@@ -11,14 +11,6 @@
             "url": "http://localhost:5173",
             "webRoot": "${workspaceFolder}"
         },
-        {
-            "name": "SWA: Run pos-itq",
-            "request": "launch",
-            "type": "pwa-chrome",
-            "url": "http://localhost:4280",
-            "preLaunchTask": "swa: start pos-itq",
-            "webRoot": "${workspaceFolder}/",
-            "timeout": 30000
-        }
+        
     ]
 }

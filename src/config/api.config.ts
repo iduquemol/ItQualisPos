@@ -2,7 +2,7 @@ const isDevelopment = import.meta.env.MODE === 'development';
 
 export const API_CONFIG = {
     BASE_URL: isDevelopment 
-        ? 'http://localhost:7071/api'
+        ? 'http://localhost:7049/api'
         : import.meta.env.VITE_API_URL,
     ENDPOINTS: {
         CATEGORIES: '/categorias',
@@ -20,6 +20,9 @@ export const API_CONFIG = {
         OBTENER_VENTA: '/obtener-venta',
         TIPOS_PRODUCTO: '/tiposproducto',
         LISTAS_PRECIOS: '/listasprecio',
+        TERCERO_DEFAULT: '/terceroVentaDefault',
+        PRODUCTS_VENTA_TERCERO: '/productos-venta-tercero',
+        PRINT_VENTA: '/print-venta',
     },
     getUrl: (endpoint: string) => {
         const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);

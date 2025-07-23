@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +29,9 @@ import { IDocumentoLista } from '@/types/IDocumentoLista';
 import { DocumentoListaService } from '@/services/DocumentoListaService';
 import { VentaService } from '@/services/VentaService';
 import { toast } from "sonner";
+import { ITerceroDefault } from '@/types/ITerceroDefault';
+import { IVentaMedioPago } from '@/types/IVentaMedioPago';
+import FacturaModal from '../reports/FacturaModal';
 
 const RetailPOS = () => {
     // const [cart, setCart] = useState<IProducto[]>([]);
@@ -83,7 +86,11 @@ const RetailPOS = () => {
         razonSocial: '',
         telefonoTercero: 0,
         direccionTercero: '',
-        emailTercero: 'iduque2001@hotmail.com'
+        idMunicipio: 0,
+        nombreTipoDocumentoId: 'CC',
+        nombreMunicipio: 'Bogota',
+        emailTercero: 'iduque2001@hotmail.com',
+        responsabilidadesTerceros: [],
     });
     const [showCustomer, setShowCustomer] = useState(false);
     const [barcodeInput, setBarcodeInput] = useState('');
@@ -108,16 +115,29 @@ const RetailPOS = () => {
     const [documentosLista, setDocumentoLista] = useState<IDocumentoLista[]>([]);
     const [isLoadingDocumentoLista, setIsLoadingDocumentoLista] = useState(true);
     const [documentoListaError, setDocumentoListaError] = useState<string | null>(null);
+    const [terceroDefault, setTerceroDefault] = useState<ITerceroDefault[]>([]);
+    const [isLoadingTerceroDefault, setIsLoadingTerceroDefault] = useState(true);
+    const [terceroDefaultError, setTerceroDefaultError] = useState<string | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
+    const [openDialogTercero, setOpenDialogTercero] = useState(false);
     const [searchDocumento, setSearchDocumento] = useState("");
     const [barcodeBuffer, setBarcodeBuffer] = useState<string>('');
     const [lastKeyTime, setLastKeyTime] = useState<number>(0);
+    const [showFacturaModal, setShowFacturaModal] = useState(false);
+    const [facturaModalData, setFacturaModalData] = useState<any>(null);
+    const [searchTercero, setSearchTercero] = useState("");    
+
     const BARCODE_DELAY = 50;
 
     const paymentMethods = [
-        { id: 'cash', name: 'Efectivo', icon: DollarSign, color: 'bg-green-500' },
-        { id: 'card', name: 'Tarjeta', icon: CreditCard, color: 'bg-blue-500' },
-        { id: 'digital', name: 'Credito', icon: Zap, color: 'bg-purple-500' }
+        { id: '1', name: 'Efectivo', icon: DollarSign, color: 'bg-green-500' },
+        { id: '2', name: 'Nequi', icon: CreditCard, color: 'bg-blue-500' },
+        { id: '3', name: 'Daviplata', icon: Zap, color: 'bg-purple-500' },
+        { id: '4', name: 'Tarjeta Débito', icon: Zap, color: 'bg-purple-500' },
+        { id: '5', name: 'Tarjeta Crédito', icon: Zap, color: 'bg-purple-500' },
+        { id: '6', name: 'Bonos', icon: Zap, color: 'bg-purple-500' },
+        { id: '7', name: 'Vales', icon: Zap, color: 'bg-purple-500' },
+        { id: '8', name: 'Otro', icon: Zap, color: 'bg-purple-500' },
     ];
 
     const fetchCategories = async () => {
@@ -187,7 +207,7 @@ const RetailPOS = () => {
         try {
             setProductError(null);
             setIsLoadingProducts(true);
-            const data = await ProductoService.getAll();
+            const data = await ProductoService.getProductosVentaByTercero(terceroDefault[0]?.numeroIdentificacion);
             setProducts(data);
         } catch (error) {
             console.error('Error:', error);
@@ -225,6 +245,50 @@ const RetailPOS = () => {
         }
     };
 
+    const fetchTerceroDefault = async () => {
+        try {
+            setTerceroDefault([]);
+            setIsLoadingTerceroDefault(true);
+            const data = await VentaService.getTerceroDefault();
+            //console.log('Terceros por defecto cargado:', data);
+            setTerceroDefault(data);
+            setFactura({
+                ...factura,
+                terceroVenta: {
+                    idTercero: data[0].idTercero,
+                    idTipoDocumentoId: data[0].idTipoDocumentoId,
+                    numeroIdentificacion: data[0].numeroIdentificacion,
+                    primerNombre: data[0].primerNombre,
+                    primerApellido: data[0].primerApellido,
+                    razonSocial: data[0].razonSocial,
+                    emailTercero: data[0].emailTercero,
+                    telefonoTercero: 0,
+                    direccionTercero: "",
+                    idMunicipio: 0,
+                    idTipoPersona: null,
+                    digitoVerificacion: null,
+                }
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            setTerceroDefaultError('Error al cargar el tercero por defecto');
+            // Terceros por defecto en caso de error
+            setTerceroDefault([
+                {
+                    idTercero: 0,
+                    idTipoDocumentoId: 0,
+                    nombreTipoDocumentoId: "0",
+                    numeroIdentificacion: "",
+                    primerNombre: "",
+                    primerApellido: "",
+                    razonSocial: "",
+                    emailTercero: ""
+                }
+            ]);
+        } finally {
+            setIsLoadingTerceroDefault(false);
+        }
+    };
 
     const playBeep = (success: boolean) => {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -245,6 +309,7 @@ const RetailPOS = () => {
     useEffect(() => {
         fetchCategories();
         fetchTipoDocumentoIdentidad();
+        fetchTerceroDefault();
         fetchTiposDocumento();
         fetchDocumentoLista();
         fetchProducts();
@@ -294,6 +359,65 @@ const RetailPOS = () => {
         return matchesSearch && matchesCategory;
     });
 
+    const handleSelectTercero = (terc: ITercero) => {
+        setFactura({
+            ...factura,
+            terceroVenta: {
+                idTercero: terc.idTercero,
+                idTipoDocumentoId: terc.idTipoDocumentoId,
+                digitoVerificacion: terc.digitoVerificacion,
+                numeroIdentificacion: terc.numeroIdentificacion,
+                primerNombre: terc.primerNombre,
+                primerApellido: terc.primerApellido,
+                razonSocial: terc.razonSocial,
+                telefonoTercero: terc.telefonoTercero,
+                direccionTercero: terc.direccionTercero,
+                idMunicipio: terc.idMunicipio,
+                emailTercero: terc.emailTercero,
+                idTipoPersona: 1
+            }
+        });
+        setOpenDialogTercero(false);
+    };
+
+    const handleNew = () => {
+        setFactura({
+            ...factura,
+            idVenta: null,
+            idTipoDocumento: 1,
+            codigoDocumento: '',
+            nombreDocumento: null,
+            numeroVenta: null,
+            prefijoVenta: '',
+            fechaVenta: '',
+            idPuntoVenta: null,
+            idUsuario: null,
+            totalRegistros: 0,
+            cantidadProductos: 0,
+            totalPrecio: 0,
+            totalDescuento: 0,
+            totalBaseIva: 0,
+            totalIva: 0,
+            totalVenta: 0,
+            terceroVenta: {
+                idTercero: null,
+                idTipoDocumentoId: 0,
+                digitoVerificacion: null,
+                numeroIdentificacion: null,
+                primerNombre: null,
+                primerApellido: null,
+                razonSocial: null,
+                telefonoTercero: null,
+                direccionTercero: null,
+                idMunicipio: 0,
+                emailTercero: null,
+                idTipoPersona: null
+            },
+            detalleVenta: [],
+            mediosPagoVenta: [],
+        });
+    };
+
     // Manejo de eventos para buscar tercero por número de identificación
     const handleSearchTercero = (numeroIdentificacion: string) => {
         const tercero = terceros.find(t => t.numeroIdentificacion === numeroIdentificacion);
@@ -317,7 +441,7 @@ const RetailPOS = () => {
         setFactura({
             ...factura,
             idVenta: data?.idVenta ?? null,
-            idTipoDocumento: data.idTipoDocumento,
+            idTipoDocumento: data?.idTipoDocumento ?? 0,
             codigoDocumento: data?.codigoDocumento ?? '',
             nombreDocumento: data?.nombreDocumento ?? null,
             numeroVenta: data?.numeroVenta ?? null,
@@ -354,9 +478,15 @@ const RetailPOS = () => {
     };
 
     const handleSaveVenta = async () => {
-
+        const todayLocal = new Date();
+        const offsetMs = todayLocal.getTimezoneOffset() * 60 * 1000;
+        const localISODate = new Date(todayLocal.getTime() - offsetMs).toISOString().split('T')[0];
+        const updatedFactura = {
+            ...factura,
+            fechaVenta: localISODate,
+        };
         try {
-            if (factura.idVenta) {
+            if (updatedFactura.idVenta) {
                 // Actualizar factura existente
                 //await VentaService.update(factura);
                 console.log("Factura actualizada:", factura);
@@ -364,7 +494,8 @@ const RetailPOS = () => {
                     position: "top-center",
                 });
             } else {
-                const result = await VentaService.create(factura);
+                console.log("Factura a guardar:", updatedFactura);
+                const result = await VentaService.create(updatedFactura);
                 console.log("Factura guardada:", result);
                 toast.success(
                     result.message +
@@ -374,20 +505,18 @@ const RetailPOS = () => {
                         position: "top-center",
                     }
                 );
+                const dataPrint = await VentaService.printById(result.idFactura);
+                setFacturaModalData(dataPrint);
+                setShowFacturaModal(true);
             }
-            //fetchProducts();
+            //await fetchProducts();
         } catch (error) {
             console.error('Error al guardar la factura:', error);
         }
     };
 
-
-
     // Funciones del carrito
     const addToCart = (product: IProducto) => {
-        if (product.stockActualProducto < 0) {
-            return;
-        }
 
         const existingItem = factura.detalleVenta?.find(item => item.idProducto === product.idProducto);
         if (existingItem) {
@@ -414,11 +543,11 @@ const RetailPOS = () => {
                         precioUnitarioVenta: product.precioUnitario,
                         cantidadVenta: 1.0,
                         descuentoVenta: 0, // Asignar descuento si es necesario
-                        ivaVenta: (product.precioUnitario * 1) * 0.19, // Asignar IVA si es necesario
+                        ivaVenta: parseFloat((product.precioUnitario * ((product.porcentajeIva || 0) / 100)).toFixed(2)),
                         totalVenta: 0,
                         costoUnitarioVenta: 0,
                         costoTotalVenta: 0, // Asignar costo si es necesario
-                        porcentajeIvaVenta: 19,
+                        porcentajeIvaVenta: product.porcentajeIva || 0,
                         porcentajeDescuentoVenta: 0
                     }
                 ]
@@ -426,19 +555,39 @@ const RetailPOS = () => {
         }
     };
 
-    const updateQuantity = (id, change) => {
-        const product = products.find(p => p.idProducto === id);
-        setCart(cart.map(item => {
-            if (item.idProducto === id) {
-                const newQuantity = item.quantity + change;
-                if (newQuantity <= 0) return null;
-                if (newQuantity > product.stock) {
-                    return item;
+    const updateQuantity = (id: number, change: number) => {
+        // const product = products.find(p => p.idProducto === id);
+        // setCart(cart.map(item => {
+        //     if (item.idProducto === id) {
+        //         const newQuantity = item.quantity + change;
+        //         if (newQuantity <= 0) return null;
+        //         if (newQuantity > product.stock) {
+        //             return item;
+        //         }
+        //         return { ...item, quantity: newQuantity };
+        //     }
+        //     return item;
+        // }).filter(Boolean));
+        setFactura({
+            ...factura,
+            detalleVenta: (factura.detalleVenta ?? []).map(item => {
+                if (item.idProducto === id) {
+                    const newQuantity = item.cantidadVenta + change;
+                    return {
+                        ...item,
+                        cantidadVenta: newQuantity,
+                        ivaVenta: parseFloat(
+                            ((item.precioUnitarioVenta * newQuantity - item.descuentoVenta) * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2)
+                        ),
+                        descuentoVenta: parseFloat(
+                            ((item.precioUnitarioVenta * newQuantity) * ((item.porcentajeDescuentoVenta || 0) / 100)).toFixed(2)
+                        ),
+                    };
                 }
-                return { ...item, quantity: newQuantity };
-            }
-            return item;
-        }).filter(Boolean));
+                return item;
+            })
+        });
+
     };
 
     const removeFromCart = (id: number) => {
@@ -469,8 +618,8 @@ const RetailPOS = () => {
 
     // Cálculos
     const subtotal = factura.detalleVenta?.reduce((sum, item) => sum + (item.precioUnitarioVenta * item.cantidadVenta), 0);
-    const discount = subtotal * (Number(customerDiscount) / 100);
-    const tax = 0; // IVA 16%
+    const discount = factura.detalleVenta?.reduce((descuento, item) => descuento + item.descuentoVenta, 0);
+    const tax = factura.detalleVenta?.reduce((iva, item) => iva + item.ivaVenta, 0);
     // const loyaltyDiscount = customerInfo.loyalty ? subtotal * 0.05 : 0; // 5% descuento por lealtad
     const total = subtotal - discount + tax;
     const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + item.cantidadVenta, 0);
@@ -479,7 +628,7 @@ const RetailPOS = () => {
     return (
         <div className="h-screen bg-background flex flex-col overflow-hidden">
             {/* Panel Superior */}
-            <div className="w-full border-b bg-card p-4">
+            <div className="w-full border-b bg-card p-1">
                 <div className="flex items-center justify-between">
                     {/* Lado izquierdo - Logo y título */}
                     <div className="flex items-center space-x-4 mb-2">
@@ -492,24 +641,33 @@ const RetailPOS = () => {
                         </div>
                     </div>
 
-                    {/* Centro - Botón Cliente y Badge Online */}
+                    {/* Centro - Total de la factura */}
                     <div className="flex items-center space-x-4 mb-2">
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowCustomer(!showCustomer)}
-                            className="flex items-center space-x-2"
-                        >
-                            <Users className="h-4 w-4" />
-                            <span>Cliente</span>
-                        </Button>
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                            Online
+                        <Badge className="flex items-center gap-2 px-4 py-2 text-lg bg-primary text-primary-foreground">
+                            {/* <DollarSign className="w-5 h-5" /> */}
+                            <span className="font-medium">Total Factura:</span>
+                            <span className="font-bold text-xl">${formatCurrency(total)}</span>
                         </Badge>
                     </div>
 
                     {/* Lado derecho - Reloj */}
                     <div className="flex items-center space-x-4 mb-2">
+                        {showFacturaModal && (
+                            <FacturaModal
+                                facturaData={facturaModalData}
+                                triggerText="Imprimir Factura"
+                                triggerVariant="destructive"
+                            />
+                        )}
+                        <Button
+                            variant="default"
+                            size="icon"
+                            title="Nueva factura"
+                            onClick={() => handleNew()}
+                            className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </Button>
                         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="icon" title="Buscar documento">
@@ -577,6 +735,20 @@ const RetailPOS = () => {
                         </Badge>
                         <Clock className="h-5 w-5" />
                         <span>{new Date().toLocaleTimeString()}</span>
+                        <Button
+                            variant="default"
+                            size="icon"
+                            title="Salir"
+                            onClick={() => {
+                                if (window.confirm('¿Estás seguro que deseas salir del sistema?')) {
+                                    console.log('Saliendo del sistema...');
+                                    // window.location.href = '/login'; // Ejemplo de redirección
+                                }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                            <X className="w-5 h-5" />
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -584,7 +756,7 @@ const RetailPOS = () => {
             <div className="flex flex-1 overflow-hidden">
 
                 {/* Panel Izquierdo - Carrito (70%) */}
-                <div className="w-[70%] flex flex-col h-screen">
+                <div className="w-[70%] flex flex-col h-[calc(100vh-80px)]">
                     {/* Header del Carrito */}
                     <div className="p-3 border-b h-[60px] shrink-0">
                         <div className="flex items-center justify-between mb-6">
@@ -641,87 +813,151 @@ const RetailPOS = () => {
                         </div>
                     </div>
 
-
                     {/* Panel de Cliente */}
-                    {showCustomer && (
-                        <div className="border-b bg-muted/50">
-                            <div className="p-4">
-                                <div className="grid grid-cols-5 gap-3">
-                                    <select
-                                        className="w-full rounded border px-3 py-2 text-sm bg-background"
-                                        value={factura.terceroVenta.idTipoDocumentoId}
-                                        onChange={(e) => setFactura({ ...factura, terceroVenta: { ...factura.terceroVenta, idTipoDocumentoId: parseInt(e.target.value) } })}
-                                        required
-                                    >
-                                        {tiposDocumentoIdentidad.map(cat => (
-                                            <option key={cat.idTipoDocumentoId} value={cat.idTipoDocumentoId}>
-                                                {cat.nombreTipoDocumentoId} ({cat.codigoTipoDocumentoId})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <Input
-                                        placeholder="Número de Identificación"
-                                        value={factura.terceroVenta.numeroIdentificacion || ''}
-                                        onChange={(e) => {
-                                            const value = e.target.value;
-                                            setFactura({
-                                                ...factura,
-                                                terceroVenta: {
-                                                    ...factura.terceroVenta,
-                                                    numeroIdentificacion: value
-                                                }
-                                            });
-                                            // Buscar tercero después de un pequeño delay para evitar muchas búsquedas
-                                            if (value.length >= 3) {
-                                                handleSearchTercero(value);
-                                            }
-                                        }}
-                                        onFocus={(e) => e.target.select()}
-                                        onBlur={(e) => {
-                                            // Búsqueda al perder el foco
-                                            if (e.target.value) {
-                                                handleSearchTercero(e.target.value);
-                                            }
-                                        }}
-                                    />
-                                    <Input
-                                        placeholder="Primer Nombre"
-                                        value={factura.terceroVenta.primerNombre || ''}
-                                        onChange={(e) => setFactura({
+
+                    <div className="border-b bg-muted/50">
+                        <div className="flex items-center gap-2 ml-3 mt-2 mb-2 mr-2">
+                            <h2 className="text-sm font-normal">Cliente</h2>
+                            <div className="grid grid-cols-5 gap-1">
+                                <select
+                                    className="w-full rounded border px-2 py-2 text-sm bg-background w-42"
+                                    value={factura.terceroVenta?.idTipoDocumentoId}
+                                    onChange={(e) => setFactura({ ...factura, terceroVenta: { ...factura.terceroVenta, idTipoDocumentoId: parseInt(e.target.value) } })}
+                                    required
+                                >
+                                    {tiposDocumentoIdentidad.map(cat => (
+                                        <option key={cat.idTipoDocumentoId} value={cat.idTipoDocumentoId}>
+                                            {cat.nombreTipoDocumentoId} ({cat.codigoTipoDocumentoId})
+                                        </option>
+                                    ))}
+                                </select>
+                                <Input
+                                    placeholder="Número de Identificación"
+                                    className="rounded border px-2 py-2 text-sm bg-background w-26"
+                                    value={factura.terceroVenta?.numeroIdentificacion || ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setFactura({
                                             ...factura,
                                             terceroVenta: {
                                                 ...factura.terceroVenta,
-                                                primerNombre: e.target.value
+                                                numeroIdentificacion: value
                                             }
-                                        })}
-                                    />
-                                    <Input
-                                        placeholder="Primer Apellido"
-                                        value={factura.terceroVenta.primerApellido || ''}
-                                        onChange={(e) => setFactura({
-                                            ...factura,
-                                            terceroVenta: {
-                                                ...factura.terceroVenta,
-                                                primerApellido: e.target.value
-                                            }
-                                        })}
-                                    />
-                                    <Input
-                                        type="email"
-                                        placeholder="Email"
-                                        value={factura.terceroVenta.emailTercero || ''}
-                                        onChange={(e) => setFactura({
-                                            ...factura,
-                                            terceroVenta: {
-                                                ...factura.terceroVenta,
-                                                emailTercero: e.target.value
-                                            }
-                                        })}
-                                    />
-                                </div>
+                                        });
+                                        // Buscar tercero después de un pequeño delay para evitar muchas búsquedas
+                                        if (value.length >= 3) {
+                                            handleSearchTercero(value);
+                                        }
+                                    }}
+                                    onFocus={(e) => e.target.select()}
+                                    onBlur={(e) => {
+                                        // Búsqueda al perder el foco
+                                        if (e.target.value) {
+                                            handleSearchTercero(e.target.value);
+                                        }
+                                    }}
+                                />
+                                <Input
+                                    placeholder="Primer Nombre"
+                                    className="rounded border px-2 py-2 text-sm bg-background w-26"
+                                    value={factura.terceroVenta?.primerNombre || ''}
+                                    onChange={(e) => setFactura({
+                                        ...factura,
+                                        terceroVenta: {
+                                            ...factura.terceroVenta,
+                                            primerNombre: e.target.value
+                                        }
+                                    })}
+                                />
+                                <Input
+                                    placeholder="Primer Apellido"
+                                    className="rounded border px-2 py-2 text-sm bg-background w-26"
+                                    value={factura.terceroVenta?.primerApellido || ''}
+                                    onChange={(e) => setFactura({
+                                        ...factura,
+                                        terceroVenta: {
+                                            ...factura.terceroVenta,
+                                            primerApellido: e.target.value
+                                        }
+                                    })}
+                                />
+                                <Input
+                                    type="email"
+                                    placeholder="Email"
+                                    className="rounded border px-2 py-2 text-sm bg-background w-26"
+                                    value={factura.terceroVenta.emailTercero || ''}
+                                    onChange={(e) => setFactura({
+                                        ...factura,
+                                        terceroVenta: {
+                                            ...factura.terceroVenta,
+                                            emailTercero: e.target.value
+                                        }
+                                    })}
+                                />
                             </div>
+                            <Dialog open={openDialogTercero} onOpenChange={setOpenDialogTercero}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="icon" title="Buscar cliente">
+                                        <Search className="w-8 h-8" />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-4xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Buscar cliente</DialogTitle>
+                                    </DialogHeader>
+                                    {/* Input de búsqueda */}
+                                    <Input
+                                        className="mb-4"
+                                        placeholder="Buscar por número o nombre o apellido o razon social..."
+                                        value={searchTercero}
+                                        onChange={e => setSearchTercero(e.target.value)}
+                                    />
+                                    <div className="overflow-x-auto max-h-[400px]">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Número Identificación</TableHead>
+                                                    <TableHead>Primer Nombre</TableHead>
+                                                    <TableHead>Primer Apellido</TableHead>
+                                                    <TableHead>Razón Social</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {terceros
+                                                    .filter(
+                                                        cliente =>
+                                                            cliente.numeroIdentificacion?.toLowerCase().includes(searchTercero.toLowerCase()) ||
+                                                            cliente.razonSocial?.toLowerCase().includes(searchTercero.toLowerCase()) ||
+                                                            cliente.primerNombre?.toLowerCase().includes(searchTercero.toLowerCase()) ||
+                                                            cliente.primerApellido?.toLowerCase().includes(searchTercero.toLowerCase())
+                                                    )
+                                                    .map((cliente) => (
+                                                        <TableRow
+                                                            key={cliente.idTercero}
+                                                            className="cursor-pointer hover:bg-primary/10"
+                                                            onClick={() => handleSelectTercero(cliente)}
+                                                        >
+                                                            <TableCell>{cliente.numeroIdentificacion}</TableCell>
+                                                            <TableCell>{cliente.primerNombre}</TableCell>
+                                                            <TableCell>{cliente.primerApellido}</TableCell>
+                                                            <TableCell>{cliente.razonSocial}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                            </TableBody>
+                                        </Table>
+                                        {isLoadingTerceros && (
+                                            <div className="text-center text-muted-foreground py-4">Cargando...</div>
+                                        )}
+                                        {terceroError && (
+                                            <div className="text-center text-red-500 py-4">{terceroError}</div>
+                                        )}
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
                         </div>
-                    )}
+
+                    </div>
+
 
                     {/* Items del Carrito */}
                     <div className="flex-1 overflow-y-auto p-4 min-h-[300px]">
@@ -732,9 +968,9 @@ const RetailPOS = () => {
                                 <p className="text-sm text-muted-foreground mt-1">Escanea o selecciona productos</p>
                             </div>
                         ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-1.5">
                                 {(factura.detalleVenta ?? []).map(item => (
-                                    <Card key={item.idProducto} className="p-3">
+                                    <Card key={item.idProducto} className="p-1">
                                         <div className="flex items-center justify-between">
                                             {/* Información del producto */}
                                             <div className="flex-1 min-w-0">
@@ -756,13 +992,15 @@ const RetailPOS = () => {
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.porcentajeDescuentoVenta || ''}
                                                             onChange={(e) => {
+                                                                const valorDescuento = parseFloat(((item.precioUnitarioVenta * item.cantidadVenta) * ((parseFloat(e.target.value) || 0) / 100)).toFixed(2));
                                                                 setFactura({
                                                                     ...factura,
                                                                     detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
-                                                                                ...detalleItem, porcentajeDescuentoVenta: parseFloat(e.target.value) || 0,
-                                                                                descuentoVenta: (item.precioUnitarioVenta * item.cantidadVenta) * ((parseFloat(e.target.value) || 0) / 100)
+                                                                                ...detalleItem,
+                                                                                porcentajeDescuentoVenta: parseFloat(e.target.value) || 0,
+                                                                                descuentoVenta: valorDescuento
                                                                             }
                                                                             : detalleItem
                                                                     )
@@ -782,7 +1020,7 @@ const RetailPOS = () => {
                                                             onChange={(e) => {
                                                                 setFactura({
                                                                     ...factura,
-                                                                    detalleVenta: factura.detalleVenta.map(detalleItem =>
+                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? { ...detalleItem, descuentoVenta: parseFloat(e.target.value) || 0 }
                                                                             : detalleItem
@@ -814,6 +1052,7 @@ const RetailPOS = () => {
                                                             min={0}
                                                             max={100}
                                                             placeholder="0"
+                                                            disabled
                                                         />
                                                     </div>
                                                     <div className="flex flex-col">
@@ -833,6 +1072,7 @@ const RetailPOS = () => {
                                                                 });
                                                             }}
                                                             placeholder="0"
+                                                            disabled
                                                         />
                                                     </div>
                                                 </div>
@@ -865,7 +1105,12 @@ const RetailPOS = () => {
                                                                             ...factura,
                                                                             detalleVenta: factura.detalleVenta.map(detalleItem =>
                                                                                 detalleItem.idProducto === item.idProducto
-                                                                                    ? { ...detalleItem, cantidadVenta: newQuantity }
+                                                                                    ? {
+                                                                                        ...detalleItem,
+                                                                                        cantidadVenta: newQuantity,
+                                                                                        ivaVenta: parseFloat(((item.precioUnitarioVenta * newQuantity - item.descuentoVenta) * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2)),
+                                                                                        descuentoVenta: parseFloat(((item.precioUnitarioVenta * newQuantity) * ((item.porcentajeDescuentoVenta || 0) / 100)).toFixed(2)),
+                                                                                    }
                                                                                     : detalleItem
                                                                             )
                                                                         });
@@ -884,7 +1129,7 @@ const RetailPOS = () => {
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-bold mb-1 whitespace-nowrap text-center">Precio Total</span>
+                                                        <span className="text-xs font-bold mb-1 whitespace-nowrap text-center">Valor Total</span>
                                                         <span className="font-bold text-primary min-w-[80px] text-right h-8 flex items-center justify-end">
                                                             ${formatCurrency((item.precioUnitarioVenta * item.cantidadVenta) - item.descuentoVenta + item.ivaVenta)}
                                                         </span>
@@ -911,11 +1156,11 @@ const RetailPOS = () => {
 
                     {/* Panel de Totales y Pago */}
                     {factura.detalleVenta.length > 0 && (
-                        <div className="border-t flex flex-col h-[300px]" >
-                            <div className="h-[120px] overflow-y-auto">
+                        <div className="border-t flex flex-col h-[400px]" >
+                            <div className="h-[100px] overflow-y-auto">
 
                                 {/* Totales */}
-                                <div className="p-4 space-y-4">
+                                <div className="p-2 space-y-2">
                                     {/* Resumen */}
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
@@ -923,17 +1168,15 @@ const RetailPOS = () => {
                                             <span>${formatCurrency(subtotal)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">IVA (19%)</span>
-                                            <span>${formatCurrency(tax)}</span>
+                                            <span className="text-muted-foreground">Descuento</span>
+                                            <span>${formatCurrency(discount)}</span>
                                         </div>
-                                        <Separator />
-                                        <div className="flex justify-between text-lg font-bold">
-                                            <span>Total</span>
-                                            <span className="text-primary">${formatCurrency(total)}</span>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">IVA</span>
+                                            <span>${formatCurrency(tax)}</span>
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
 
                             {/* Botón de Pago */}
@@ -1023,7 +1266,7 @@ const RetailPOS = () => {
 
                                     <CardFooter className="flex flex-col space-y-2 pt-2">
                                         <div className="text-lg font-bold text-primary">
-                                            ${formatCurrency(product.precioUnitario)}
+                                            ${formatCurrency(product.precioPos)}
                                         </div>
                                         {/* <Badge
                                             variant={product.stock > product.minStock ? "secondary" :
@@ -1047,21 +1290,36 @@ const RetailPOS = () => {
                         </DialogHeader>
 
                         {/* Métodos de Pago */}
-                        <div className="grid grid-cols-3 gap-2 mb-6">
-                            {paymentMethods.map(method => {
-                                const IconComponent = method.icon;
-                                return (
-                                    <Button
-                                        key={method.id}
-                                        variant={activePaymentMethod === method.id ? "default" : "outline"}
-                                        onClick={() => setActivePaymentMethod(method.id)}
-                                        className="flex flex-col items-center p-3 h-auto"
-                                    >
-                                        <IconComponent className="h-5 w-5 mb-1" />
-                                        <span className="text-xs">{method.name}</span>
-                                    </Button>
-                                );
-                            })}
+                        <div className="mb-6">
+                            <Label className="mb-2 block text-sm font-medium">Método de pago</Label>
+                            <Select value={activePaymentMethod}
+                                onValueChange={(value) => {
+                                    setActivePaymentMethod(value);
+
+                                    // Crear un nuevo medio de pago
+                                    const nuevoMedioPago: IVentaMedioPago = {
+                                        idMedioPagoVenta: 0,
+                                        idMedioPago: parseInt(value),
+                                        valorMedioPago: total
+                                    };
+
+                                    setFactura(prev => ({
+                                        ...prev,
+                                        idFormaPago: nuevoMedioPago.idMedioPago,
+                                        mediosPagoVenta: [nuevoMedioPago], // reemplaza o haz append si es necesario
+                                    }));
+                                }}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Selecciona un método de pago" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {paymentMethods.map(method => (
+                                        <SelectItem key={method.id} value={method.id}>
+                                            {method.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         {/* Información del Cliente */}
@@ -1082,27 +1340,6 @@ const RetailPOS = () => {
                                 </AlertDescription>
                             </Alert>
                         )}
-
-                        {/* Panel de Descuentos */}
-                        <div className="space-y-4 mb-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="discount">Descuento</Label>
-                                <Select value={customerDiscount} onValueChange={setCustomerDiscount}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="0">Sin descuento</SelectItem>
-                                        <SelectItem value="5">5% - Promoción</SelectItem>
-                                        <SelectItem value="10">10% - Cliente Frecuente</SelectItem>
-                                        <SelectItem value="15">15% - Liquidación</SelectItem>
-                                        <SelectItem value="20">20% - Empleado</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            {/* <Separator /> */}
-                        </div>
-
 
                         <Card className="p-4 mb-6">
                             <div className="space-y-2">
@@ -1146,6 +1383,7 @@ const RetailPOS = () => {
                     </DialogContent>
                 </Dialog>
             </div>
+
         </div >
     );
 };

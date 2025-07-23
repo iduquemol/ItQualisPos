@@ -10,8 +10,8 @@ export interface IProducto {
     idCategoria: number;
     idUnidadMedida: number;
     precioUnitario: number;
-    stockActualProducto: number;
-    costoPromedioActualProducto: number | null;
+    precioPos: number;
+    porcentajeIva: number | null;
     quantity: number;  
     idTipoProducto: number; // ID of the product type
     productoActivo: boolean; // Indicates if the product is active

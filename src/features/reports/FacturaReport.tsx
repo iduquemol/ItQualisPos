@@ -370,25 +370,25 @@ const FacturaElectronica: React.FC<FacturaElectronicaProps> = ({ facturaData }) 
         {/* Header */}
         <View style={styles.header}>
           <Text>Representación gráfica</Text>
-          <Text>FACTURA ELECTRÓNICA DE VENTA {data.factura.numero}</Text>
+          <Text>FACTURA ELECTRÓNICA DE VENTA {data.numeroVenta}</Text>
         </View>
 
         {/* Información de la empresa */}
         <View style={styles.companySection}>
-          <Text style={styles.companyName}>{data.empresa.nombre}</Text>
+          <Text style={styles.companyName}>{data.facturadorNombre}</Text>
           <View style={styles.row}>
             <View style={styles.leftColumn}>
-              <Text><Text style={styles.label}>NIT:</Text> {data.empresa.nit}</Text>
-              <Text><Text style={styles.label}>Tipo de contribuyente:</Text> {data.empresa.tipoContribuyente}</Text>
-              <Text><Text style={styles.label}>Tipo de responsabilidad:</Text> {data.empresa.tipoResponsabilidad}</Text>
-              <Text><Text style={styles.label}>Régimen fiscal:</Text> {data.empresa.regimenFiscal}</Text>
-              <Text><Text style={styles.label}>Actividades económicas:</Text> {data.empresa.actividadEconomica}</Text>
+              <Text><Text style={styles.label}>NIT:</Text> {data.facturadorNumeroIdentificacion}</Text>
+              <Text><Text style={styles.label}>Tipo de contribuyente:</Text> {data.clienteTipoContribuyente}</Text>
+              <Text><Text style={styles.label}>Tipo de responsabilidad:</Text> {data.facturadorResponsabilidadFiscal}</Text>
+              <Text><Text style={styles.label}>Régimen fiscal:</Text> {data.facturadorTipoRegimen}</Text>
+              <Text><Text style={styles.label}>Actividades económicas:</Text> {}</Text>
             </View>
             <View style={styles.rightColumn}>
-              <Text><Text style={styles.label}>Municipio:</Text> {data.empresa.municipio}</Text>
-              <Text><Text style={styles.label}>Dirección:</Text> {data.empresa.direccion}</Text>
-              <Text><Text style={styles.label}>Correo:</Text> {data.empresa.correo}</Text>
-              <Text><Text style={styles.label}>Teléfono:</Text> {data.empresa.telefono}</Text>
+              <Text><Text style={styles.label}>Municipio:</Text> {data.facturadorMunicipio}</Text>
+              <Text><Text style={styles.label}>Dirección:</Text> {data.facturadorDireccion}</Text>
+              <Text><Text style={styles.label}>Correo:</Text> {data.facturadorEmail}</Text>
+              <Text><Text style={styles.label}>Teléfono:</Text> {data.facturadorTelefono}</Text>
             </View>
           </View>
         </View>
@@ -396,21 +396,21 @@ const FacturaElectronica: React.FC<FacturaElectronicaProps> = ({ facturaData }) 
         {/* Información de la factura */}
         <View style={styles.facturaInfo}>
           {/* <Text style={styles.facturaHeader}>Software Qenta - NIT 901.195.532 - Qenta SAS - Desarrollo Propio Pag. 1 de 1</Text> */}
-          <Text style={styles.cufeText}>CUFE: {data.factura.cufe}</Text>
+          <Text style={styles.cufeText}>CUFE: {data.cufe}</Text>
           
           <View style={styles.row}>
             <View style={styles.leftColumn}>
-              <Text><Text style={styles.label}>Fecha de emisión:</Text> {data.factura.fechaEmision}</Text>
-              <Text><Text style={styles.label}>Fecha de vencimiento:</Text> {data.factura.fechaVencimiento}</Text>
-              <Text><Text style={styles.label}>Orden de referencia:</Text> {data.factura.ordenReferencia}</Text>
-              <Text><Text style={styles.label}>Fecha y hora de autorización:</Text></Text>
-              <Text><Text style={styles.label}>Medio de pago:</Text> {data.factura.medioPago}</Text>
+              <Text><Text style={styles.label}>Fecha de emisión:</Text> {data.fechaVenta}</Text>
+              <Text><Text style={styles.label}>Fecha de vencimiento:</Text> {data.fechaVencimiento}</Text>
+              <Text><Text style={styles.label}>Orden de referencia:</Text> {}</Text>
+              <Text><Text style={styles.label}>Fecha y hora de autorización:</Text>{data.fechaHoraAutorizacion}</Text>
+              <Text><Text style={styles.label}>Medio de pago:</Text> {}</Text>
             </View>
             <View style={styles.rightColumn}>
-              <Text><Text style={styles.label}>Prefijo:</Text> {data.factura.prefijo}</Text>
-              <Text><Text style={styles.label}>Forma de Pago:</Text> {data.factura.formaPago}</Text>
-              <Text><Text style={styles.label}>Tipo de operación:</Text> {data.factura.tipoOperacion}</Text>
-              <Text><Text style={styles.label}>Plazo:</Text> {data.factura.plazo}</Text>
+              <Text><Text style={styles.label}>Prefijo:</Text> {data.prefijoVenta}</Text>
+              <Text><Text style={styles.label}>Forma de Pago:</Text> {data.nombreFormaPago}</Text>
+              <Text><Text style={styles.label}>Tipo de operación:</Text> {}</Text>
+              <Text><Text style={styles.label}>Plazo:</Text> {data.plazoDias}</Text>
             </View>
           </View>
         </View>
@@ -420,18 +420,18 @@ const FacturaElectronica: React.FC<FacturaElectronicaProps> = ({ facturaData }) 
           <Text style={styles.clientHeader}>Adquiriente</Text>
           <View style={styles.row}>
             <View style={styles.leftColumn}>
-              <Text><Text style={styles.label}>Nombres y apellidos:</Text> {data.cliente.nombre}</Text>
-              <Text><Text style={styles.label}>Número de documento:</Text> {data.cliente.tipoDocumento} - {data.cliente.nit}</Text>
-              <Text><Text style={styles.label}>Departamento:</Text> {data.cliente.departamento}</Text>
-              <Text><Text style={styles.label}>Correo:</Text> {data.cliente.correo}</Text>
-              <Text><Text style={styles.label}>Tipo de persona:</Text> {data.cliente.tipoPersona}</Text>
+              <Text><Text style={styles.label}>Nombres y apellidos:</Text> {data.clienteRazonSocial}</Text>
+              <Text><Text style={styles.label}>Número de documento:</Text> {data.clienteTipoId} - {data.clienteNumeroIdentificacion}</Text>
+              <Text><Text style={styles.label}>Departamento:</Text> {data.clienteMunicipio}</Text>
+              <Text><Text style={styles.label}>Correo:</Text> {data.clienteEmail}</Text>
+              <Text><Text style={styles.label}>Tipo de persona:</Text> {}</Text>
             </View>
             <View style={styles.rightColumn}>
-              <Text><Text style={styles.label}>Municipio:</Text> {data.cliente.municipio}</Text>
-              <Text><Text style={styles.label}>Régimen fiscal:</Text> {data.cliente.regimenFiscal}</Text>
-              <Text><Text style={styles.label}>Dirección:</Text> {data.cliente.direccion}</Text>
-              <Text><Text style={styles.label}>Tipo de responsabilidad:</Text> {data.cliente.tipoResponsabilidad}</Text>
-              <Text><Text style={styles.label}>Teléfono:</Text> {data.cliente.telefono}</Text>
+              <Text><Text style={styles.label}>Municipio:</Text> {data.clienteMunicipio}</Text>
+              <Text><Text style={styles.label}>Régimen fiscal:</Text> {data.clienteResponsabilidadFiscal}</Text>
+              <Text><Text style={styles.label}>Dirección:</Text> {data.clienteDireccion}</Text>
+              <Text><Text style={styles.label}>Tipo de responsabilidad:</Text> {data.clienteTipoRegimen}</Text>
+              <Text><Text style={styles.label}>Teléfono:</Text> {data.clienteTelefono}</Text>
             </View>
           </View>
         </View>
@@ -477,34 +477,34 @@ const FacturaElectronica: React.FC<FacturaElectronicaProps> = ({ facturaData }) 
           {data.items.map((item, index) => (
             <View key={index} style={styles.tableRow}>
               <View style={styles.tableCell}>
-                <Text>{item.item}</Text>
+                <Text>{item.registroVenta}</Text>
               </View>
               <View style={styles.tableCell}>
-                <Text>{item.codigo}</Text>
+                <Text>{item.codigoProducto}</Text>
               </View>
               <View style={styles.tableCellWide}>
-                <Text>{item.descripcion}</Text>
+                <Text>{item.nombreProducto}</Text>
               </View>
               <View style={styles.tableCell}>
-                <Text>{item.cantidad.toFixed(2)}</Text>
+                <Text>{item.cantidadVenta.toFixed(2)}</Text>
               </View>
               <View style={styles.tableCell}>
-                <Text>{item.unidadMedida}</Text>
+                <Text>{item.nombreUnidadMedida}</Text>
               </View>
               <View style={styles.tableCell}>
-                <Text>{formatCurrency(item.valorUnitario)}</Text>
+                <Text>{formatCurrency(item.precioUnitarioVenta)}</Text>
               </View>
               <View style={styles.tableCell}>
-                <Text>{item.descuento}</Text>
+                <Text>{item.porcentajeDescuentoVenta}</Text>
               </View>
               <View style={styles.tableCell}>
-                <Text>{item.iva}</Text>
+                <Text>{item.porcentajeIvaVenta}</Text>
               </View>
               <View style={styles.tableCell}>
-                <Text>{item.inc}</Text>
+                <Text>{}</Text>
               </View>
               <View style={styles.tableCellLast}>
-                <Text>{formatCurrency(item.valorTotal)}</Text>
+                <Text>{formatCurrency(item.precioTotalVenta)}</Text>
               </View>
             </View>
           ))}
@@ -518,72 +518,72 @@ const FacturaElectronica: React.FC<FacturaElectronicaProps> = ({ facturaData }) 
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Subtotal bruto =</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totales.subtotalBruto)}</Text>
+            <Text style={styles.totalValue}>{}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Descuentos -</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totales.descuentos)}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(data.totalDescuento)}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Recargos +</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totales.recargos)}</Text>
+            <Text style={styles.totalValue}>{}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Subtotal neto =</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totales.subtotalNeto)}</Text>
+            <Text style={styles.totalValue}>{}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Impuesto IVA (19%) +</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totales.impuestoIVA)}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(data.totalIva)}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Subtotal más impuestos =</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totales.subtotalMasImpuestos)}</Text>
+            <Text style={styles.totalValue}>{}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>ReteRenta -</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totales.reteRenta)}</Text>
+            <Text style={styles.totalValue}>{}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total deducciones =</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totales.totalDeducciones)}</Text>
+            <Text style={styles.totalValue}>{}</Text>
           </View>
           
           <View style={[styles.totalRow, styles.finalTotal]}>
             <Text style={styles.totalLabel}>Total a pagar =</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totales.totalPagar)}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(data.totalVenta)}</Text>
           </View>
         </View>
 
         {/* Observaciones */}
         <View style={styles.observaciones}>
           <Text style={styles.label}>Observaciones</Text>
-          <Text>{data.observaciones}</Text>
+          <Text>{}</Text>
         </View>
 
         {/* Autorización */}
         <View style={styles.autorizacion}>
-          <Text><Text style={styles.label}>Número de autorización:</Text> {data.autorizacion.numero}</Text>
-          <Text><Text style={styles.label}>Rango Autorizado:</Text> {data.autorizacion.rango}</Text>
-          <Text><Text style={styles.label}>Expedida:</Text> {data.autorizacion.expedida} <Text style={styles.label}>Vigencia:</Text> {data.autorizacion.vigencia} <Text style={styles.label}>Vencimiento:</Text> {data.autorizacion.vencimiento}</Text>
+          <Text><Text style={styles.label}>Número de autorización:</Text> {data.numeroResolucion}</Text>
+          <Text><Text style={styles.label}>Rango Autorizado desde:</Text>{data.numeroInicialResolucion}<Text style={styles.label}>hasta:</Text>{data.numeroFinalResolucion}</Text>
+          <Text><Text style={styles.label}>Expedida:</Text> {data.fechaAutorizacionResolucion} <Text style={styles.label}>Vigencia:</Text> {data.fechaInicialResolucion} <Text style={styles.label}>Vencimiento:</Text> {data.fechaFinalResolucion}</Text>
         </View>
 
         {/* Firma Digital */}
         <View style={styles.firma}>
           <Text style={styles.label}>Firma Digital:</Text>
-          <Text>{data.firma}</Text>
+          <Text>{data.firmaDigital}</Text>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text>{data.fechaHoraGeneracion}</Text>
+          <Text>{data.fechaHoraAutorizacion}</Text>
         </View>
       </Page>
     </Document>
