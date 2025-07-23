@@ -7,7 +7,7 @@ const menuItems = [
   { label: "Ventas", icon: "🛒", color: "bg-blue-100", route: "/pos" },
   { label: "Items", icon: "📦", color: "bg-green-100", route: "/items" },
   { label: "Terceros", icon: "👥", color: "bg-blue-100", route: "/terceros" },
-  { label: "Reporte", icon: "📊", color: "bg-red-100", route: "/reporte" }
+  // { label: "Reporte", icon: "📊", color: "bg-red-100", route: "/reporte" }
 ];
 
 const filtros = [

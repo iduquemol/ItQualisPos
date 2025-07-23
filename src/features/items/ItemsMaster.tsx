@@ -22,6 +22,8 @@ import { ITipoProducto } from "@/types/ITipoProducto";
 import { IPrecioProducto } from "@/types/IPrecioProducto";
 import { IListaPrecio } from "@/types/IListaPrecio";
 import { ListaPrecioService } from "@/services/ListaPrecioService";
+import { ITerceroDefault } from "@/types/ITerceroDefault";
+import { VentaService } from "@/services/VentaService";
 
 export default function ItemsMaster() {
     const [search, setSearch] = useState("");
@@ -59,6 +61,7 @@ export default function ItemsMaster() {
     const [listaPrecios, setListaPrecios] = useState<IListaPrecio[]>([]);
     const [isLoadingListaPrecios, setIsLoadingListaPrecios] = useState(true);
     const [listaPreciosError, setListaPreciosError] = useState<string | null>(null);
+    
     // Estados para edición inline de tributos
     const [editIdx, setEditIdx] = useState<number | null>(null);
     const [editImpuesto, setEditImpuesto] = useState<ITributoProducto>({
@@ -425,7 +428,7 @@ export default function ItemsMaster() {
         } finally {
             setIsLoadingListaPrecios(false);
         }
-    };
+    };           
 
     // Cargar data al iniciar el componente
     useEffect(() => {
@@ -435,6 +438,7 @@ export default function ItemsMaster() {
         fetchTributos();
         fetchTipoProducto();
         fetchListasPrecios();
+        
     }, []);
 
     return (
