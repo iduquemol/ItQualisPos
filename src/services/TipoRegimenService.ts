@@ -1,11 +1,11 @@
-    import { API_CONFIG } from "@/config/api.config";
-import { IMunicipiosPorDepartamento } from "@/types/IMunicipio";
+import { API_CONFIG } from "@/config/api.config";
+import { ITipoRegimen } from "@/types/ITipoRegimen";
 
-export const MunicipioService = {
-    async getAll(): Promise<IMunicipiosPorDepartamento[]> {
+export const TipoRegimenService = {
+    async getAll(): Promise<ITipoRegimen[]> {
         try {
             const response = await fetch(
-                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.MUNICIPIOS),
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.TIPOS_REGIMEN),
                 { 
                     headers: API_CONFIG.OPTIONS.headers,
                     mode: 'cors',
@@ -13,12 +13,12 @@ export const MunicipioService = {
                 }
             );
             if (!response.ok) {
-                throw new Error('Error al cargar municipios');
+                throw new Error('Error al cargar tipos de regimen');
             }
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error('Error en MunicipioService.getAll:', error);
+            console.error('Error en TipoRegimenService.getAll:', error);
             throw error;
         }
     }

@@ -1,8 +1,12 @@
-export interface IMunicipio {
-    idMunicipio: number;
+export interface IMunicipiosPorDepartamento {
+    idDepartamento: number;
     codigoDepartamento: string;
     nombreDepartamento: string;
-    codigoMunicipio: string;
-    nombreMunicipio: string;
+    municipios: {
+        idMunicipio: number;
+        codigoMunicipio: string;
+        nombreMunicipio: string;
+        idMunicipioFe: number;
+    }[];
 }
     

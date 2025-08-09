@@ -11,8 +11,17 @@ export interface ITercero {
     razonSocial: string | null;
     telefonoTercero: number | null;
     direccionTercero: string | null;
+    idDepartamento: number;
+    nombreDepartamento: string | null;
     idMunicipio: number;
     nombreMunicipio: string | null;
-    emailTercero: string | null;    
-    responsabilidadesTerceros: IResponsabilidadTercero[]; // Array of IResponsabilidadTercero
+    emailTercero: string | null;   
+    terceroActivo: boolean;
+    terceroCliente: boolean;
+    terceroProveedor: boolean;
+    terceroEmpleado: boolean;
+    terceroGeneral: boolean;
+    idTipoRegimen: number;
+    idListaPreciosTercero: number;
+    responsabilidadesTerceros: IResponsabilidadTercero[];
 }

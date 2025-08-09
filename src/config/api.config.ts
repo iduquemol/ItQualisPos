@@ -19,10 +19,12 @@ export const API_CONFIG = {
         VENTA: '/ventas',
         OBTENER_VENTA: '/obtener-venta',
         TIPOS_PRODUCTO: '/tiposproducto',
-        LISTAS_PRECIOS: '/listasprecio',
+        LISTAS_PRECIOS: '/listasprecios',
         TERCERO_DEFAULT: '/terceroVentaDefault',
         PRODUCTS_VENTA_TERCERO: '/productos-venta-tercero',
         PRINT_VENTA: '/print-venta',
+        DEPARTAMENTOS: '/departamentos',
+        TIPOS_REGIMEN: '/tiposregimen',
     },
     getUrl: (endpoint: string) => {
         const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);

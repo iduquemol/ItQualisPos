@@ -7,6 +7,7 @@ export interface IVenta {
     idTipoDocumento: number;
     codigoDocumento: string;
     nombreDocumento: string | null;
+    idMetodoDian: number | null;
     idFormaPago: number | null;
     numeroVenta: number | null;
     prefijoVenta: string | null;

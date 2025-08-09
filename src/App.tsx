@@ -18,7 +18,7 @@ function App() {
         const navigate = useNavigate();
 
         const handleLogin = (user: { usuario: string; password: string }) => {
-            if (user.usuario === "administrador" && user.password === "123456") {
+            if (user.usuario === "administrador" && user.password === "astil2025") {
                 setIsAuthenticated(true);
                 navigate("/main-menu");
                 return true;
@@ -52,8 +52,8 @@ function App() {
                 <Route
                     path="/pos"
                     element={
-                        // isAuthenticated ? <POSPage /> : <Navigate to="/login" />
-                        <POSPage />
+                        isAuthenticated ? <POSPage /> : <Navigate to="/login" />
+                        // <POSPage />
                     }
                 />
                 <Route
