@@ -12,20 +12,35 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, Eye, Printer, X } from "lucide-react";
 import FacturaElectronica from './FacturaReport'; // Tu componente existente
+import FacturaReportTira from './FacturaReportTira';
 
 interface FacturaModalProps {
   facturaData?: any; // Reemplaza con el tipo específico de tu factura
   triggerText?: string;
   triggerVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  idMetodoDian?: number;
 }
 
-const FacturaModal: React.FC<FacturaModalProps> = ({ 
-  facturaData, 
+const FacturaModal: React.FC<FacturaModalProps> = ({
+  facturaData,
   triggerText = "Ver Factura",
-  triggerVariant = "default" 
+  triggerVariant = "default",
+  idMetodoDian = 1
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
+  // Función para obtener el componente PDF correcto según idMetodoDian
+  const getPDFComponent = () => {
+    switch (idMetodoDian) {
+      case 1:
+        return <FacturaElectronica facturaData={facturaData} />;
+      case 2:
+        return <FacturaReportTira facturaData={facturaData} />;
+      default:
+        return <FacturaElectronica facturaData={facturaData} />;
+    }
+  };
+
   // Generar nombre del archivo basado en los datos de la factura
   const getFileName = () => {
     if (facturaData?.numeroVenta) {
@@ -42,7 +57,7 @@ const FacturaModal: React.FC<FacturaModalProps> = ({
           {triggerText}
         </Button>
       </DialogTrigger>
-      
+
       <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
@@ -53,15 +68,15 @@ const FacturaModal: React.FC<FacturaModalProps> = ({
                   {facturaData.numeroVenta}
                 </Badge>
               )}
-              
+
               {/* Botón de descarga */}
               <PDFDownloadLink
                 document={<FacturaElectronica facturaData={facturaData} />}
                 fileName={getFileName()}
               >
                 {({ blob, url, loading, error }) => (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     disabled={loading}
                     className="flex items-center gap-2"
@@ -73,30 +88,30 @@ const FacturaModal: React.FC<FacturaModalProps> = ({
               </PDFDownloadLink>
             </div>
           </DialogTitle>
-          
+
           <DialogDescription>
             {facturaData?.clienteRazonSocial
-              ? `Cliente: ${facturaData.clienteRazonSocial}` 
+              ? `Cliente: ${facturaData.clienteRazonSocial}`
               : 'Vista previa de la factura electrónica'
             }
-            {facturaData?.fechaHoraAutorizacion && 
+            {facturaData?.fechaHoraAutorizacion &&
               ` - Fecha: ${facturaData.fechaHoraAutorizacion}`
             }
           </DialogDescription>
         </DialogHeader>
-        
+
         {/* Visor del PDF */}
         <div className="flex-1 border rounded-lg overflow-hidden bg-gray-50">
-          <PDFViewer 
-            width="100%" 
+          <PDFViewer
+            width="100%"
             height="100%"
             showToolbar={true}
             className="border-0"
           >
-            <FacturaElectronica facturaData={facturaData} />
+            {getPDFComponent()}
           </PDFViewer>
         </div>
-        
+
         {/* Footer con información adicional */}
         <div className="flex justify-between items-center pt-4 border-t text-sm text-gray-600">
           <div className="flex items-center gap-4">
@@ -108,12 +123,12 @@ const FacturaModal: React.FC<FacturaModalProps> = ({
                 }).format(facturaData.totalVenta)}
               </span>
             )}
-            
+
             {facturaData?.items?.length && (
               <span>Items: {facturaData.items.length}</span>
             )}
           </div>
-          
+
           <div className="text-xs text-gray-500">
             {facturaData?.fechaHoraAutorizacion || 'Generado automáticamente'}
           </div>
@@ -149,22 +164,22 @@ const FacturaExample: React.FC = () => {
   return (
     <div className="p-8 space-y-4">
       <h1 className="text-2xl font-bold">Sistema de Facturación</h1>
-      
+
       <div className="flex gap-4">
         {/* Diferentes variantes del botón trigger */}
-        <FacturaModal 
+        <FacturaModal
           facturaData={facturaEjemplo}
           triggerText="Ver Factura Completa"
           triggerVariant="default"
         />
-        
-        <FacturaModal 
+
+        <FacturaModal
           facturaData={facturaEjemplo}
           triggerText="Vista Rápida"
           triggerVariant="outline"
         />
-        
-        <FacturaModal 
+
+        <FacturaModal
           facturaData={facturaEjemplo}
           triggerText="Previsualizar"
           triggerVariant="secondary"

@@ -1,4 +1,4 @@
-import FacturaReport from '@/features/reports/FacturaReport';
+import FacturaReportTira from '@/features/reports/FacturaReportTira';
 import { PDFViewer } from '@react-pdf/renderer';
 
 const sampleData = [
@@ -26,7 +26,7 @@ export default function FacturaReportPage() {
         style={{ height: '100%', width: '100%' }} 
         className="w-full h-full"
       >
-        <FacturaReport data={sampleData} />
+        <FacturaReportTira data={sampleData} />
       </PDFViewer>
     </div>
   );

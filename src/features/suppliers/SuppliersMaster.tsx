@@ -3,8 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Check, Pencil, Search, X, CircleX, Save, Trash } from "lucide-react";
+import { Check, Pencil, Search, X, CircleX, Save, Trash, Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Package } from "lucide-react";
 import { toast } from "sonner"
 import { ITercero } from "@/types/ITercero";
@@ -12,12 +13,19 @@ import { TerceroService } from "@/services/TerceroService";
 import { TipoDocumentoIdentidadService } from "@/services/TipoDocumentoIdentidadService";
 import { ITipoDocumentoIdentidad } from "@/types/ITipoDocumentoIdentidad";
 import { MunicipioService } from "@/services/MunicipioService";
-import { IMunicipio } from "@/types/IMunicipio";
+import { IMunicipiosPorDepartamento } from "@/types/IMunicipio";
 import { IResponsabilidadTercero } from "@/types/IResponsabilidadTercero";
 import { ResponsabilidadFiscalService } from "@/services/ResponsabilidadFiscalService";
 import { IResponsabilidadFiscal } from "@/types/IResponsabilidadFiscal";
+import { DepartamentoService } from "@/services/DepartamentoService";
+import { IDepartamento } from "@/types/IDepartamento";
+import { ITipoRegimen } from "@/types/ITipoRegimen";
+import { TipoRegimenService } from "@/services/TipoRegimenService";
+import { IListaPrecio } from "@/types/IListaPrecio";
+import { ListaPrecioService } from "@/services/ListaPrecioService";
 
 export default function SuppliersMaster() {
+    const navigate = useNavigate();
     const [search, setSearch] = useState("");
     // Estado para los campos iniciales del tercero
     const [tercero, setTercero] = useState<ITercero>({
@@ -32,8 +40,17 @@ export default function SuppliersMaster() {
         telefonoTercero: 0,
         direccionTercero: "",
         emailTercero: "",
+        idDepartamento: 0,
+        nombreDepartamento: null,
         idMunicipio: 0,
         nombreMunicipio: null,
+        terceroActivo: false,
+        terceroCliente: false,
+        terceroEmpleado: false,
+        terceroProveedor: false,
+        terceroGeneral: false,
+        idTipoRegimen: 0,
+        idListaPreciosTercero: 0,
         responsabilidadesTerceros: [],
     });
 
@@ -56,12 +73,21 @@ export default function SuppliersMaster() {
     const [tiposDocumentoIdentidad, setTiposDocumentoIdentidad] = useState<ITipoDocumentoIdentidad[]>([]);
     const [isLoadingTipos, setIsLoadingTipos] = useState(true);
     const [tipoError, setTipoError] = useState<string | null>(null);
-    const [municipios, setMunicipios] = useState<IMunicipio[]>([]);
+    const [municipiosPorDepartamento, setMunicipiosPorDepartamento] = useState<IMunicipiosPorDepartamento[]>([]);
     const [isLoadingMunicipios, setIsLoadingMunicipios] = useState(true);
     const [municipioError, setMunicipioError] = useState<string | null>(null);
+    const [departamentos, setDepartamentos] = useState<IDepartamento[]>([]);
+    const [isLoadingDepartamentos, setIsLoadingDepartamentos] = useState(true);
+    const [departamentoError, setDepartamentoError] = useState<string | null>(null);
     const [responsabilidadesFiscales, setResponsabilidadesFiscales] = useState<IResponsabilidadFiscal[]>([]);
     const [isLoadingResponsabilidadFiscales, setIsLoadingResponsabilidadFiscales] = useState(true);
     const [responsabilidadFiscalError, setResponsabilidadFiscalError] = useState<string | null>(null);
+    const [tiposRegimen, setTiposRegimen] = useState<ITipoRegimen[]>([]);
+    const [isLoadingTiposRegimen, setIsLoadingTiposRegimen] = useState(true);
+    const [tipoRegimenError, setTipoRegimenError] = useState<string | null>(null);
+    const [listaPrecios, setListaPrecios] = useState<IListaPrecio[]>([]);
+    const [isLoadingListaPrecios, setIsLoadingListaPrecios] = useState(true);
+    const [listaPreciosError, setListaPreciosError] = useState<string | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedTercero, setSelectedTercero] = useState<ITercero | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
@@ -84,6 +110,15 @@ export default function SuppliersMaster() {
             direccionTercero: terc.direccionTercero,
             idMunicipio: terc.idMunicipio,
             nombreMunicipio: terc.nombreMunicipio,
+            idDepartamento: terc.idDepartamento,
+            nombreDepartamento: terc.nombreDepartamento,
+            terceroActivo: terc.terceroActivo,
+            terceroCliente: terc.terceroCliente,
+            terceroProveedor: terc.terceroProveedor,
+            terceroEmpleado: terc.terceroEmpleado,
+            terceroGeneral: terc.terceroGeneral,
+            idTipoRegimen: terc.idTipoRegimen,
+            idListaPreciosTercero: terc.idListaPreciosTercero,           
             responsabilidadesTerceros: terc.responsabilidadesTerceros || [],
         });
         setOpenDialog(false);
@@ -126,8 +161,8 @@ export default function SuppliersMaster() {
                     position: "top-center",
                 });
             } else {
-                await TerceroService.create(tercero);
-                console.log("Tercero guardado:", tercero);
+                const result = await TerceroService.create(tercero);
+                console.log("Tercero guardado:", result);
                 toast.success("Tercero guardado correctamente", {
                     position: "top-center",
                 });
@@ -162,10 +197,35 @@ export default function SuppliersMaster() {
 
 
     // Filtrado simple por concepto o descripción de responsabilidades
-    const filteredResponsabilidades = (tercero.responsabilidadesTerceros || []).filter(
-        (item) =>
-            item.nombreResponsabilidadFiscal?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredResponsabilidades = (tercero.responsabilidadesTerceros || []);
+
+    const handleNew = async () => {
+        setTercero({
+            idTercero: null,
+            idTipoDocumentoId: 0,
+            nombreTipoDocumentoId: "",
+            digitoVerificacion: "",
+            numeroIdentificacion: "",
+            primerNombre: "",
+            primerApellido: "",
+            razonSocial: "",
+            telefonoTercero: null,
+            direccionTercero: "",
+            emailTercero: "",
+            idDepartamento: 0,
+            nombreDepartamento: null,
+            idMunicipio: 0,
+            nombreMunicipio: null,
+            terceroActivo: false,
+            terceroCliente: false,
+            terceroProveedor: false,
+            terceroEmpleado: false,
+            terceroGeneral: false,
+            idTipoRegimen: 0,
+            idListaPreciosTercero: 0,
+            responsabilidadesTerceros: [],
+        });
+    };
 
     const handleDeleteTercero = async () => {
         // Verificar que hay un tercero seleccionado para eliminar
@@ -189,24 +249,24 @@ export default function SuppliersMaster() {
             });
 
             // Limpiar el formulario después de eliminar
-            setProducto({
-                idProducto: null,
-                codigoProducto: "",
-                nombreProducto: "",
-                imagenProducto: "",
-                codigoBarras: "",
-                idCategoria: 0,
-                idUnidadMedida: 0,
-                precioUnitario: 0,
-                stockActualProducto: 0,
-                costoPromedioActualProducto: 0,
-                quantity: 0,
-                tributosProducto: [],
-            });
-            setSelectedProduct(null);
+            // setProducto({
+            //     idProducto: null,
+            //     codigoProducto: "",
+            //     nombreProducto: "",
+            //     imagenProducto: "",
+            //     codigoBarras: "",
+            //     idCategoria: 0,
+            //     idUnidadMedida: 0,
+            //     precioUnitario: 0,
+            //     stockActualProducto: 0,
+            //     costoPromedioActualProducto: 0,
+            //     quantity: 0,
+            //     tributosProducto: [],
+            // });
+            // setSelectedProduct(null);
 
-            // Recargar la lista de productos
-            fetchProducts();
+            // // Recargar la lista de productos
+            // fetchProducts();
         } catch (error) {
             console.error('Error al eliminar el producto:', error);
             toast.error("Error al eliminar el producto", {
@@ -258,19 +318,34 @@ export default function SuppliersMaster() {
             setMunicipioError(null);
             setIsLoadingMunicipios(true);
             const data = await MunicipioService.getAll();
-            setMunicipios([
-                { idMunicipio: 0, codigoMunicipio: "0", nombreMunicipio: "Seleccione un municipio", codigoDepartamento: "0", nombreDepartamento: "" },
+            setMunicipiosPorDepartamento(data);
+        } catch (error) {
+            console.error('Error:', error);
+            setMunicipioError('Error al cargar los municipios');
+            setMunicipiosPorDepartamento([]);
+        } finally {
+            setIsLoadingMunicipios(false);
+        }
+    };
+
+    const fetchDepartamentos = async () => {
+        try {
+            setDepartamentoError(null);
+            setIsLoadingDepartamentos(true);
+            const data = await DepartamentoService.getAll();
+            setDepartamentos([
+                { idDepartamento: 0, codigoDepartamento: "0", nombreDepartamento: "Seleccione un departamento" },
                 ...data
             ]);
         } catch (error) {
             console.error('Error:', error);
-            setMunicipioError('Error al cargar los municipios');
-            // Municipios por defecto en caso de error
-            setMunicipios([
-                { idMunicipio: 0, codigoMunicipio: "0", nombreMunicipio: "Seleccione un municipio", codigoDepartamento: "0", nombreDepartamento: "" }
+            setDepartamentoError('Error al cargar los departamentos');
+            // Departamentos por defecto en caso de error
+            setDepartamentos([
+                { idDepartamento: 0, codigoDepartamento: "0", nombreDepartamento: "Seleccione un departamento" }
             ]);
         } finally {
-            setIsLoadingMunicipios(false);
+            setIsLoadingDepartamentos(false);
         }
     };
 
@@ -295,11 +370,56 @@ export default function SuppliersMaster() {
         }
     };
 
+    const fetchTiposRegimen = async () => {
+        try {
+            setTipoRegimenError(null);
+            setIsLoadingTiposRegimen(true);
+            const data = await TipoRegimenService.getAll();
+            setTiposRegimen([
+                { idTipoRegimen: 0, codigoTipoRegimen: "0", nombreTipoRegimen: "Seleccione un tipo de regimen", idTipoRegimenFe: null },
+                ...data
+            ]);
+        } catch (error) {
+            console.error('Error:', error);
+            setTipoRegimenError('Error al cargar los tipos de regimen');
+            // Tipos de regimen por defecto en caso de error
+            setTiposRegimen([
+                { idTipoRegimen: 0, codigoTipoRegimen: "0", nombreTipoRegimen: "Seleccione un tipo de regimen", idTipoRegimenFe: null }
+            ]);
+        } finally {
+            setIsLoadingTiposRegimen(false);
+        }
+    };
+
+    const fetchListaPrecios = async () => {
+        try {
+            setListaPreciosError(null);
+            setIsLoadingListaPrecios(true);
+            const data = await ListaPrecioService.getAll();
+            setListaPrecios([
+                { idListaPrecio: 0, codigoListaPrecio: "0", nombreListaPrecio: "Seleccione una lista de precios" },
+                ...data
+            ]);
+        } catch (error) {
+            console.error('Error:', error);
+            setListaPreciosError('Error al cargar las listas de precios');
+            // Listas de precios por defecto en caso de error
+            setListaPrecios([
+                { idListaPrecio: 0, codigoListaPrecio: "0", nombreListaPrecio: "Seleccione una lista de precios" }
+            ]);
+        } finally {
+            setIsLoadingListaPrecios(false);
+        }
+    };
+
     // Cargar data al iniciar el componente
     useEffect(() => {
         fetchTipoDocumentoIdentidad();
+        fetchDepartamentos();
         fetchMunicipios();
         fetchResponsabilidadesFiscales();
+        fetchTiposRegimen();
+        fetchListaPrecios();
         fetchSuppliers();
     }, []);
 
@@ -322,6 +442,17 @@ export default function SuppliersMaster() {
                     <p className="text-muted-foreground text-sm">Consulta y gestión de terceros</p>
                 </div>
                 <div className="flex gap-2">
+                    <Button
+                        variant="default"
+                        size="icon"
+                        title="Nuevo tercero"
+                        onClick={() => handleNew()}
+                        className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                        <Plus className="w-5 h-5" />
+                    </Button>
+
+
                     {/* Dialog de búsqueda */}
                     <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                         <DialogTrigger asChild>
@@ -382,13 +513,30 @@ export default function SuppliersMaster() {
                             </div>
                         </DialogContent>
                     </Dialog>
-                    <Button variant="default" onClick={handleSaveTercero}>
+                    <Button
+                        variant="default"
+                        title="Guardar tercero"
+                        onClick={handleSaveTercero}>
                         <Save className="w-4 h-4 mr-2" />
                         Guardar
                     </Button>
-                    <Button variant="destructive" onClick={handleDeleteTercero}>
+                    <Button
+                        variant="default"
+                        title="Eliminar tercero"
+                        onClick={handleDeleteTercero}>
                         <Trash className="w-4 h-4 mr-2" />
                         Eliminar
+                    </Button>
+                    <Button
+                        variant="default"
+                        size="icon"
+                        title="Salir"
+                        onClick={() => {
+                            navigate('/main-menu');
+                        }}
+                        className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                        <X className="w-5 h-5" />
                     </Button>
                 </div>
             </div>
@@ -414,29 +562,12 @@ export default function SuppliersMaster() {
                                 </option>
                             ))}
                         </select>
-                        {/* {formError && (!tercero.idTipoDocumentoId || tercero.idTipoDocumentoId === 0) && (
+                        {formError && (!tercero.idTipoDocumentoId || tercero.idTipoDocumentoId === 0) && (
                             <span className="text-xs text-red-500">El tipo de documento es obligatorio.</span>
-                        )} */}
+                        )}
                         {tipoError && (
                             <span className="text-xs text-red-500">{tipoError}</span>
                         )}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Digito de Verificación</label>
-                        <Input
-                            value={tercero.digitoVerificacion ?? ""}
-                            onChange={e => setTercero({ ...tercero, digitoVerificacion: e.target.value })}
-                            placeholder="Dígito de verificación"
-                            required
-                            className={
-                                !tercero.digitoVerificacion?.trim() && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
-                        />
-                        {/* {formError && !tercero.digitoVerificacion?.trim() && (
-                            <span className="text-xs text-red-500">El dígito de verificación es obligatorio.</span>
-                        )} */}
                     </div>
                     <div>
                         <label className="block text-xs text-muted-foreground mb-1">Número de Identificación</label>
@@ -456,127 +587,289 @@ export default function SuppliersMaster() {
                         )}
                     </div>
                     <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Primer Nombre</label>
+                        <label className="block text-xs text-muted-foreground mb-1">Digito de Verificación</label>
                         <Input
-                            value={tercero.primerNombre ?? ""}
-                            onChange={e => setTercero({ ...tercero, primerNombre: e.target.value })}
-                            placeholder="Primer nombre"
-                            className={
-                                !tercero.primerNombre?.trim() && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
+                            value={tercero.digitoVerificacion ?? ""}
+                            onChange={e => setTercero({ ...tercero, digitoVerificacion: e.target.value })}
+                            placeholder="DV"
+                            readOnly
+                            className={`w-20 ${!tercero.digitoVerificacion?.trim() && formError
+                                ? "border border-red-500"
+                                : ""
+                                }`}
                         />
-                        {/* {formError && (!tercero.primerNombre?.trim()) && (
+                    </div>
+                    <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Primer Nombre</label>
+                            <Input
+                                value={tercero.primerNombre ?? ""}
+                                onChange={e => setTercero({ ...tercero, primerNombre: e.target.value })}
+                                placeholder="Primer nombre"
+                                className={
+                                    !tercero.primerNombre?.trim() && formError
+                                        ? "border border-red-500"
+                                        : ""
+                                }
+                            />
+                            {/* {formError && (!tercero.primerNombre?.trim()) && (
                             <span className="text-xs text-red-500">El primer nombre es obligatorio.</span>
                         )} */}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Primer Apellido</label>
-                        <Input
-                            value={tercero.primerApellido ?? ""}
-                            onChange={e => setTercero({ ...tercero, primerApellido: e.target.value })}
-                            placeholder="Primer apellido"
-                            className={
-                                !tercero.primerApellido?.trim() && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
-                        />
-                        {/* {formError && (!tercero.primerApellido?.trim()) && (
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Primer Apellido</label>
+                            <Input
+                                value={tercero.primerApellido ?? ""}
+                                onChange={e => setTercero({ ...tercero, primerApellido: e.target.value })}
+                                placeholder="Primer apellido"
+                                className={
+                                    !tercero.primerApellido?.trim() && formError
+                                        ? "border border-red-500"
+                                        : ""
+                                }
+                            />
+                            {/* {formError && (!tercero.primerApellido?.trim()) && (
                             <span className="text-xs text-red-500">El primer apellido es obligatorio.</span>
                         )} */}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Razón Social</label>
-                        <Input
-                            value={tercero.razonSocial ?? ""}
-                            onChange={e => setTercero({ ...tercero, razonSocial: e.target.value })}
-                            placeholder="Razón social"
-                            className={
-                                !tercero.razonSocial?.trim() && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
-                        />
-                        {/* {formError && (!tercero.razonSocial?.trim()) && (
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Razón Social</label>
+                            <Input
+                                value={tercero.razonSocial ?? ""}
+                                onChange={e => setTercero({ ...tercero, razonSocial: e.target.value })}
+                                placeholder="Razón social"
+                                className={
+                                    !tercero.razonSocial?.trim() && formError
+                                        ? "border border-red-500"
+                                        : ""
+                                }
+                            />
+                            {/* {formError && (!tercero.razonSocial?.trim()) && (
                             <span className="text-xs text-red-500">La razón social es obligatoria.</span>
                         )} */}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Dirección</label>
-                        <Input
-                            value={tercero.direccionTercero ?? ""}
-                            onChange={e => setTercero({ ...tercero, direccionTercero: e.target.value })}
-                            placeholder="Dirección"
-                            className={
-                                !tercero.direccionTercero?.trim() && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
-                        />
-                        {/* {formError && (!tercero.direccionTercero?.trim()) && (
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Dirección</label>
+                            <Input
+                                value={tercero.direccionTercero ?? ""}
+                                onChange={e => setTercero({ ...tercero, direccionTercero: e.target.value })}
+                                placeholder="Dirección"
+                                className={
+                                    !tercero.direccionTercero?.trim() && formError
+                                        ? "border border-red-500"
+                                        : ""
+                                }
+                            />
+                            {/* {formError && (!tercero.direccionTercero?.trim()) && (
                             <span className="text-xs text-red-500">La dirección es obligatoria.</span>
                         )} */}
+                        </div>
                     </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
-                        <Input
-                            type="number"
-                            value={tercero.telefonoTercero || ""}
-                            onChange={e => setTercero({ ...tercero, telefonoTercero: Number(e.target.value) })}
-                            placeholder="Teléfono"
-                            className={
-                                !tercero.telefonoTercero && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
-                        />
-                        {/* {formError && (!tercero.telefonoTercero) && (
-                            <span className="text-xs text-red-500">El teléfono es obligatorio.</span>
-                        )} */}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Municipio</label>
-                        <select
-                            className={
-                                (!tercero.idMunicipio || tercero.idMunicipio === 0) && formError
-                                    ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                    : "w-full rounded border px-3 py-2 text-sm bg-background"
-                            }
-                            value={tercero.idMunicipio}
-                            onChange={e => setTercero({ ...tercero, idMunicipio: Number(e.target.value) })}
-                            required
-                        >
-                            {municipios.map(cat => (
-                                <option key={cat.idMunicipio} value={cat.idMunicipio}>
-                                    {cat.nombreMunicipio}
-                                </option>
-                            ))}
-                        </select>
-                        {/* {formError && (!tercero.idMunicipio || tercero.idMunicipio === 0) && (
-                            <span className="text-xs text-red-500">El municipio es obligatorio.</span>
-                        )} */}
-                        {tipoError && (
-                            <span className="text-xs text-red-500">{tipoError}</span>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Email</label>
-                        <Input
-                            type="email"
-                            value={tercero.emailTercero ?? ""}
-                            onChange={e => setTercero({ ...tercero, emailTercero: e.target.value })}
-                            placeholder="Email"
-                            className={
-                                !tercero.emailTercero?.trim() && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
-                        />
-                        {/* {formError && (!tercero.emailTercero?.trim()) && (
+                    <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Departamento</label>
+                            <select
+                                className={
+                                    (!tercero.idDepartamento || tercero.idDepartamento === 0) && formError
+                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                }
+                                value={tercero.idDepartamento}
+                                onChange={e => {
+                                    const newDepartamentoId = Number(e.target.value);
+                                    setTercero({
+                                        ...tercero,
+                                        idDepartamento: newDepartamentoId,
+                                        idMunicipio: 0 // Resetear municipio cuando cambia el departamento
+                                    });
+                                }}
+                                required
+                            >
+                                {departamentos.map(cat => (
+                                    <option key={cat.idDepartamento} value={cat.idDepartamento}>
+                                        {cat.nombreDepartamento}
+                                    </option>
+                                ))}
+                            </select>
+                            {formError && (!tercero.idDepartamento || tercero.idDepartamento === 0) && (
+                                <span className="text-xs text-red-500">El departamento es obligatorio.</span>
+                            )}
+                            {tipoError && (
+                                <span className="text-xs text-red-500">{tipoError}</span>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Municipio</label>
+                            <select
+                                className={
+                                    (!tercero.idMunicipio || tercero.idMunicipio === 0) && formError
+                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                }
+                                value={tercero.idMunicipio}
+                                onChange={e => setTercero({ ...tercero, idMunicipio: Number(e.target.value) })}
+                                required
+                            >
+                                <option value={0}>Seleccione un municipio</option>
+                                {municipiosPorDepartamento
+                                    .find(dep => dep.idDepartamento === tercero.idDepartamento)
+                                    ?.municipios.map(mun => (
+                                        <option key={mun.idMunicipio} value={mun.idMunicipio}>
+                                            {mun.nombreMunicipio}
+                                        </option>
+                                    ))}
+                            </select>
+                            {formError && (!tercero.idMunicipio || tercero.idMunicipio === 0) && (
+                                <span className="text-xs text-red-500">El municipio es obligatorio.</span>
+                            )}
+                            {tipoError && (
+                                <span className="text-xs text-red-500">{tipoError}</span>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Email</label>
+                            <Input
+                                type="email"
+                                value={tercero.emailTercero ?? ""}
+                                onChange={e => setTercero({ ...tercero, emailTercero: e.target.value })}
+                                placeholder="Email"
+                                className={
+                                    !tercero.emailTercero?.trim() && formError
+                                        ? "border border-red-500"
+                                        : ""
+                                }
+                            />
+                            {/* {formError && (!tercero.emailTercero?.trim()) && (
                             <span className="text-xs text-red-500">El email es obligatorio.</span>
                         )} */}
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
+                            <Input
+                                type="number"
+                                value={tercero.telefonoTercero || ""}
+                                onChange={e => setTercero({ ...tercero, telefonoTercero: Number(e.target.value) })}
+                                placeholder="Teléfono"
+                                className={
+                                    !tercero.telefonoTercero && formError
+                                        ? "border border-red-500"
+                                        : ""
+                                }
+                            />
+                            {/* {formError && (!tercero.telefonoTercero) && (
+                            <span className="text-xs text-red-500">El teléfono es obligatorio.</span>
+                        )} */}
+                        </div>
+                    </div>
+                    <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Estado</label>
+                            <div className="flex items-center space-x-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={tercero.terceroActivo || false}
+                                    onChange={e => setTercero({ ...tercero, terceroActivo: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {tercero.terceroActivo ? "Tercero activo" : "Tercero inactivo"}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Es Cliente?</label>
+                            <div className="flex items-center space-x-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={tercero.terceroCliente || false}
+                                    onChange={e => setTercero({ ...tercero, terceroCliente: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {tercero.terceroCliente ? "Si" : "No"}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Es Proveedor?</label>
+                            <div className="flex items-center space-x-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={tercero.terceroProveedor || false}
+                                    onChange={e => setTercero({ ...tercero, terceroProveedor: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {tercero.terceroProveedor ? "Si" : "No"}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Es General?</label>
+                            <div className="flex items-center space-x-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={tercero.terceroGeneral || false}
+                                    onChange={e => setTercero({ ...tercero, terceroGeneral: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {tercero.terceroGeneral ? "Si" : "No"}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Tipo Régimen</label>
+                            <select
+                                className={
+                                    (!tercero.idTipoRegimen || tercero.idTipoRegimen === 0) && formError
+                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                }
+                                value={tercero.idTipoRegimen}
+                                onChange={e => setTercero({ ...tercero, idTipoRegimen: Number(e.target.value) })}
+                                required
+                            >
+                                {tiposRegimen.map(cat => (
+                                    <option key={cat.idTipoRegimen} value={cat.idTipoRegimen}>
+                                        {cat.nombreTipoRegimen}
+                                    </option>
+                                ))}
+                            </select>
+                            {formError && (!tercero.idTipoRegimen || tercero.idTipoRegimen === 0) && (
+                                <span className="text-xs text-red-500">El tipo de régimen es obligatorio.</span>
+                            )}
+                            {tipoError && (
+                                <span className="text-xs text-red-500">{tipoError}</span>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Lista de Precios</label>
+                            <select
+                                className={
+                                    (!tercero.idListaPreciosTercero || tercero.idListaPreciosTercero === 0) && formError
+                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                }
+                                value={tercero.idListaPreciosTercero}
+                                onChange={e => setTercero({ ...tercero, idListaPreciosTercero: Number(e.target.value) })}
+                                required
+                            >
+                                {listaPrecios.map(cat => (
+                                    <option key={cat.idListaPrecio} value={cat.idListaPrecio}>
+                                        {cat.nombreListaPrecio}
+                                    </option>
+                                ))}
+                            </select>
+                            {formError && (!tercero.idListaPreciosTercero || tercero.idListaPreciosTercero === 0) && (
+                                <span className="text-xs text-red-500">La lista de precios es obligatoria.</span>
+                            )}
+                            {tipoError && (
+                                <span className="text-xs text-red-500">{tipoError}</span>
+                            )}
+                        </div>
                     </div>
                 </div>
             </Card>

@@ -4,4 +4,7 @@ export interface ITipoDocumento {
     nombreDocumento: string;
     idTipoDocumentoE: number | null;
     idFormaPago: number | null;
+    nombreFormaPago: string;
+    idMetodoDian: number | null;
+    nombreMetodo: string;
 }

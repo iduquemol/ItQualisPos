@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,12 +35,13 @@ import { IVentaMedioPago } from '@/types/IVentaMedioPago';
 import FacturaModal from '../reports/FacturaModal';
 
 const RetailPOS = () => {
-    // const [cart, setCart] = useState<IProducto[]>([]);
+    const navigate = useNavigate();
     const [factura, setFactura] = useState<IVenta>({
         idVenta: 0,
-        idTipoDocumento: 1,
+        idTipoDocumento: 4,
         codigoDocumento: '',
         nombreDocumento: null,
+        idMetodoDian: 2,
         idFormaPago: 1,
         numeroVenta: 0,
         prefijoVenta: '',
@@ -74,7 +76,7 @@ const RetailPOS = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('0');
     const [showPayment, setShowPayment] = useState(false);
-    const [activePaymentMethod, setActivePaymentMethod] = useState('cash');
+    const [activePaymentMethod, setActivePaymentMethod] = useState('');
     const [customerDiscount, setCustomerDiscount] = useState('0');
     const [terceroInfo, setTerceroInfo] = useState<ITercero>({
         idTercero: 1,
@@ -90,6 +92,15 @@ const RetailPOS = () => {
         nombreTipoDocumentoId: 'CC',
         nombreMunicipio: 'Bogota',
         emailTercero: 'iduque2001@hotmail.com',
+        terceroActivo: true,
+        terceroCliente: true,
+        terceroEmpleado: true,
+        terceroProveedor: true,
+        terceroGeneral: true,
+        idTipoRegimen: 0,
+        idListaPreciosTercero: 0,
+        idDepartamento: 0,
+        nombreDepartamento: 'Bogota',
         responsabilidadesTerceros: [],
     });
     const [showCustomer, setShowCustomer] = useState(false);
@@ -125,7 +136,8 @@ const RetailPOS = () => {
     const [lastKeyTime, setLastKeyTime] = useState<number>(0);
     const [showFacturaModal, setShowFacturaModal] = useState(false);
     const [facturaModalData, setFacturaModalData] = useState<any>(null);
-    const [searchTercero, setSearchTercero] = useState("");    
+    const [searchTercero, setSearchTercero] = useState("");
+    const [vendedorSeleccionado, setVendedorSeleccionado] = useState(1);
 
     const BARCODE_DELAY = 50;
 
@@ -139,6 +151,12 @@ const RetailPOS = () => {
         { id: '7', name: 'Vales', icon: Zap, color: 'bg-purple-500' },
         { id: '8', name: 'Otro', icon: Zap, color: 'bg-purple-500' },
     ];
+
+    const [vendedores, setVendedores] = useState<any[]>([
+        { id: 1, nombre: "Administrador" },
+        { id: 2, nombre: "Vendedor 1" },
+        { id: 3, nombre: "Vendedor 2" },
+    ]);
 
     const fetchCategories = async () => {
         try {
@@ -290,6 +308,18 @@ const RetailPOS = () => {
         }
     };
 
+    const initializeComponent = async () => {
+        await Promise.all([
+            fetchCategories(),
+            fetchTipoDocumentoIdentidad(),
+            fetchTerceroDefault(),
+            fetchTiposDocumento(),
+            fetchDocumentoLista(),
+            fetchProducts(),
+            fetchTerceros()
+        ]);
+    };
+
     const playBeep = (success: boolean) => {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         const audioContext = new AudioContextClass();
@@ -307,13 +337,7 @@ const RetailPOS = () => {
     };
 
     useEffect(() => {
-        fetchCategories();
-        fetchTipoDocumentoIdentidad();
-        fetchTerceroDefault();
-        fetchTiposDocumento();
-        fetchDocumentoLista();
-        fetchProducts();
-        fetchTerceros();
+        initializeComponent();
     }, []);
 
     // Manejo de eventos del teclado para escaneo de código de barras
@@ -380,18 +404,21 @@ const RetailPOS = () => {
         setOpenDialogTercero(false);
     };
 
-    const handleNew = () => {
+    const handleNew = async () => {
+        await initializeComponent();
         setFactura({
             ...factura,
-            idVenta: null,
-            idTipoDocumento: 1,
+            idVenta: 0,
+            idTipoDocumento: 4,
             codigoDocumento: '',
             nombreDocumento: null,
-            numeroVenta: null,
+            idMetodoDian: 2,
+            idFormaPago: 1,
+            numeroVenta: 0,
             prefijoVenta: '',
             fechaVenta: '',
-            idPuntoVenta: null,
-            idUsuario: null,
+            idPuntoVenta: 1,
+            idUsuario: 1,
             totalRegistros: 0,
             cantidadProductos: 0,
             totalPrecio: 0,
@@ -400,22 +427,23 @@ const RetailPOS = () => {
             totalIva: 0,
             totalVenta: 0,
             terceroVenta: {
-                idTercero: null,
-                idTipoDocumentoId: 0,
+                idTercero: terceroDefault[0]?.idTercero || null,
+                idTipoDocumentoId: terceroDefault[0]?.idTipoDocumentoId || 0,
                 digitoVerificacion: null,
-                numeroIdentificacion: null,
-                primerNombre: null,
-                primerApellido: null,
-                razonSocial: null,
+                numeroIdentificacion: terceroDefault[0]?.numeroIdentificacion || null,
+                primerNombre: terceroDefault[0]?.primerNombre || null,
+                primerApellido: terceroDefault[0]?.primerApellido || null,
+                razonSocial: terceroDefault[0]?.razonSocial || null,
                 telefonoTercero: null,
                 direccionTercero: null,
                 idMunicipio: 0,
-                emailTercero: null,
+                emailTercero: terceroDefault[0]?.emailTercero || null,
                 idTipoPersona: null
             },
             detalleVenta: [],
             mediosPagoVenta: [],
         });
+        setActivePaymentMethod('');
     };
 
     // Manejo de eventos para buscar tercero por número de identificación
@@ -499,12 +527,49 @@ const RetailPOS = () => {
                 console.log("Factura guardada:", result);
                 toast.success(
                     result.message +
-                    "\nNúmero de factura: " + result.idFactura +
                     "\nNúmero Documento Dian: " + result.numeroDocumentoDian,
                     {
                         position: "top-center",
                     }
                 );
+                const data = await VentaService.getById(result.idFactura);
+                setSelectedFactura(data);
+                setFactura({
+                    ...factura,
+                    idVenta: data?.idVenta ?? null,
+                    idTipoDocumento: data?.idTipoDocumento ?? 0,
+                    codigoDocumento: data?.codigoDocumento ?? '',
+                    nombreDocumento: data?.nombreDocumento ?? null,
+                    numeroVenta: data?.numeroVenta ?? null,
+                    prefijoVenta: data?.prefijoVenta ?? '',
+                    fechaVenta: data?.fechaVenta ?? '',
+                    idPuntoVenta: data?.idPuntoVenta ?? null,
+                    idUsuario: data?.idUsuario ?? null,
+                    totalRegistros: data?.totalRegistros ?? 0,
+                    cantidadProductos: data?.cantidadProductos ?? 0,
+                    totalPrecio: data?.totalPrecio ?? 0,
+                    totalDescuento: data?.totalDescuento ?? 0,
+                    totalBaseIva: data?.totalBaseIva ?? 0,
+                    totalIva: data?.totalIva ?? 0,
+                    totalVenta: data?.totalVenta ?? 0,
+                    terceroVenta: data?.terceroVenta ?? {
+                        idTercero: null,
+                        idTipoDocumentoId: 0,
+                        digitoVerificacion: null,
+                        numeroIdentificacion: null,
+                        primerNombre: null,
+                        primerApellido: null,
+                        razonSocial: null,
+                        telefonoTercero: null,
+                        direccionTercero: null,
+                        idMunicipio: 0,
+                        emailTercero: null,
+                        idTipoPersona: null
+                    },
+                    detalleVenta: data?.detalleVenta ?? [],
+                    mediosPagoVenta: data?.mediosPagoVenta ?? [],
+
+                });
                 const dataPrint = await VentaService.printById(result.idFactura);
                 setFacturaModalData(dataPrint);
                 setShowFacturaModal(true);
@@ -556,18 +621,6 @@ const RetailPOS = () => {
     };
 
     const updateQuantity = (id: number, change: number) => {
-        // const product = products.find(p => p.idProducto === id);
-        // setCart(cart.map(item => {
-        //     if (item.idProducto === id) {
-        //         const newQuantity = item.quantity + change;
-        //         if (newQuantity <= 0) return null;
-        //         if (newQuantity > product.stock) {
-        //             return item;
-        //         }
-        //         return { ...item, quantity: newQuantity };
-        //     }
-        //     return item;
-        // }).filter(Boolean));
         setFactura({
             ...factura,
             detalleVenta: (factura.detalleVenta ?? []).map(item => {
@@ -656,7 +709,8 @@ const RetailPOS = () => {
                             <FacturaModal
                                 facturaData={facturaModalData}
                                 triggerText="Imprimir Factura"
-                                triggerVariant="destructive"
+                                triggerVariant="secondary"
+                                idMetodoDian={factura?.idMetodoDian || 0}
                             />
                         )}
                         <Button
@@ -729,9 +783,30 @@ const RetailPOS = () => {
                                 </div>
                             </DialogContent>
                         </Dialog>
+                        {/* Select de vendedor */}
+                        <div className="flex items-center space-x-2">
+                            <Label htmlFor="vendedor-select" className="text-sm font-medium whitespace-nowrap">
+                                Vendedor:
+                            </Label>
+                            <Select
+                                value={vendedorSeleccionado.toString()}
+                                onValueChange={(value) => setVendedorSeleccionado(parseInt(value))}
+                            >
+                                <SelectTrigger className="w-36" id="vendedor-select">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {vendedores.map(vendedor => (
+                                        <SelectItem key={vendedor.id} value={vendedor.id.toString()}>
+                                            {vendedor.nombre}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <Badge className="flex items-center gap-1 px-2 py-1 text-base bg-primary text-primary-foreground">
                             <User className="w-4 h-4 mr-1" />
-                            Usuario Actual : Administrador
+                            Administrador
                         </Badge>
                         <Clock className="h-5 w-5" />
                         <span>{new Date().toLocaleTimeString()}</span>
@@ -740,10 +815,7 @@ const RetailPOS = () => {
                             size="icon"
                             title="Salir"
                             onClick={() => {
-                                if (window.confirm('¿Estás seguro que deseas salir del sistema?')) {
-                                    console.log('Saliendo del sistema...');
-                                    // window.location.href = '/login'; // Ejemplo de redirección
-                                }
+                                navigate('/main-menu');
                             }}
                             className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
                         >
@@ -765,7 +837,16 @@ const RetailPOS = () => {
                                 <select
                                     className="rounded border px-3 py-2 text-sm bg-background w-48"
                                     value={factura.idTipoDocumento}
-                                    onChange={(e) => setFactura({ ...factura, idTipoDocumento: parseInt(e.target.value) })}
+                                    onChange={(e) => {
+                                        const selectedId = parseInt(e.target.value);
+                                        console.log(selectedId);
+                                        const selectedTipoDocumento = tiposDocumento.find(td => td.idTipoDocumento === selectedId);
+                                        setFactura({
+                                            ...factura,
+                                            idTipoDocumento: selectedId,
+                                            idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
+                                        });
+                                    }}
                                     required
                                 >
                                     {tiposDocumento.map(td => (
