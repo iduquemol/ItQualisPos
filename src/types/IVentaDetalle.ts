@@ -5,6 +5,8 @@ export interface IVentaDetalle {
     codigoProducto: string;
     nombreProducto: string;
     cantidadVenta: number;
+    cantidadNotaCredito: number;
+    indNotaCredito: boolean;
     precioUnitarioVenta: number;
     porcentajeIvaVenta: number;
     ivaVenta: number;

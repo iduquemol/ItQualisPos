@@ -118,7 +118,7 @@ export default function SuppliersMaster() {
             terceroEmpleado: terc.terceroEmpleado,
             terceroGeneral: terc.terceroGeneral,
             idTipoRegimen: terc.idTipoRegimen,
-            idListaPreciosTercero: terc.idListaPreciosTercero,           
+            idListaPreciosTercero: terc.idListaPreciosTercero,
             responsabilidadesTerceros: terc.responsabilidadesTerceros || [],
         });
         setOpenDialog(false);
@@ -237,39 +237,50 @@ export default function SuppliersMaster() {
         }
 
         // Confirmar la eliminación
-        if (!window.confirm(`¿Está seguro de que desea eliminar el tercero "${tercero.nombreTercero}"?`)) {
+        if (!window.confirm(`¿Está seguro que desea eliminar el tercero "${tercero.razonSocial}"?`)) {
             return;
         }
 
         try {
-            //await TerceroService.delete(tercero.idTercero);
+            await TerceroService.delete(tercero.idTercero);
             console.log("Tercero eliminado:", tercero.idTercero);
             toast.success("Tercero eliminado correctamente", {
                 position: "top-center",
             });
 
             // Limpiar el formulario después de eliminar
-            // setProducto({
-            //     idProducto: null,
-            //     codigoProducto: "",
-            //     nombreProducto: "",
-            //     imagenProducto: "",
-            //     codigoBarras: "",
-            //     idCategoria: 0,
-            //     idUnidadMedida: 0,
-            //     precioUnitario: 0,
-            //     stockActualProducto: 0,
-            //     costoPromedioActualProducto: 0,
-            //     quantity: 0,
-            //     tributosProducto: [],
-            // });
-            // setSelectedProduct(null);
+            setTercero({
+                idTercero: null,
+                idTipoDocumentoId: 0,
+                nombreTipoDocumentoId: "",
+                digitoVerificacion: "",
+                numeroIdentificacion: "",
+                primerNombre: "",
+                primerApellido: "",
+                razonSocial: "",
+                telefonoTercero: null,
+                direccionTercero: "",
+                emailTercero: "",
+                idDepartamento: 0,
+                nombreDepartamento: null,
+                idMunicipio: 0,
+                nombreMunicipio: null,
+                terceroActivo: false,
+                terceroCliente: false,
+                terceroProveedor: false,
+                terceroEmpleado: false,
+                terceroGeneral: false,
+                idTipoRegimen: 0,
+                idListaPreciosTercero: 0,
+                responsabilidadesTerceros: [],
+            });
+            setSelectedTercero(null);
 
-            // // Recargar la lista de productos
-            // fetchProducts();
+            // Recargar la lista de terceros
+            fetchSuppliers();
         } catch (error) {
-            console.error('Error al eliminar el producto:', error);
-            toast.error("Error al eliminar el producto", {
+            console.error('Error al eliminar el tercero:', error);
+            toast.error("Error al eliminar el tercero", {
                 position: "top-center",
             });
         }
@@ -898,7 +909,7 @@ export default function SuppliersMaster() {
                                                     const selectedResponsabilidad = responsabilidadesFiscales.find(t => String(t.idResponsabilidadFiscal) === selectedId);
                                                     setEditResponsabilidad({
                                                         ...editResponsabilidad,
-                                                        idResponsabilidadFiscal: selectedResponsabilidad ? Number(selectedResponsabilidad.codigoResponsabilidadFiscal) : 0,
+                                                        idResponsabilidadFiscal: selectedResponsabilidad ? selectedResponsabilidad.idResponsabilidadFiscal : 0,
                                                         nombreResponsabilidadFiscal: selectedResponsabilidad ? selectedResponsabilidad.nombreResponsabilidadFiscal : "",
                                                     });
                                                 }}

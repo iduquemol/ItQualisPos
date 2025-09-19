@@ -73,5 +73,32 @@ export const TerceroService = {
             console.error('Error en TerceroService.update:', error);
             throw error;
         }
-    }
+    },
+
+    async delete(idtercero: number): Promise<void> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.SUPPLIERS),
+                {
+                    method: "DELETE",
+                    headers: {
+                        ...API_CONFIG.OPTIONS.headers,
+                        "Content-Type": "application/json"
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ idtercero })
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al eliminar tercero');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error en TerceroService.delete:', error);
+            throw error;
+        }
+    },                        
+
 };

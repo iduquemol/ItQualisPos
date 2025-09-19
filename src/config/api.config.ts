@@ -20,11 +20,16 @@ export const API_CONFIG = {
         OBTENER_VENTA: '/obtener-venta',
         TIPOS_PRODUCTO: '/tiposproducto',
         LISTAS_PRECIOS: '/listasprecios',
-        TERCERO_DEFAULT: '/terceroVentaDefault',
+        PARAMETROS_VENTA_DEFAULT: '/parametrosVentaDefault',
         PRODUCTS_VENTA_TERCERO: '/productos-venta-tercero',
         PRINT_VENTA: '/print-venta',
         DEPARTAMENTOS: '/departamentos',
         TIPOS_REGIMEN: '/tiposregimen',
+        TIPOS_NOTAS_CREDITO: '/tiposDocumentoNotaCredito',
+        TIPOS_DOCUMENTO_VENTA: '/tiposDocumentoVenta',
+        COTIZACION: '/cotizacion',
+        CONCEPTOS_NOTA_CREDITO: '/conceptosnotacredito',
+        NOTA_CREDITO: '/notacredito',
     },
     getUrl: (endpoint: string) => {
         const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);

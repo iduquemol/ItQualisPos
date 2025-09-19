@@ -4,8 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Pencil, Search, X, CircleX, Trash, Save } from "lucide-react";
+import { Check, Pencil, Search, X, CircleX, Trash, Save, Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { IProducto } from '@/types/IProducto';
 import { ICategory } from '@/types/ICategoria';
 import { Package } from "lucide-react";
@@ -26,6 +27,7 @@ import { ITerceroDefault } from "@/types/ITerceroDefault";
 import { VentaService } from "@/services/VentaService";
 
 export default function ItemsMaster() {
+    const navigate = useNavigate();
     const [search, setSearch] = useState("");
     // Estado para los campos del producto
     const [producto, setProducto] = useState<IProducto>({
@@ -61,7 +63,7 @@ export default function ItemsMaster() {
     const [listaPrecios, setListaPrecios] = useState<IListaPrecio[]>([]);
     const [isLoadingListaPrecios, setIsLoadingListaPrecios] = useState(true);
     const [listaPreciosError, setListaPreciosError] = useState<string | null>(null);
-    
+
     // Estados para edición inline de tributos
     const [editIdx, setEditIdx] = useState<number | null>(null);
     const [editImpuesto, setEditImpuesto] = useState<ITributoProducto>({
@@ -115,8 +117,6 @@ export default function ItemsMaster() {
             idCategoria: prod.idCategoria,
             idUnidadMedida: prod.idUnidadMedida,
             precioUnitario: prod.precioUnitario,
-            stockActualProducto: prod.stockActualProducto,
-            costoPromedioActualProducto: prod.costoPromedioActualProducto,
             idTipoProducto: prod.idTipoProducto,
             productoActivo: prod.productoActivo,
             porcentajeDescuento: prod.porcentajeDescuento || 0,
@@ -124,6 +124,28 @@ export default function ItemsMaster() {
             preciosProducto: prod.preciosProducto || [],
         });
         setOpenDialog(false);
+    };
+
+    const handleNew = async () => {
+        setSelectedProduct(null);
+        setProducto({
+            idProducto: 0,
+            codigoProducto: "",
+            nombreProducto: "",
+            codigoBarras: "",
+            idCategoria: 0,
+            idUnidadMedida: 0,
+            precioUnitario: 0,
+            idTipoProducto: 0,
+            productoActivo: true,
+            porcentajeDescuento: 0,
+            imagenProducto: "",
+            precioPos: 0,
+            porcentajeIva: 0,
+            quantity: 0,
+            tributosProducto: [],
+            preciosProducto: [],
+        });
     };
     // Editar tributo
     const handleEdit = (idx: number) => {
@@ -298,7 +320,7 @@ export default function ItemsMaster() {
             idListaPrecio: 0,
             codigoListaPrecio: "",
             nombreListaPrecio: "",
-            precio: 0,            
+            precio: 0,
         });
         setAddPrecioMode(false);
     };
@@ -428,7 +450,7 @@ export default function ItemsMaster() {
         } finally {
             setIsLoadingListaPrecios(false);
         }
-    };           
+    };
 
     // Cargar data al iniciar el componente
     useEffect(() => {
@@ -438,7 +460,7 @@ export default function ItemsMaster() {
         fetchTributos();
         fetchTipoProducto();
         fetchListasPrecios();
-        
+
     }, []);
 
     return (
@@ -460,6 +482,15 @@ export default function ItemsMaster() {
                     <p className="text-muted-foreground text-sm">Consulta y gestión de productos</p>
                 </div>
                 <div className="flex gap-2">
+                    <Button
+                        variant="default"
+                        size="icon"
+                        title="Nuevo producto"
+                        onClick={() => handleNew()}
+                        className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                        <Plus className="w-5 h-5" />
+                    </Button>
                     {/* Dialog de búsqueda */}
                     <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                         <DialogTrigger asChild>
@@ -514,13 +545,30 @@ export default function ItemsMaster() {
                             </div>
                         </DialogContent>
                     </Dialog>
-                    <Button variant="default" onClick={handleSaveProduct}>
+                    <Button variant="default"
+                        title="Guardar producto"
+                        onClick={handleSaveProduct}>
                         <Save className="w-4 h-4 mr-2" />
                         Guardar
                     </Button>
-                    <Button variant="destructive" onClick={handleDeleteProduct}>
+                    <Button
+                        variant="default"
+                        title="Eliminar producto"
+                        onClick={handleDeleteProduct}
+                    >
                         <Trash className="w-4 h-4 mr-2" />
                         Eliminar
+                    </Button>
+                    <Button
+                        variant="default"
+                        size="icon"
+                        title="Salir"
+                        onClick={() => {
+                            navigate('/main-menu');
+                        }}
+                        className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                        <X className="w-5 h-5" />
                     </Button>
                 </div>
             </div>
@@ -544,10 +592,9 @@ export default function ItemsMaster() {
                                         codigoBarras: "",
                                         idCategoria: 0,
                                         idUnidadMedida: 0,
-                                        precioUnitario: 0,
-                                        stockActualProducto: 0,
-                                        costoPromedioActualProducto: 0,
+                                        precioUnitario: 0,                                     
                                         quantity: 0,
+                                        precioPos: 0,
                                         idTipoProducto: 0,
                                         productoActivo: false,
                                         porcentajeDescuento: 0,
@@ -1011,7 +1058,7 @@ export default function ItemsMaster() {
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
-                                                    
+
                                                 </td>
                                             </>
                                         )}
