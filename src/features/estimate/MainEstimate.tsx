@@ -33,21 +33,20 @@ import { toast } from "sonner";
 import { ITerceroDefault } from '@/types/ITerceroDefault';
 import { IVentaMedioPago } from '@/types/IVentaMedioPago';
 import FacturaModal from '../reports/FacturaModal';
+import { ICotizacion } from '@/types/ICotizacion';
 import { IParametrosVentaDefault } from '@/types/IParametrosVentaDefault';
+import { CotizacionService } from '@/services/CotizacionService';
 
-const RetailPOS = () => {
+const MainEstimate = () => {
     const navigate = useNavigate();
-    const [factura, setFactura] = useState<IVenta>({
-        idVenta: 0,
-        idTipoDocumento: 4,
+    const [cotizacion, setCotizacion] = useState<ICotizacion>({
+        idCotizacion: 0,
+        idTipoDocumento: 7,
         codigoDocumento: '',
         nombreDocumento: null,
-        idMetodoDian: 2,
-        idFormaPago: 1,
-        numeroVenta: 0,
-        prefijoVenta: '',
-        fechaVenta: '',
-        idPuntoVenta: 1,
+        numeroCotizacion: 0,
+        prefijoCotizacion: '',
+        fechaCotizacion: '',
         idUsuario: 1,
         totalRegistros: 0,
         cantidadProductos: 0,
@@ -55,8 +54,8 @@ const RetailPOS = () => {
         totalDescuento: 0,
         totalBaseIva: 0,
         totalIva: 0,
-        totalVenta: 0,
-        terceroVenta: {
+        totalCotizacion: 0,
+        terceroCotizacion: {
             idTercero: null,
             idTipoDocumentoId: 0,
             digitoVerificacion: null,
@@ -70,8 +69,8 @@ const RetailPOS = () => {
             emailTercero: null,
             idTipoPersona: null
         },
-        detalleVenta: [],
-        mediosPagoVenta: []
+        detalleCotizacion: []
+
     });
     const [selectedFactura, setSelectedFactura] = useState<IVenta | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -184,7 +183,7 @@ const RetailPOS = () => {
         try {
             setTipoDocumentoError(null);
             setIsLoadingTiposDocumento(true);
-            const data = await TipoDocumentoService.getTiposVenta();
+            const data = await TipoDocumentoService.getAll();
             setTiposDocumento([
                 ...data
             ]);
@@ -226,7 +225,7 @@ const RetailPOS = () => {
         try {
             setProductError(null);
             setIsLoadingProducts(true);
-            const data = await ProductoService.getProductosVentaByTercero(factura.terceroVenta?.numeroIdentificacion || "0");
+            const data = await ProductoService.getProductosVentaByTercero(cotizacion.terceroCotizacion?.numeroIdentificacion || "0");
             setProducts(data);
         } catch (error) {
             console.error('Error:', error);
@@ -269,11 +268,12 @@ const RetailPOS = () => {
             setParametrosVentaDefault(null);
             setIsLoadingTerceroDefault(true);
             const data = await VentaService.getParametrosVentaDefault();
+            //console.log('Terceros por defecto cargado:', data);
             setParametrosVentaDefault(data);
-            setFactura({
-                ...factura,
-                idTipoDocumento : data.documentoVenta[0].idTipoDocumento,
-                terceroVenta: {
+            setCotizacion({
+                ...cotizacion,
+                idTipoDocumento: data.documentoCotizacion[0].idTipoDocumento,
+                terceroCotizacion: {
                     idTercero: data.terceroVenta[0].idTercero,
                     idTipoDocumentoId: data.terceroVenta[0].idTipoDocumentoId,
                     numeroIdentificacion: data.terceroVenta[0].numeroIdentificacion,
@@ -290,7 +290,7 @@ const RetailPOS = () => {
             });
         } catch (error) {
             console.error('Error:', error);
-            setTerceroDefaultError('Error al cargar los parametros de venta por defecto');
+            setTerceroDefaultError('Error al cargar el tercero por defecto');
             setParametrosVentaDefault({
                 terceroVenta: [
                     {
@@ -450,18 +450,15 @@ const RetailPOS = () => {
 
     const handleNew = async () => {
         await initializeComponent();
-        setFactura({
-            ...factura,
-            idVenta: 0,
-            idTipoDocumento: 4,
+        setCotizacion({
+            ...cotizacion,
+            idCotizacion: 0,
+            idTipoDocumento: cotizacion.idTipoDocumento || 7,
             codigoDocumento: '',
             nombreDocumento: null,
-            idMetodoDian: 2,
-            idFormaPago: 1,
-            numeroVenta: 0,
-            prefijoVenta: '',
-            fechaVenta: '',
-            idPuntoVenta: 1,
+            numeroCotizacion: 0,
+            prefijoCotizacion: '',
+            fechaCotizacion: '',
             idUsuario: 1,
             totalRegistros: 0,
             cantidadProductos: 0,
@@ -469,23 +466,22 @@ const RetailPOS = () => {
             totalDescuento: 0,
             totalBaseIva: 0,
             totalIva: 0,
-            totalVenta: 0,
-            terceroVenta: {
-                idTercero: factura.terceroVenta?.idTercero || null,
-                idTipoDocumentoId: factura.terceroVenta?.idTipoDocumentoId || 0,
+            totalCotizacion: 0,
+            terceroCotizacion: {
+                idTercero: cotizacion.terceroCotizacion?.idTercero || null,
+                idTipoDocumentoId: cotizacion.terceroCotizacion?.idTipoDocumentoId || 0,
                 digitoVerificacion: null,
-                numeroIdentificacion: factura.terceroVenta?.numeroIdentificacion || null,
-                primerNombre: factura.terceroVenta?.primerNombre || null,
-                primerApellido: factura.terceroVenta?.primerApellido || null,
-                razonSocial: factura.terceroVenta?.razonSocial || null,
+                numeroIdentificacion: cotizacion.terceroCotizacion?.numeroIdentificacion || null,
+                primerNombre: cotizacion.terceroCotizacion?.primerNombre || null,
+                primerApellido: cotizacion.terceroCotizacion?.primerApellido || null,
+                razonSocial: cotizacion.terceroCotizacion?.razonSocial || null,
                 telefonoTercero: null,
                 direccionTercero: null,
                 idMunicipio: 0,
-                emailTercero: factura.terceroVenta?.emailTercero || null,
+                emailTercero: cotizacion.terceroCotizacion?.emailTercero || null,
                 idTipoPersona: null
             },
-            detalleVenta: [],
-            mediosPagoVenta: [],
+            detalleCotizacion: [],
         });
         setActivePaymentMethod('');
     };
@@ -553,111 +549,110 @@ const RetailPOS = () => {
         const todayLocal = new Date();
         const offsetMs = todayLocal.getTimezoneOffset() * 60 * 1000;
         const localISODate = new Date(todayLocal.getTime() - offsetMs).toISOString().split('T')[0];
-        const updatedFactura = {
-            ...factura,
-            fechaVenta: localISODate,
+        const updatedCotizacion = {
+            ...cotizacion,
+            fechaCotizacion: localISODate,
         };
         try {
-            if (updatedFactura.idVenta) {
-                // Actualizar factura existente
-                //await VentaService.update(factura);
-                console.log("Factura actualizada:", factura);
-                toast.success("Factura actualizada correctamente", {
+            if (updatedCotizacion.idCotizacion) {
+                // Actualizar cotización existente
+                //await VentaService.update(cotizacion);
+                console.log("Cotizacion actualizada:", cotizacion);
+                toast.success("Cotizacion actualizada correctamente", {
                     position: "top-center",
                 });
             } else {
-                console.log("Factura a guardar:", updatedFactura);
-                const result = await VentaService.create(updatedFactura);
-                console.log("Factura guardada:", result);
+                console.log("Cotizacion a guardar:", updatedCotizacion);
+                const result = await CotizacionService.create(updatedCotizacion);
+                console.log("Cotizacion guardada:", result);
                 toast.success(
-                    result.message +
-                    "\nNúmero Documento Dian: " + result.numeroDocumentoDian,
+                    result.message + " " + result.idCotizacion,
                     {
                         position: "top-center",
                     }
                 );
-                const data = await VentaService.getById(result.idFactura);
-                setSelectedFactura(data);
-                setFactura({
-                    ...factura,
-                    idVenta: data?.idVenta ?? null,
-                    idTipoDocumento: data?.idTipoDocumento ?? 0,
-                    codigoDocumento: data?.codigoDocumento ?? '',
-                    nombreDocumento: data?.nombreDocumento ?? null,
-                    numeroVenta: data?.numeroVenta ?? null,
-                    prefijoVenta: data?.prefijoVenta ?? '',
-                    fechaVenta: data?.fechaVenta ?? '',
-                    idPuntoVenta: data?.idPuntoVenta ?? null,
-                    idUsuario: data?.idUsuario ?? null,
-                    totalRegistros: data?.totalRegistros ?? 0,
-                    cantidadProductos: data?.cantidadProductos ?? 0,
-                    totalPrecio: data?.totalPrecio ?? 0,
-                    totalDescuento: data?.totalDescuento ?? 0,
-                    totalBaseIva: data?.totalBaseIva ?? 0,
-                    totalIva: data?.totalIva ?? 0,
-                    totalVenta: data?.totalVenta ?? 0,
-                    terceroVenta: data?.terceroVenta ?? {
-                        idTercero: null,
-                        idTipoDocumentoId: 0,
-                        digitoVerificacion: null,
-                        numeroIdentificacion: null,
-                        primerNombre: null,
-                        primerApellido: null,
-                        razonSocial: null,
-                        telefonoTercero: null,
-                        direccionTercero: null,
-                        idMunicipio: 0,
-                        emailTercero: null,
-                        idTipoPersona: null
-                    },
-                    detalleVenta: data?.detalleVenta ?? [],
-                    mediosPagoVenta: data?.mediosPagoVenta ?? [],
+                // const data = await VentaService.getById(result.idFactura);
+                // setSelectedFactura(data);
+                // setFactura({
+                //     ...factura,
+                //     idVenta: data?.idVenta ?? null,
+                //     idTipoDocumento: data?.idTipoDocumento ?? 0,
+                //     codigoDocumento: data?.codigoDocumento ?? '',
+                //     nombreDocumento: data?.nombreDocumento ?? null,
+                //     numeroVenta: data?.numeroVenta ?? null,
+                //     prefijoVenta: data?.prefijoVenta ?? '',
+                //     fechaVenta: data?.fechaVenta ?? '',
+                //     idPuntoVenta: data?.idPuntoVenta ?? null,
+                //     idUsuario: data?.idUsuario ?? null,
+                //     totalRegistros: data?.totalRegistros ?? 0,
+                //     cantidadProductos: data?.cantidadProductos ?? 0,
+                //     totalPrecio: data?.totalPrecio ?? 0,
+                //     totalDescuento: data?.totalDescuento ?? 0,
+                //     totalBaseIva: data?.totalBaseIva ?? 0,
+                //     totalIva: data?.totalIva ?? 0,
+                //     totalVenta: data?.totalVenta ?? 0,
+                //     terceroVenta: data?.terceroVenta ?? {
+                //         idTercero: null,
+                //         idTipoDocumentoId: 0,
+                //         digitoVerificacion: null,
+                //         numeroIdentificacion: null,
+                //         primerNombre: null,
+                //         primerApellido: null,
+                //         razonSocial: null,
+                //         telefonoTercero: null,
+                //         direccionTercero: null,
+                //         idMunicipio: 0,
+                //         emailTercero: null,
+                //         idTipoPersona: null
+                //     },
+                //     detalleVenta: data?.detalleVenta ?? [],
+                //     mediosPagoVenta: data?.mediosPagoVenta ?? [],
 
-                });
-                const dataPrint = await VentaService.printById(result.idFactura);
-                setFacturaModalData(dataPrint);
-                setShowFacturaModal(true);
+                // });
+                // const dataPrint = await VentaService.printById(result.idFactura);
+                // setFacturaModalData(dataPrint);
+                // setShowFacturaModal(true);
             }
             //await fetchProducts();
         } catch (error) {
-            console.error('Error al guardar la factura:', error);
+            console.error('Error al guardar la cotizacion:', error);
         }
     };
 
     // Funciones del carrito
     const addToCart = (product: IProducto) => {
 
-        const existingItem = factura.detalleVenta?.find(item => item.idProducto === product.idProducto);
+        const existingItem = cotizacion.detalleCotizacion?.find(item => item.idProducto === product.idProducto);
         if (existingItem) {
             // Si el producto ya está en el carrito, incrementa la cantidad
-            setFactura({
-                ...factura,
-                detalleVenta: (factura.detalleVenta ?? []).map(item =>
+            setCotizacion({
+                ...cotizacion,
+                detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(item =>
                     item.idProducto === product.idProducto
-                        ? { ...item, cantidadVenta: item.cantidadVenta + 1 }
+                        ? { ...item, cantidadCotizacion: item.cantidadCotizacion + 1 }
                         : item
                 )
             });
         } else {
-            setFactura({
-                ...factura,
-                detalleVenta: [
-                    ...(factura.detalleVenta || []),
+            setCotizacion({
+                ...cotizacion,
+                detalleCotizacion: [
+                    ...(cotizacion.detalleCotizacion || []),
                     {
-                        idDetalleVenta: 0, // Asignar un ID único si es necesario
-                        registroVenta: (factura.detalleVenta ? factura.detalleVenta.length : 0) + 1,
+                        idDetalleCotizacion: 0, // Asignar un ID único si es necesario
+                        registroCotizacion: (cotizacion.detalleCotizacion ? cotizacion.detalleCotizacion.length : 0) + 1,
                         idProducto: product.idProducto ?? 0,
                         codigoProducto: product.codigoProducto,
                         nombreProducto: product.nombreProducto,
-                        precioUnitarioVenta: product.precioUnitario,
-                        cantidadVenta: 1.0,
-                        descuentoVenta: 0, // Asignar descuento si es necesario
-                        ivaVenta: parseFloat((product.precioUnitario * ((product.porcentajeIva || 0) / 100)).toFixed(2)),
-                        totalVenta: 0,
-                        costoUnitarioVenta: 0,
-                        costoTotalVenta: 0, // Asignar costo si es necesario
-                        porcentajeIvaVenta: product.porcentajeIva || 0,
-                        porcentajeDescuentoVenta: 0
+                        precioUnitarioCotizacion: product.precioUnitario,
+                        cantidadCotizacion: 1.0,
+                        descuentoCotizacion: 0, // Asignar descuento si es necesario
+                        ivaCotizacion: parseFloat((product.precioUnitario * ((product.porcentajeIva || 0) / 100)).toFixed(2)),
+                        totalCotizacion: 0,
+                        costoUnitarioCotizacion: 0,
+                        costoTotalCotizacion: 0, // Asignar costo si es necesario
+                        porcentajeIvaCotizacion: product.porcentajeIva || 0,
+                        porcentajeDescuentoCotizacion: 0
                     }
                 ]
             });
@@ -665,19 +660,19 @@ const RetailPOS = () => {
     };
 
     const updateQuantity = (id: number, change: number) => {
-        setFactura({
-            ...factura,
-            detalleVenta: (factura.detalleVenta ?? []).map(item => {
+        setCotizacion({
+            ...cotizacion,
+            detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(item => {
                 if (item.idProducto === id) {
-                    const newQuantity = item.cantidadVenta + change;
+                    const newQuantity = item.cantidadCotizacion + change;
                     return {
                         ...item,
-                        cantidadVenta: newQuantity,
-                        ivaVenta: parseFloat(
-                            ((item.precioUnitarioVenta * newQuantity - item.descuentoVenta) * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2)
+                        cantidadCotizacion: newQuantity,
+                        ivaCotizacion: parseFloat(
+                            ((item.precioUnitarioCotizacion * newQuantity - item.descuentoCotizacion) * ((item.porcentajeIvaCotizacion || 0) / 100)).toFixed(2)
                         ),
-                        descuentoVenta: parseFloat(
-                            ((item.precioUnitarioVenta * newQuantity) * ((item.porcentajeDescuentoVenta || 0) / 100)).toFixed(2)
+                        descuentoCotizacion: parseFloat(
+                            ((item.precioUnitarioCotizacion * newQuantity) * ((item.porcentajeDescuentoCotizacion || 0) / 100)).toFixed(2)
                         ),
                     };
                 }
@@ -689,9 +684,9 @@ const RetailPOS = () => {
 
     const removeFromCart = (id: number) => {
         // Elimina el producto del carrito
-        setFactura({
-            ...factura,
-            detalleVenta: factura.detalleVenta ? factura.detalleVenta.filter(item => item.idProducto !== id) : []
+        setCotizacion({
+            ...cotizacion,
+            detalleCotizacion: cotizacion.detalleCotizacion ? cotizacion.detalleCotizacion.filter(item => item.idProducto !== id) : []
         });
     };
 
@@ -714,12 +709,12 @@ const RetailPOS = () => {
     };
 
     // Cálculos
-    const subtotal = factura.detalleVenta?.reduce((sum, item) => sum + (item.precioUnitarioVenta * item.cantidadVenta), 0);
-    const discount = factura.detalleVenta?.reduce((descuento, item) => descuento + item.descuentoVenta, 0);
-    const tax = factura.detalleVenta?.reduce((iva, item) => iva + item.ivaVenta, 0);
+    const subtotal = cotizacion.detalleCotizacion?.reduce((sum, item) => sum + (item.precioUnitarioCotizacion * item.cantidadCotizacion), 0);
+    const discount = cotizacion.detalleCotizacion?.reduce((descuento, item) => descuento + item.descuentoCotizacion, 0);
+    const tax = cotizacion.detalleCotizacion?.reduce((iva, item) => iva + item.ivaCotizacion, 0);
     // const loyaltyDiscount = customerInfo.loyalty ? subtotal * 0.05 : 0; // 5% descuento por lealtad
     const total = subtotal - discount + tax;
-    const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + item.cantidadVenta, 0);
+    const totalItems = cotizacion.detalleCotizacion?.reduce((sum, item) => sum + item.cantidadCotizacion, 0);
     const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
 
     return (
@@ -738,10 +733,10 @@ const RetailPOS = () => {
                         </div>
                     </div>
 
-                    {/* Centro - Total de la factura */}
+                    {/* Centro - Total de la cotización */}
                     <div className="flex items-center space-x-4 mb-2">
                         <Badge className="flex items-center gap-2 px-4 py-2 text-lg bg-orange-500 text-white">
-                            <span className="font-medium">Factura</span>
+                            <span className="font-medium">Cotización</span>
                         </Badge>
                         <Badge className="flex items-center gap-2 px-4 py-2 text-lg bg-primary text-primary-foreground">
                             {/* <DollarSign className="w-5 h-5" /> */}
@@ -883,15 +878,16 @@ const RetailPOS = () => {
                                 <h2 className="text-sm font-normal">Tipo de documento</h2>
                                 <select
                                     className="rounded border px-3 py-2 text-sm bg-background w-48"
-                                    value={factura.idTipoDocumento}
+                                    value={cotizacion.idTipoDocumento}
                                     onChange={(e) => {
                                         const selectedId = parseInt(e.target.value);
                                         console.log(selectedId);
                                         const selectedTipoDocumento = tiposDocumento.find(td => td.idTipoDocumento === selectedId);
-                                        setFactura({
-                                            ...factura,
+                                        setCotizacion({
+                                            ...cotizacion,
                                             idTipoDocumento: selectedId,
-                                            idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
+                                            codigoDocumento: selectedTipoDocumento?.codigoDocumento || '',
+                                            nombreDocumento: selectedTipoDocumento?.nombreDocumento || null
                                         });
                                     }}
                                     required
@@ -906,16 +902,16 @@ const RetailPOS = () => {
                                 <input
                                     type="text"
                                     className="rounded border px-3 py-2 text-sm bg-background w-20"
-                                    value={factura.prefijoVenta}
-                                    onChange={(e) => setFactura({ ...factura, prefijoVenta: e.target.value })}
+                                    value={cotizacion.prefijoCotizacion}
+                                    onChange={(e) => setCotizacion({ ...cotizacion, prefijoCotizacion: e.target.value })}
                                     readOnly
                                 />
                                 <h2 className="text-sm font-normal">Número</h2>
                                 <input
                                     type="text"
                                     className="rounded border px-3 py-2 text-sm bg-background w-28"
-                                    value={factura.numeroVenta}
-                                    onChange={(e) => setFactura({ ...factura, numeroVenta: parseInt(e.target.value) })}
+                                    value={cotizacion.numeroCotizacion}
+                                    onChange={(e) => setCotizacion({ ...cotizacion, numeroCotizacion: parseInt(e.target.value) })}
                                     readOnly
                                 />
                                 <h2 className="text-sm font-normal">Fecha</h2>
@@ -923,18 +919,11 @@ const RetailPOS = () => {
                                     type="date"
                                     className="rounded border px-3 py-2 text-sm bg-background w-30"
                                     value={new Date().toISOString().split('T')[0]}
-                                    onChange={(e) => setFactura({ ...factura, fechaVenta: e.target.value })}
+                                    onChange={(e) => setCotizacion({ ...cotizacion, fechaCotizacion: e.target.value })}
                                     readOnly
                                 />
                             </div>
 
-                            {/* Indicador de Escaneo */}
-                            {/* {barcodeBuffer && (
-                                <div className="flex items-center space-x-2 bg-background/80 backdrop-blur-sm p-2 rounded-lg border shadow-lg">
-                                    <Scan className="h-4 w-4 animate-pulse text-primary" />
-                                    <span className="text-sm font-mono">{barcodeBuffer}</span>
-                                </div>
-                            )} */}
                             <Badge className="bg-primary text-primary-foreground">
                                 {totalItems}
                             </Badge>
@@ -949,8 +938,8 @@ const RetailPOS = () => {
                             <div className="grid grid-cols-5 gap-1">
                                 <select
                                     className="w-full rounded border px-2 py-2 text-sm bg-background w-42"
-                                    value={factura.terceroVenta?.idTipoDocumentoId}
-                                    onChange={(e) => setFactura({ ...factura, terceroVenta: { ...factura.terceroVenta, idTipoDocumentoId: parseInt(e.target.value) } })}
+                                    value={cotizacion.terceroCotizacion?.idTipoDocumentoId}
+                                    onChange={(e) => setCotizacion({ ...cotizacion, terceroCotizacion: { ...cotizacion.terceroCotizacion, idTipoDocumentoId: parseInt(e.target.value) } })}
                                     required
                                 >
                                     {tiposDocumentoIdentidad.map(cat => (
@@ -962,13 +951,13 @@ const RetailPOS = () => {
                                 <Input
                                     placeholder="Número de Identificación"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={factura.terceroVenta?.numeroIdentificacion || ''}
+                                    value={cotizacion.terceroCotizacion?.numeroIdentificacion || ''}
                                     onChange={(e) => {
                                         const value = e.target.value;
-                                        setFactura({
-                                            ...factura,
-                                            terceroVenta: {
-                                                ...factura.terceroVenta,
+                                        setCotizacion({
+                                            ...cotizacion,
+                                            terceroCotizacion: {
+                                                ...cotizacion.terceroCotizacion,
                                                 numeroIdentificacion: value
                                             }
                                         });
@@ -988,11 +977,11 @@ const RetailPOS = () => {
                                 <Input
                                     placeholder="Primer Nombre"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={factura.terceroVenta?.primerNombre || ''}
-                                    onChange={(e) => setFactura({
-                                        ...factura,
-                                        terceroVenta: {
-                                            ...factura.terceroVenta,
+                                    value={cotizacion.terceroCotizacion?.primerNombre || ''}
+                                    onChange={(e) => setCotizacion({
+                                        ...cotizacion,
+                                        terceroCotizacion: {
+                                            ...cotizacion.terceroCotizacion,
                                             primerNombre: e.target.value
                                         }
                                     })}
@@ -1000,11 +989,11 @@ const RetailPOS = () => {
                                 <Input
                                     placeholder="Primer Apellido"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={factura.terceroVenta?.primerApellido || ''}
-                                    onChange={(e) => setFactura({
-                                        ...factura,
-                                        terceroVenta: {
-                                            ...factura.terceroVenta,
+                                    value={cotizacion.terceroCotizacion?.primerApellido || ''}
+                                    onChange={(e) => setCotizacion({
+                                        ...cotizacion,
+                                        terceroCotizacion: {
+                                            ...cotizacion.terceroCotizacion,
                                             primerApellido: e.target.value
                                         }
                                     })}
@@ -1013,11 +1002,11 @@ const RetailPOS = () => {
                                     type="email"
                                     placeholder="Email"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={factura.terceroVenta.emailTercero || ''}
-                                    onChange={(e) => setFactura({
-                                        ...factura,
-                                        terceroVenta: {
-                                            ...factura.terceroVenta,
+                                    value={cotizacion.terceroCotizacion.emailTercero || ''}
+                                    onChange={(e) => setCotizacion({
+                                        ...cotizacion,
+                                        terceroCotizacion: {
+                                            ...cotizacion.terceroCotizacion,
                                             emailTercero: e.target.value
                                         }
                                     })}
@@ -1089,7 +1078,7 @@ const RetailPOS = () => {
 
                     {/* Items del Carrito */}
                     <div className="flex-1 overflow-y-auto p-4 min-h-[300px]">
-                        {factura.detalleVenta.length === 0 ? (
+                        {cotizacion.detalleCotizacion.length === 0 ? (
                             <div className="text-center py-12">
                                 <div className="text-6xl mb-4">🛒</div>
                                 <p className="text-muted-foreground font-medium">Carrito vacío</p>
@@ -1097,7 +1086,7 @@ const RetailPOS = () => {
                             </div>
                         ) : (
                             <div className="space-y-1.5">
-                                {(factura.detalleVenta ?? []).map(item => (
+                                {(cotizacion.detalleCotizacion ?? []).map(item => (
                                     <Card key={item.idProducto} className="p-1">
                                         <div className="flex items-center justify-between">
                                             {/* Información del producto */}
@@ -1105,7 +1094,7 @@ const RetailPOS = () => {
                                                 <h4 className="font-medium text-sm truncate">{item.nombreProducto}</h4>
                                                 <div className="flex items-center space-x-2 mt-1">
                                                     <Badge variant="outline" className="text-xs">{item.codigoProducto}</Badge>
-                                                    <span className="text-sm text-muted-foreground">${formatCurrency(item.precioUnitarioVenta)}</span>
+                                                    <span className="text-sm text-muted-foreground">${formatCurrency(item.precioUnitarioCotizacion)}</span>
                                                 </div>
                                             </div>
 
@@ -1118,17 +1107,17 @@ const RetailPOS = () => {
                                                         <input
                                                             type="number"
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.porcentajeDescuentoVenta || ''}
+                                                            value={item.porcentajeDescuentoCotizacion || ''}
                                                             onChange={(e) => {
-                                                                const valorDescuento = parseFloat(((item.precioUnitarioVenta * item.cantidadVenta) * ((parseFloat(e.target.value) || 0) / 100)).toFixed(2));
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                const valorDescuento = parseFloat(((item.precioUnitarioCotizacion * item.cantidadCotizacion) * ((parseFloat(e.target.value) || 0) / 100)).toFixed(2));
+                                                                setCotizacion({
+                                                                    ...cotizacion,
+                                                                    detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
                                                                                 ...detalleItem,
-                                                                                porcentajeDescuentoVenta: parseFloat(e.target.value) || 0,
-                                                                                descuentoVenta: valorDescuento
+                                                                                porcentajeDescuentoCotizacion: parseFloat(e.target.value) || 0,
+                                                                                descuentoCotizacion: valorDescuento
                                                                             }
                                                                             : detalleItem
                                                                     )
@@ -1144,13 +1133,13 @@ const RetailPOS = () => {
                                                         <input
                                                             type="number"
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.descuentoVenta || ''}
+                                                            value={item.descuentoCotizacion || ''}
                                                             onChange={(e) => {
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                setCotizacion({
+                                                                    ...cotizacion,
+                                                                    detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
-                                                                            ? { ...detalleItem, descuentoVenta: parseFloat(e.target.value) || 0 }
+                                                                            ? { ...detalleItem, descuentoCotizacion: parseFloat(e.target.value) || 0 }
                                                                             : detalleItem
                                                                     )
                                                                 });
@@ -1163,15 +1152,15 @@ const RetailPOS = () => {
                                                         <input
                                                             type="number"
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.porcentajeIvaVenta || ''}
+                                                            value={item.porcentajeIvaCotizacion || ''}
                                                             onChange={(e) => {
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: factura.detalleVenta.map(detalleItem =>
+                                                                setCotizacion({
+                                                                    ...cotizacion,
+                                                                    detalleCotizacion: cotizacion.detalleCotizacion.map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
-                                                                                ...detalleItem, porcentajeIvaVenta: parseFloat(e.target.value) || 0,
-                                                                                ivaVenta: (detalleItem.precioUnitarioVenta * detalleItem.cantidadVenta) * ((parseFloat(e.target.value) || 0) / 100)
+                                                                                ...detalleItem, porcentajeIvaCotizacion: parseFloat(e.target.value) || 0,
+                                                                                ivaCotizacion: (detalleItem.precioUnitarioCotizacion * detalleItem.cantidadCotizacion) * ((parseFloat(e.target.value) || 0) / 100)
                                                                             }
                                                                             : detalleItem
                                                                     )
@@ -1188,13 +1177,13 @@ const RetailPOS = () => {
                                                         <input
                                                             type="number"
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.ivaVenta || ''}
+                                                            value={item.ivaCotizacion || ''}
                                                             onChange={(e) => {
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: factura.detalleVenta.map(detalleItem =>
+                                                                setCotizacion({
+                                                                    ...cotizacion,
+                                                                    detalleCotizacion: cotizacion.detalleCotizacion.map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
-                                                                            ? { ...detalleItem, ivaVenta: parseFloat(e.target.value) || 0 }
+                                                                            ? { ...detalleItem, ivaCotizacion: parseFloat(e.target.value) || 0 }
                                                                             : detalleItem
                                                                     )
                                                                 });
@@ -1223,21 +1212,21 @@ const RetailPOS = () => {
                                                             </Button>
                                                             <Input
                                                                 type="number"
-                                                                value={item.cantidadVenta}
+                                                                value={item.cantidadCotizacion}
                                                                 onFocus={(e) => e.target.select()}
                                                                 onChange={(e) => {
                                                                     const value = e.target.value;
                                                                     const newQuantity = value === '' ? 0 : parseFloat(value);
                                                                     if (newQuantity >= 0) {
-                                                                        setFactura({
-                                                                            ...factura,
-                                                                            detalleVenta: factura.detalleVenta.map(detalleItem =>
+                                                                        setCotizacion({
+                                                                            ...cotizacion,
+                                                                            detalleCotizacion: cotizacion.detalleCotizacion.map(detalleItem =>
                                                                                 detalleItem.idProducto === item.idProducto
                                                                                     ? {
                                                                                         ...detalleItem,
-                                                                                        cantidadVenta: newQuantity,
-                                                                                        ivaVenta: parseFloat(((item.precioUnitarioVenta * newQuantity - item.descuentoVenta) * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2)),
-                                                                                        descuentoVenta: parseFloat(((item.precioUnitarioVenta * newQuantity) * ((item.porcentajeDescuentoVenta || 0) / 100)).toFixed(2)),
+                                                                                        cantidadCotizacion: newQuantity,
+                                                                                        ivaCotizacion: parseFloat(((item.precioUnitarioCotizacion * newQuantity - item.descuentoCotizacion) * ((item.porcentajeIvaCotizacion || 0) / 100)).toFixed(2)),
+                                                                                        descuentoCotizacion: parseFloat(((item.precioUnitarioCotizacion * newQuantity) * ((item.porcentajeDescuentoCotizacion || 0) / 100)).toFixed(2)),
                                                                                     }
                                                                                     : detalleItem
                                                                             )
@@ -1259,7 +1248,7 @@ const RetailPOS = () => {
                                                     <div className="flex flex-col">
                                                         <span className="text-xs font-bold mb-1 whitespace-nowrap text-center">Valor Total</span>
                                                         <span className="font-bold text-primary min-w-[80px] text-right h-8 flex items-center justify-end">
-                                                            ${formatCurrency((item.precioUnitarioVenta * item.cantidadVenta) - item.descuentoVenta + item.ivaVenta)}
+                                                            ${formatCurrency((item.precioUnitarioCotizacion * item.cantidadCotizacion) - item.descuentoCotizacion + item.ivaCotizacion)}
                                                         </span>
                                                     </div>
                                                     <div className="flex flex-col">
@@ -1283,7 +1272,7 @@ const RetailPOS = () => {
                     </div>
 
                     {/* Panel de Totales y Pago */}
-                    {factura.detalleVenta.length > 0 && (
+                    {cotizacion.detalleCotizacion.length > 0 && (
                         <div className="border-t flex flex-col h-[400px]" >
                             <div className="h-[100px] overflow-y-auto">
 
@@ -1310,12 +1299,12 @@ const RetailPOS = () => {
                             {/* Botón de Pago */}
                             <div className="h-[60px] p-4 border-t bg-background">
                                 <Button
-                                    onClick={() => setShowPayment(true)}
+                                    onClick={handleSaveVenta}
                                     className="w-full h-[40px] text-lg font-bold"
                                     size="lg"
                                 >
                                     <Check className="h-5 w-5 mr-2" />
-                                    Procesar Venta
+                                    Guardar cotización
                                 </Button>
                             </div>
                         </div>
@@ -1410,110 +1399,10 @@ const RetailPOS = () => {
                     </div>
                 </div>
 
-                {/* Modal de Pago */}
-                <Dialog open={showPayment} onOpenChange={setShowPayment}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader className="text-center">
-                            <DialogTitle className="text-xl mb-4">Seleccionar método de pago</DialogTitle>
-                        </DialogHeader>
-
-                        {/* Métodos de Pago */}
-                        <div className="mb-6">
-                            <Label className="mb-2 block text-sm font-medium">Método de pago</Label>
-                            <Select value={activePaymentMethod}
-                                onValueChange={(value) => {
-                                    setActivePaymentMethod(value);
-
-                                    // Crear un nuevo medio de pago
-                                    const nuevoMedioPago: IVentaMedioPago = {
-                                        idMedioPagoVenta: 0,
-                                        idMedioPago: parseInt(value),
-                                        valorMedioPago: total
-                                    };
-
-                                    setFactura(prev => ({
-                                        ...prev,
-                                        idFormaPago: nuevoMedioPago.idMedioPago,
-                                        mediosPagoVenta: [nuevoMedioPago], // reemplaza o haz append si es necesario
-                                    }));
-                                }}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Selecciona un método de pago" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {paymentMethods.map(method => (
-                                        <SelectItem key={method.id} value={method.id}>
-                                            {method.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Información del Cliente */}
-                        {factura.terceroVenta.primerApellido && (
-                            <Alert className="mb-6">
-                                <User className="h-4 w-4" />
-                                <AlertDescription className="flex flex-col space-y-1">
-                                    <span className="text-xs text-muted-foreground">Nombre Cliente</span>
-                                    <div className="flex items-center justify-between">
-                                        <span>{`${factura.terceroVenta.primerNombre} ${factura.terceroVenta.primerApellido}`}</span>
-                                        {/* {factura.terceroVenta.loyalty && (
-                                            <Badge variant="secondary" className="ml-2">
-                                                <Star className="h-3 w-3 mr-1 fill-current" />
-                                                VIP
-                                            </Badge>
-                                        )} */}
-                                    </div>
-                                </AlertDescription>
-                            </Alert>
-                        )}
-
-                        <Card className="p-4 mb-6">
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Total a Pagar</span>
-                                    <span className="text-2xl font-bold text-primary">${formatCurrency(total)}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Artículos</span>
-                                    <span className="font-medium">{totalItems}</span>
-                                </div>
-                                {/* {customerInfo.loyalty && pointsEarned > 0 && (
-                                    <div className="flex justify-between items-center text-amber-600">
-                                        <span>Puntos a Ganar</span>
-                                        <span className="font-medium">{pointsEarned} pts</span>
-                                    </div>
-                                )} */}
-                            </div>
-                        </Card>
-
-                        <DialogFooter className="flex space-x-2">
-                            <Button
-                                onClick={() => {
-                                    // Mostrar confirmación de pago
-                                    setShowPayment(false);
-                                    handleSaveVenta();
-                                    // Aquí podrías mostrar otro modal de confirmación
-                                }}
-                                className="flex-1"
-                            >
-                                Confirmar Pago
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowPayment(false)}
-
-                            >
-                                Cancelar
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </div>
 
         </div >
     );
 };
 
-export default RetailPOS;
+export default MainEstimate;

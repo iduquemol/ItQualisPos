@@ -1,4 +1,5 @@
 import { API_CONFIG } from "@/config/api.config";
+import { INotaCredito } from "@/types/INotaCredito";
 import { IParametrosVentaDefault } from "@/types/IParametrosVentaDefault";
 import { IPrintVenta } from "@/types/IPrintVenta";
 import { IResponseVenta } from "@/types/IResponseVenta";
@@ -6,7 +7,7 @@ import { ITerceroDefault } from "@/types/ITerceroDefault";
 import { ITipoDocumentoDefault } from "@/types/ITipoDocumentoDefault";
 import { IVenta } from "@/types/IVenta";
 
-export const VentaService = {
+export const NotaCreditoService = {
     async getById(idventa: number): Promise<IVenta | null> {
         try {
             const response = await fetch(
@@ -61,10 +62,10 @@ export const VentaService = {
         }
     },
 
-    async create(factura: IVenta): Promise<IResponseVenta> {
+    async create(notaCredito: INotaCredito): Promise<IResponseVenta> {
         try {
             const response = await fetch(
-                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.VENTA),
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.NOTA_CREDITO),
                 {
                     method: "POST",
                     headers: {
@@ -73,16 +74,16 @@ export const VentaService = {
                     },
                     mode: 'cors',
                     credentials: 'same-origin',
-                    body: JSON.stringify(factura)
+                    body: JSON.stringify(notaCredito)
                 }
             );
             if (!response.ok) {
-                throw new Error('Error al crear factura');
+                throw new Error('Error al crear nota de crédito');
             }
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error('Error en VentaService.create:', error);
+            console.error('Error en NotaCreditoService.create:', error);
             throw error;
         }
     },

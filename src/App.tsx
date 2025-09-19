@@ -8,6 +8,8 @@ import TercerosPage from './pages/tercerosPage';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import FacturaReportPage from './pages/facturaReportPage';
+import CreditNotePage from './pages/creditNotePage';
+import EstimatePage from './pages/estimatePage';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -54,6 +56,18 @@ function App() {
                     element={
                         isAuthenticated ? <POSPage /> : <Navigate to="/login" />
                         // <POSPage />
+                    }
+                />
+                <Route
+                    path="/credit-notes"
+                    element={
+                        isAuthenticated ? <CreditNotePage /> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/estimates"
+                    element={
+                        isAuthenticated ? <EstimatePage /> : <Navigate to="/login" />
                     }
                 />
                 <Route
