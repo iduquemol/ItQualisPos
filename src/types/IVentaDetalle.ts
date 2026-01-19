@@ -8,11 +8,22 @@ export interface IVentaDetalle {
     cantidadNotaCredito: number;
     indNotaCredito: boolean;
     precioUnitarioVenta: number;
+    baseIvaVenta: number;
     porcentajeIvaVenta: number;
     ivaVenta: number;
     porcentajeDescuentoVenta: number;
     descuentoVenta: number;
+    porcentajeImpoConsumo: number;
+    impoConsumoVenta: number;
+    porcentajeReteIva: number;
+    reteIvaVenta: number;
+    porcentajeReteRenta: number;
+    reteRentaVenta: number;
+    baseReteRenta: number
+    porcentajeReteIca: number;
+    reteIcaVenta: number;
     totalVenta: number;
     costoUnitarioVenta: number;
     costoTotalVenta: number;    
+    idTipoProducto: number;
 }

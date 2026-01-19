@@ -356,7 +356,7 @@ const FacturaElectronica: React.FC<FacturaElectronicaProps> = ({ facturaData }) 
 
   const data = facturaData || defaultData;
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
@@ -379,7 +379,7 @@ const FacturaElectronica: React.FC<FacturaElectronicaProps> = ({ facturaData }) 
           <View style={styles.row}>
             <View style={styles.leftColumn}>
               <Text><Text style={styles.label}>NIT:</Text> {data.facturadorNumeroIdentificacion}</Text>
-              <Text><Text style={styles.label}>Tipo de contribuyente:</Text> {data.clienteTipoContribuyente}</Text>
+              <Text><Text style={styles.label}>Tipo de contribuyente:</Text> {data.facturadorTipoContribuyente}</Text>
               <Text><Text style={styles.label}>Tipo de responsabilidad:</Text> {data.facturadorResponsabilidadFiscal}</Text>
               <Text><Text style={styles.label}>Régimen fiscal:</Text> {data.facturadorTipoRegimen}</Text>
               <Text><Text style={styles.label}>Actividades económicas:</Text> {}</Text>
@@ -518,7 +518,7 @@ const FacturaElectronica: React.FC<FacturaElectronicaProps> = ({ facturaData }) 
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Subtotal bruto =</Text>
-            <Text style={styles.totalValue}>{}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(data.totalPrecio)}</Text>
           </View>
           
           <View style={styles.totalRow}>
@@ -528,44 +528,48 @@ const FacturaElectronica: React.FC<FacturaElectronicaProps> = ({ facturaData }) 
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Recargos +</Text>
-            <Text style={styles.totalValue}>{}</Text>
+            <Text style={styles.totalValue}>0</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Subtotal neto =</Text>
-            <Text style={styles.totalValue}>{}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(data.totalPrecio - data.totalDescuento)}</Text>
           </View>
           
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Impuesto IVA (19%) +</Text>
+            <Text style={styles.totalLabel}>Impuesto IVA (19%) +</Text> 
             <Text style={styles.totalValue}>{formatCurrency(data.totalIva)}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Subtotal más impuestos =</Text>
-            <Text style={styles.totalValue}>{}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(data.totalPrecio - data.totalDescuento + data.totalIva)}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>ReteRenta -</Text>
-            <Text style={styles.totalValue}>{}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(data.totalReteRenta)}</Text>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total deducciones =</Text>
-            <Text style={styles.totalValue}>{}</Text>
+            <Text style={styles.totalValue}>{0}</Text>
           </View>
           
           <View style={[styles.totalRow, styles.finalTotal]}>
             <Text style={styles.totalLabel}>Total a pagar =</Text>
-            <Text style={styles.totalValue}>{formatCurrency(data.totalVenta)}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(data.totalPrecio - data.totalDescuento + data.totalIva - data.totalReteRenta)}</Text>
           </View>
         </View>
 
         {/* Observaciones */}
         <View style={styles.observaciones}>
           <Text style={styles.label}>Observaciones</Text>
-          <Text>{}</Text>
+          <Text>{data.observaciones}</Text>
+          <Text style={styles.label}>Orden Referencia</Text>
+          <Text>{data.ordenReferencia}</Text>
+          <Text style={styles.label}>Fecha Orden Referencia</Text>
+          <Text>{data.fechaOrdenReferencia}</Text>
         </View>
 
         {/* Autorización */}

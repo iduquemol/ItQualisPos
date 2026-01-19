@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Download, Eye, Printer, X } from "lucide-react";
 import FacturaElectronica from './FacturaReport'; // Tu componente existente
 import FacturaReportTira from './FacturaReportTira';
+import FacturaServiTransReport from './FacturaServiTrans';
 
 interface FacturaModalProps {
   facturaData?: any; // Reemplaza con el tipo específico de tu factura

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Check, Pencil, Search, X, CircleX, Trash, Save, Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -23,8 +24,8 @@ import { ITipoProducto } from "@/types/ITipoProducto";
 import { IPrecioProducto } from "@/types/IPrecioProducto";
 import { IListaPrecio } from "@/types/IListaPrecio";
 import { ListaPrecioService } from "@/services/ListaPrecioService";
-import { ITerceroDefault } from "@/types/ITerceroDefault";
-import { VentaService } from "@/services/VentaService";
+import { ITarifasPorTributo } from "@/types/ITarifasPorTributo";
+
 
 export default function ItemsMaster() {
     const navigate = useNavigate();
@@ -39,12 +40,12 @@ export default function ItemsMaster() {
         idCategoria: 0,
         idUnidadMedida: 0,
         precioUnitario: 0,
-        stockActualProducto: 0,
-        costoPromedioActualProducto: 0,
         quantity: 0,
         idTipoProducto: 0,
         productoActivo: true,
         porcentajeDescuento: 0,
+        precioPos: 0,
+        porcentajeIva: 0,
         tributosProducto: [],
         preciosProducto: [],
     });
@@ -63,6 +64,9 @@ export default function ItemsMaster() {
     const [listaPrecios, setListaPrecios] = useState<IListaPrecio[]>([]);
     const [isLoadingListaPrecios, setIsLoadingListaPrecios] = useState(true);
     const [listaPreciosError, setListaPreciosError] = useState<string | null>(null);
+    const [tarifasTributo, setTarifasTributo] = useState<ITarifasPorTributo[]>([]);
+    const [isLoadingTarifasTributo, setIsLoadingTarifasTributo] = useState(true);
+    const [tarifasTributoError, setTarifasTributoError] = useState<string | null>(null);
 
     // Estados para edición inline de tributos
     const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -71,6 +75,9 @@ export default function ItemsMaster() {
         codigoTributo: "",
         nombreTributo: "",
         tarifa: 0,
+        idTarifaProducto: 0,
+        codigoTarifa: "",
+        nombreTarifa: "",            
         idTributoProducto: 0,
     });
     const [addMode, setAddMode] = useState(false);
@@ -79,6 +86,9 @@ export default function ItemsMaster() {
         codigoTributo: "",
         nombreTributo: "",
         tarifa: 0,
+        idTarifaProducto: 0,
+        codigoTarifa: "",
+        nombreTarifa: "",
         idTributoProducto: 0,
     });
     // Estados para edición inline de precios
@@ -105,6 +115,9 @@ export default function ItemsMaster() {
     const [selectedProduct, setSelectedProduct] = useState<IProducto | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const precioUnitarioRef = useRef<HTMLInputElement>(null);
+    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     const handleSelectProduct = (prod: IProducto) => {
         setSelectedProduct(prod);
@@ -208,15 +221,13 @@ export default function ItemsMaster() {
                 // Actualizar producto existente
                 await ProductoService.update(producto);
                 console.log("Producto actualizado:", producto);
-                toast.success("Producto actualizado correctamente", {
-                    position: "top-center",
-                });
+                setSuccessMessage("Producto actualizado correctamente");
+                setShowSuccessDialog(true);
             } else {
                 await ProductoService.create(producto);
                 console.log("Producto guardado:", producto);
-                toast.success("Producto guardado correctamente", {
-                    position: "top-center",
-                });
+                setSuccessMessage("Producto guardado correctamente");
+                setShowSuccessDialog(true);
             }
             fetchProducts();
         } catch (error) {
@@ -233,11 +244,11 @@ export default function ItemsMaster() {
             return;
         }
 
-        // Confirmar la eliminación
-        if (!window.confirm(`¿Está seguro de que desea eliminar el producto "${producto.nombreProducto}"?`)) {
-            return;
-        }
+        setShowDeleteDialog(true);
+    };
 
+    // Agregar esta nueva función para confirmar la eliminación
+    const confirmDeleteProduct = async () => {
         try {
             //await ProductoService.delete(producto.idProducto);
             console.log("Producto eliminado:", producto.idProducto);
@@ -255,8 +266,8 @@ export default function ItemsMaster() {
                 idCategoria: 0,
                 idUnidadMedida: 0,
                 precioUnitario: 0,
-                stockActualProducto: 0,
-                costoPromedioActualProducto: 0,
+                precioPos: 0,
+                porcentajeIva: 0,
                 quantity: 0,
                 idTipoProducto: 0,
                 productoActivo: true,
@@ -268,11 +279,15 @@ export default function ItemsMaster() {
 
             // Recargar la lista de productos
             fetchProducts();
+
+            // Cerrar el diálogo
+            setShowDeleteDialog(false);
         } catch (error) {
             console.error('Error al eliminar el producto:', error);
             toast.error("Error al eliminar el producto", {
                 position: "top-center",
             });
+            setShowDeleteDialog(false);
         }
     };
 
@@ -295,6 +310,9 @@ export default function ItemsMaster() {
             codigoTributo: "",
             nombreTributo: "",
             tarifa: 0,
+            idTarifaProducto: 0,
+            codigoTarifa: "",
+            nombreTarifa: "",
             idTributoProducto: null,
         });
         setAddMode(false);
@@ -430,6 +448,27 @@ export default function ItemsMaster() {
         }
     };
 
+    const fetchTarifasPorTributo = async () => {
+        try {
+            setTarifasTributoError(null);
+            setIsLoadingTarifasTributo(true);
+            const data = await TributoService.getTarifasPorTributo();
+            setTarifasTributo([
+                { idTributo: 0, codigoTributo: "0", nombreTributo: "Seleccione un tributo", tarifasTributo: [] },
+                ...data
+            ]);
+        } catch (error) {
+            console.error('Error:', error);
+            setTarifasTributoError('Error al cargar las tarifas por tributo');
+            // Tarifas por defecto en caso de error
+            setTarifasTributo([
+                { idTributo: 0, codigoTributo: "0", nombreTributo: "Seleccione un tributo", tarifasTributo: [] }
+            ]);
+        } finally {
+            setIsLoadingTarifasTributo(false);
+        }
+    };
+
     const fetchListasPrecios = async () => {
         try {
             setListaPrecios([]);
@@ -458,6 +497,7 @@ export default function ItemsMaster() {
         fetchUnidadesDeMedida();
         fetchProducts();
         fetchTributos();
+        fetchTarifasPorTributo();
         fetchTipoProducto();
         fetchListasPrecios();
 
@@ -592,12 +632,13 @@ export default function ItemsMaster() {
                                         codigoBarras: "",
                                         idCategoria: 0,
                                         idUnidadMedida: 0,
-                                        precioUnitario: 0,                                     
+                                        precioUnitario: 0,
                                         quantity: 0,
                                         precioPos: 0,
                                         idTipoProducto: 0,
                                         productoActivo: false,
                                         porcentajeDescuento: 0,
+                                        porcentajeIva: 0,
                                         preciosProducto: [],
                                         tributosProducto: [],
                                     });
@@ -797,7 +838,7 @@ export default function ItemsMaster() {
                                 <tr className="bg-muted">
                                     <th className="px-2 py-2 text-left font-semibold w-64">Código Impuesto</th>
                                     <th className="px-4 py-2 text-left font-semibold w-96">Nombre</th>
-                                    <th className="px-4 py-2 text-left font-semibold w-32">Valor</th>
+                                    <th className="px-4 py-2 text-left font-semibold w-96">Tarifa</th>
                                     <th className="px-4 py-2"></th>
                                 </tr>
                             </thead>
@@ -825,7 +866,7 @@ export default function ItemsMaster() {
                                                         {tributos
                                                             .filter(t => t.idTributo !== 0)
                                                             .map(t => (
-                                                                <option key={t.idTributo} value={t.idTributo}>
+                                                                <option key={t.idTributo} value={t.codigoTributo}>
                                                                     {t.nombreTributo} ({t.codigoTributo})
                                                                 </option>
                                                             ))}
@@ -840,12 +881,30 @@ export default function ItemsMaster() {
                                                     />
                                                 </td>
                                                 <td className="px-4 py-2">
-                                                    <input
-                                                        type="number"
+                                                    <select
                                                         className="w-full border rounded px-2 py-1"
-                                                        value={editImpuesto.tarifa}
-                                                        onChange={e => setEditImpuesto({ ...editImpuesto, tarifa: Number(e.target.value) })}
-                                                    />
+                                                        value={editImpuesto.nombreTarifa || ""}
+                                                        onChange={e => {
+                                                            const selectedTarifaNombre = e.target.value;
+                                                            const tributoActual = tarifasTributo.find(t => String(t.idTributo) === editImpuesto.idTributo);
+                                                            const selectedTarifa = tributoActual?.tarifasTributo?.find(tarifa => String(tarifa.nombreTarifa) === selectedTarifaNombre);
+                                                            setEditImpuesto({
+                                                                ...editImpuesto,
+                                                                idTarifaProducto: selectedTarifa ? selectedTarifa.idTarifaTributo : 0,
+                                                                tarifa: selectedTarifa ? selectedTarifa.tarifaTributo : 0,
+                                                                nombreTarifa: selectedTarifa ? selectedTarifa.nombreTarifa : "",
+                                                            });
+                                                        }}
+                                                    >
+                                                        <option value="">Seleccione una tarifa...</option>
+                                                        {tarifasTributo
+                                                            .find(t => String(t.idTributo) === editImpuesto.idTributo)
+                                                            ?.tarifasTributo?.map((tarifa, idx) => (
+                                                                <option key={idx} value={tarifa.nombreTarifa}>
+                                                                    {tarifa.nombreTarifa}
+                                                                </option>
+                                                            )) || []}
+                                                    </select>
                                                 </td>
                                                 <td className="px-4 py-2 flex gap-2">
                                                     <button
@@ -868,7 +927,7 @@ export default function ItemsMaster() {
                                             <>
                                                 <td className="px-2 py-2">{item.codigoTributo}</td>
                                                 <td className="px-4 py-2">{item.nombreTributo}</td>
-                                                <td className="px-4 py-2">{item.tarifa}</td>
+                                                <td className="px-4 py-2">{item.nombreTarifa}</td>
                                                 <td className="px-4 py-2">
                                                     <button
                                                         className="text-blue-600 font-semibold flex items-center"
@@ -920,13 +979,30 @@ export default function ItemsMaster() {
                                             />
                                         </td>
                                         <td className="px-4 py-2">
-                                            <input
-                                                type="number"
+                                            <select
                                                 className="w-full border rounded px-2 py-1"
-                                                value={nuevoImpuesto.tarifa || ""}
-                                                onChange={e => setNuevoImpuesto({ ...nuevoImpuesto, tarifa: Number(e.target.value) })}
-                                                placeholder="Valor"
-                                            />
+                                                value={nuevoImpuesto.nombreTarifa || ""}
+                                                onChange={e => {
+                                                    const selectedTarifaNombre = e.target.value;
+                                                    const tributoActual = tarifasTributo.find(t => String(t.idTributo) === nuevoImpuesto.idTributo);
+                                                    const selectedTarifa = tributoActual?.tarifasTributo?.find(tarifa => String(tarifa.nombreTarifa) === selectedTarifaNombre);
+                                                    setNuevoImpuesto({
+                                                        ...nuevoImpuesto,
+                                                        idTarifaProducto: selectedTarifa ? selectedTarifa.idTarifaTributo : 0,
+                                                        tarifa: selectedTarifa ? selectedTarifa.tarifaTributo : 0,
+                                                        nombreTarifa: selectedTarifa ? selectedTarifa.nombreTarifa : "",
+                                                    });
+                                                }}
+                                            >
+                                                <option value="">Seleccione una tarifa...</option>
+                                                {tarifasTributo
+                                                    .find(t => String(t.idTributo) === nuevoImpuesto.idTributo)
+                                                    ?.tarifasTributo?.map((tarifa, idx) => (
+                                                        <option key={idx} value={tarifa.nombreTarifa}>
+                                                            {tarifa.nombreTarifa}
+                                                        </option>
+                                                    )) || []}
+                                            </select>
                                         </td>
                                         <td className="px-4 py-2 flex gap-2">
                                             <button
@@ -945,6 +1021,9 @@ export default function ItemsMaster() {
                                                         idTributo: "0",
                                                         codigoTributo: "",
                                                         nombreTributo: "",
+                                                        idTarifaProducto: 0,
+                                                        codigoTarifa: "",
+                                                        nombreTarifa: "",
                                                         tarifa: 0,
                                                     });
                                                 }}
@@ -1151,9 +1230,41 @@ export default function ItemsMaster() {
                         </table>
                     </Card>
                 </TabsContent>
-
             </Tabs>
-
+            {/* AlertDialog de éxito */}
+            <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Todo ha salido bien!!</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {successMessage}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
+                            Aceptar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar eliminación</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            ¿Está seguro de que desea eliminar el producto "{producto.nombreProducto}"? Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                            Cancelar
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDeleteProduct}>
+                            Eliminar
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

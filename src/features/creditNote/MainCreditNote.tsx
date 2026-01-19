@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import Tesseract from 'tesseract.js';
 import { CategoryService } from '@/services/CategoryService';
@@ -110,6 +111,8 @@ const MainCreditNote = () => {
     const [facturaModalData, setFacturaModalData] = useState<any>(null);
     const [searchTercero, setSearchTercero] = useState("");
     const [vendedorSeleccionado, setVendedorSeleccionado] = useState(1);
+    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
 
     const BARCODE_DELAY = 50;
 
@@ -372,21 +375,16 @@ const MainCreditNote = () => {
             if (updatedNotaCredito.idNotaCredito) {
                 // Actualizar nota credito existente
                 //await VentaService.update(notaCredito);
-                console.log("Nota de crédito actualizada:", notaCredito);
-                toast.success("Nota de crédito actualizada correctamente", {
-                    position: "top-center",
-                });
+                console.log("Nota crédito actualizada:", notaCredito);
+                setSuccessMessage("Nota crédito actualizada correctamente");
+                setShowSuccessDialog(true);
             } else {
                 console.log("Nota crédito a guardar:", updatedNotaCredito);
                 const result = await NotaCreditoService.create(updatedNotaCredito);
                 console.log("Nota crédito guardada:", result);
-                toast.success(
-                    result.message +
-                    "\nNúmero Documento Dian: " + result.idNotaCredito,
-                    {
-                        position: "top-center",
-                    }
-                );
+                setSuccessMessage(result.message +
+                    "\nNúmero Documento Dian: " + result.idNotaCredito);
+                setShowSuccessDialog(true);
                 // const data = await VentaService.getById(result.idFactura);
                 // setSelectedFactura(data);
                 // setFactura({
@@ -1086,9 +1084,23 @@ const MainCreditNote = () => {
                         </div>
                     )}
                 </div>
-
-
             </div>
+            {/* AlertDialog de éxito */}
+            <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Todo ha salido bien!!</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {successMessage}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
+                            Aceptar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div >
     );

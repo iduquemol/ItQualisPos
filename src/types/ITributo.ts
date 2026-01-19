@@ -4,3 +4,4 @@ export interface ITributo {
     nombreTributo: string;
     descripcionTributo: string;
 }
+

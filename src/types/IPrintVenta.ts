@@ -46,5 +46,7 @@ export interface IPrintVenta {
     totalDescuento: number;
     totalVenta: number;
     totalBaseIva: number;
+    totalReteRenta: number;
+    totalReteIca: number;
     items: IPrintItem[];
 }
