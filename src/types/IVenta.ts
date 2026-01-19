@@ -21,6 +21,9 @@ export interface IVenta {
     totalBaseIva: number | null;
     totalIva: number | null;
     totalVenta: number | null;
+    observaciones: string | null;
+    ordenReferencia: string | null;
+    fechaOrdenReferencia: string | null;
     terceroVenta: IVentaTercero | null;
     detalleVenta: IVentaDetalle[] | null;
     mediosPagoVenta: IVentaMedioPago[] | null;

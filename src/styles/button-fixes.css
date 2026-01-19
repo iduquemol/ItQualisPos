@@ -1,0 +1,46 @@
+/* Estilos específicos para botones de pago en monitores de alta resolución */
+.payment-button-container {
+  height: 60px !important;
+  padding: 8px !important;
+}
+
+.payment-button-container .flex {
+  height: 44px !important;
+}
+
+.payment-button-container button {
+  height: 44px !important;
+  max-height: 44px !important;
+  min-height: 44px !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+  padding: 8px 16px !important;
+}
+
+.payment-button-container button svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Para monitores específicos */
+@media (min-width: 1920px) and (min-height: 1080px) {
+  .payment-button-container {
+    height: 60px !important;
+  }
+  
+  .payment-button-container button {
+    height: 44px !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+@media (min-width: 2560px) {
+  .payment-button-container {
+    height: 60px !important;
+  }
+  
+  .payment-button-container button {
+    height: 44px !important;
+    font-size: 0.875rem !important;
+  }
+}

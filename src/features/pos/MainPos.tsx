@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, FileText, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import Tesseract from 'tesseract.js';
 import { CategoryService } from '@/services/CategoryService';
@@ -56,6 +57,9 @@ const RetailPOS = () => {
         totalBaseIva: 0,
         totalIva: 0,
         totalVenta: 0,
+        observaciones: null,
+        ordenReferencia: null,
+        fechaOrdenReferencia: null,
         terceroVenta: {
             idTercero: null,
             idTipoDocumentoId: 0,
@@ -102,6 +106,11 @@ const RetailPOS = () => {
         idListaPreciosTercero: 0,
         idDepartamento: 0,
         nombreDepartamento: 'Bogota',
+        retenedorIva: false,
+        retenedorRenta: false,
+        retenedorIca: false,
+        declaraRenta: false,
+        tarifaIca: 0,
         responsabilidadesTerceros: [],
     });
     const [showCustomer, setShowCustomer] = useState(false);
@@ -139,6 +148,8 @@ const RetailPOS = () => {
     const [facturaModalData, setFacturaModalData] = useState<any>(null);
     const [searchTercero, setSearchTercero] = useState("");
     const [vendedorSeleccionado, setVendedorSeleccionado] = useState(1);
+    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
 
     const BARCODE_DELAY = 50;
 
@@ -272,7 +283,8 @@ const RetailPOS = () => {
             setParametrosVentaDefault(data);
             setFactura({
                 ...factura,
-                idTipoDocumento : data.documentoVenta[0].idTipoDocumento,
+                idTipoDocumento: data.documentoVenta[0].idTipoDocumento,
+                idMetodoDian: data.documentoVenta[0].idMetodoDian,
                 terceroVenta: {
                     idTercero: data.terceroVenta[0].idTercero,
                     idTipoDocumentoId: data.terceroVenta[0].idTipoDocumentoId,
@@ -471,24 +483,32 @@ const RetailPOS = () => {
             totalIva: 0,
             totalVenta: 0,
             terceroVenta: {
-                idTercero: factura.terceroVenta?.idTercero || null,
-                idTipoDocumentoId: factura.terceroVenta?.idTipoDocumentoId || 0,
-                digitoVerificacion: null,
+                idTercero: factura.terceroVenta?.idTercero ?? null,
+                idTipoDocumentoId: factura.terceroVenta?.idTipoDocumentoId ?? 0,
+                digitoVerificacion: factura.terceroVenta?.digitoVerificacion || null,
                 numeroIdentificacion: factura.terceroVenta?.numeroIdentificacion || null,
                 primerNombre: factura.terceroVenta?.primerNombre || null,
                 primerApellido: factura.terceroVenta?.primerApellido || null,
                 razonSocial: factura.terceroVenta?.razonSocial || null,
-                telefonoTercero: null,
-                direccionTercero: null,
-                idMunicipio: 0,
+                telefonoTercero: factura.terceroVenta?.telefonoTercero || null,
+                direccionTercero: factura.terceroVenta?.direccionTercero || null,
+                idMunicipio: factura.terceroVenta?.idMunicipio ?? 0,
                 emailTercero: factura.terceroVenta?.emailTercero || null,
-                idTipoPersona: null
+                idTipoPersona: factura.terceroVenta?.idTipoPersona || null
             },
             detalleVenta: [],
             mediosPagoVenta: [],
         });
         setActivePaymentMethod('');
     };
+
+    const handleResend = async () => {
+        console.log("Enviando factura a la Dian:");
+        if (factura.idVenta) {
+            const result = await VentaService.resend(factura.idVenta, factura.idMetodoDian || 2);
+            console.log("Factura enviada a la Dian:", result);
+        }
+    }
 
     // Manejo de eventos para buscar tercero por número de identificación
     const handleSearchTercero = (numeroIdentificacion: string) => {
@@ -519,6 +539,7 @@ const RetailPOS = () => {
             numeroVenta: data?.numeroVenta ?? null,
             prefijoVenta: data?.prefijoVenta ?? '',
             fechaVenta: data?.fechaVenta ?? '',
+            idMetodoDian: data?.idMetodoDian ?? 2,
             idPuntoVenta: data?.idPuntoVenta ?? null,
             idUsuario: data?.idUsuario ?? null,
             totalRegistros: data?.totalRegistros ?? 0,
@@ -547,35 +568,34 @@ const RetailPOS = () => {
 
         });
         setOpenDialog(false);
+        const dataPrint = await VentaService.printById(documento.idVenta);
+        setFacturaModalData(dataPrint);
+        setShowFacturaModal(true);
     };
 
-    const handleSaveVenta = async () => {
+    const handleSaveVenta = async (indBorrador: boolean) => {
         const todayLocal = new Date();
         const offsetMs = todayLocal.getTimezoneOffset() * 60 * 1000;
         const localISODate = new Date(todayLocal.getTime() - offsetMs).toISOString().split('T')[0];
         const updatedFactura = {
             ...factura,
             fechaVenta: localISODate,
+            esBorrador: indBorrador ? 1 : 0,
         };
         try {
             if (updatedFactura.idVenta) {
                 // Actualizar factura existente
                 //await VentaService.update(factura);
                 console.log("Factura actualizada:", factura);
-                toast.success("Factura actualizada correctamente", {
-                    position: "top-center",
-                });
+                setSuccessMessage("Factura actualizada correctamente");
+                setShowSuccessDialog(true);
             } else {
                 console.log("Factura a guardar:", updatedFactura);
                 const result = await VentaService.create(updatedFactura);
                 console.log("Factura guardada:", result);
-                toast.success(
-                    result.message +
-                    "\nNúmero Documento Dian: " + result.numeroDocumentoDian,
-                    {
-                        position: "top-center",
-                    }
-                );
+                setSuccessMessage(result.message +
+                    "\nNúmero Documento Dian: " + result.numeroDocumentoDian);
+                setShowSuccessDialog(true);
                 const data = await VentaService.getById(result.idFactura);
                 setSelectedFactura(data);
                 setFactura({
@@ -617,6 +637,7 @@ const RetailPOS = () => {
                 const dataPrint = await VentaService.printById(result.idFactura);
                 setFacturaModalData(dataPrint);
                 setShowFacturaModal(true);
+
             }
             //await fetchProducts();
         } catch (error) {
@@ -626,41 +647,95 @@ const RetailPOS = () => {
 
     // Funciones del carrito
     const addToCart = (product: IProducto) => {
-
-        const existingItem = factura.detalleVenta?.find(item => item.idProducto === product.idProducto);
-        if (existingItem) {
-            // Si el producto ya está en el carrito, incrementa la cantidad
-            setFactura({
-                ...factura,
-                detalleVenta: (factura.detalleVenta ?? []).map(item =>
-                    item.idProducto === product.idProducto
-                        ? { ...item, cantidadVenta: item.cantidadVenta + 1 }
-                        : item
-                )
-            });
-        } else {
+        const baseIvaVentaCalculada = parseFloat((product.precioUnitario - (product.porcentajeDescuento || 0) / 100).toFixed(2));
+        const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((product.porcentajeIva || 0) / 100)).toFixed(2));
+        // Si el tipo de producto es 2, siempre agregar como nuevo item
+        if (product.idTipoProducto === 2) {
             setFactura({
                 ...factura,
                 detalleVenta: [
                     ...(factura.detalleVenta || []),
                     {
-                        idDetalleVenta: 0, // Asignar un ID único si es necesario
+                        idDetalleVenta: 0,
                         registroVenta: (factura.detalleVenta ? factura.detalleVenta.length : 0) + 1,
                         idProducto: product.idProducto ?? 0,
                         codigoProducto: product.codigoProducto,
                         nombreProducto: product.nombreProducto,
                         precioUnitarioVenta: product.precioUnitario,
                         cantidadVenta: 1.0,
-                        descuentoVenta: 0, // Asignar descuento si es necesario
-                        ivaVenta: parseFloat((product.precioUnitario * ((product.porcentajeIva || 0) / 100)).toFixed(2)),
+                        descuentoVenta: 0,
+                        baseIvaVenta: baseIvaVentaCalculada,
+                        ivaVenta: ivaVentaCalculada,
                         totalVenta: 0,
                         costoUnitarioVenta: 0,
-                        costoTotalVenta: 0, // Asignar costo si es necesario
+                        costoTotalVenta: 0,
                         porcentajeIvaVenta: product.porcentajeIva || 0,
-                        porcentajeDescuentoVenta: 0
+                        porcentajeDescuentoVenta: 0,
+                        porcentajeImpoConsumo: product.porcentajeImpoConsumo || 0,
+                        impoConsumoVenta: parseFloat((product.precioUnitario * ((product.porcentajeImpoConsumo || 0) / 100)).toFixed(2)),
+                        porcentajeReteIva: product.porcentajeReteIva || 0,
+                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((product.porcentajeReteIva || 0) / 100)).toFixed(2)),
+                        porcentajeReteRenta: product.porcentajeReteRenta || 0,
+                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((product.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                        baseReteRenta: baseIvaVentaCalculada,
+                        porcentajeReteIca: product.porcentajeReteIca || 0,
+                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((product.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
+                        cantidadNotaCredito: 0,
+                        indNotaCredito: false,
+                        idTipoProducto: product.idTipoProducto || 0
                     }
                 ]
             });
+        } else {
+            // Para otros tipos de producto, mantener la lógica original
+            const existingItem = factura.detalleVenta?.find(item => item.idProducto === product.idProducto);
+            if (existingItem) {
+                // Si el producto ya está en el carrito, incrementa la cantidad
+                setFactura({
+                    ...factura,
+                    detalleVenta: (factura.detalleVenta ?? []).map(item =>
+                        item.idProducto === product.idProducto
+                            ? { ...item, cantidadVenta: item.cantidadVenta + 1 }
+                            : item
+                    )
+                });
+            } else {
+                setFactura({
+                    ...factura,
+                    detalleVenta: [
+                        ...(factura.detalleVenta || []),
+                        {
+                            idDetalleVenta: 0,
+                            registroVenta: (factura.detalleVenta ? factura.detalleVenta.length : 0) + 1,
+                            idProducto: product.idProducto ?? 0,
+                            codigoProducto: product.codigoProducto,
+                            nombreProducto: product.nombreProducto,
+                            precioUnitarioVenta: product.precioUnitario,
+                            cantidadVenta: 1.0,
+                            descuentoVenta: 0,
+                            baseIvaVenta: baseIvaVentaCalculada,
+                            ivaVenta: ivaVentaCalculada,
+                            totalVenta: 0,
+                            costoUnitarioVenta: 0,
+                            costoTotalVenta: 0,
+                            porcentajeIvaVenta: product.porcentajeIva || 0,
+                            porcentajeDescuentoVenta: 0,
+                            porcentajeImpoConsumo: product.porcentajeImpoConsumo || 0,
+                            impoConsumoVenta: parseFloat((product.precioUnitario * ((product.porcentajeImpoConsumo || 0) / 100)).toFixed(2)),
+                            porcentajeReteIva: product.porcentajeReteIva || 0,
+                            reteIvaVenta: parseFloat((ivaVentaCalculada * ((product.porcentajeReteIva || 0) / 100)).toFixed(2)),
+                            porcentajeReteRenta: product.porcentajeReteRenta || 0,
+                            reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((product.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                            baseReteRenta: baseIvaVentaCalculada,
+                            porcentajeReteIca: product.porcentajeReteIca || 0,
+                            reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((product.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
+                            cantidadNotaCredito: 0,
+                            indNotaCredito: false,
+                            idTipoProducto: product.idTipoProducto || 0
+                        }
+                    ]
+                });
+            }
         }
     };
 
@@ -670,15 +745,20 @@ const RetailPOS = () => {
             detalleVenta: (factura.detalleVenta ?? []).map(item => {
                 if (item.idProducto === id) {
                     const newQuantity = item.cantidadVenta + change;
+                    const baseIvaVentaCalculada = parseFloat((newQuantity * item.precioUnitarioVenta - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
+                    const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
                     return {
                         ...item,
                         cantidadVenta: newQuantity,
-                        ivaVenta: parseFloat(
-                            ((item.precioUnitarioVenta * newQuantity - item.descuentoVenta) * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2)
-                        ),
+                        baseIvaVenta: baseIvaVentaCalculada,
+                        ivaVenta: ivaVentaCalculada,
                         descuentoVenta: parseFloat(
                             ((item.precioUnitarioVenta * newQuantity) * ((item.porcentajeDescuentoVenta || 0) / 100)).toFixed(2)
                         ),
+                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((item.porcentajeReteIva || 0) / 100)).toFixed(2)),
+                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                        baseReteRenta: baseIvaVentaCalculada,
+                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
                     };
                 }
                 return item;
@@ -717,8 +797,10 @@ const RetailPOS = () => {
     const subtotal = factura.detalleVenta?.reduce((sum, item) => sum + (item.precioUnitarioVenta * item.cantidadVenta), 0);
     const discount = factura.detalleVenta?.reduce((descuento, item) => descuento + item.descuentoVenta, 0);
     const tax = factura.detalleVenta?.reduce((iva, item) => iva + item.ivaVenta, 0);
-    // const loyaltyDiscount = customerInfo.loyalty ? subtotal * 0.05 : 0; // 5% descuento por lealtad
-    const total = subtotal - discount + tax;
+    const totalReteIva = factura.detalleVenta?.reduce((reteIva, item) => reteIva + (item.reteIvaVenta || 0), 0);
+    const totalReteRenta = factura.detalleVenta?.reduce((reteRenta, item) => reteRenta + (item.reteRentaVenta || 0), 0);
+    const totalReteIca = factura.detalleVenta?.reduce((reteIca, item) => reteIca + (item.reteIcaVenta || 0), 0);
+    const total = (subtotal || 0) - (discount || 0) + (tax || 0) - (totalReteIva || 0) - (totalReteRenta || 0) - (totalReteIca || 0);
     const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + item.cantidadVenta, 0);
     const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
 
@@ -753,12 +835,24 @@ const RetailPOS = () => {
                     {/* Lado derecho - Reloj */}
                     <div className="flex items-center space-x-4 mb-2">
                         {showFacturaModal && (
-                            <FacturaModal
-                                facturaData={facturaModalData}
-                                triggerText="Imprimir Factura"
-                                triggerVariant="secondary"
-                                idMetodoDian={factura?.idMetodoDian || 0}
-                            />
+                            <div className="flex items-center space-x-2">
+                                <FacturaModal
+                                    facturaData={facturaModalData}
+                                    triggerText="Imprimir Factura"
+                                    triggerVariant="secondary"
+                                    idMetodoDian={factura?.idMetodoDian || 0}
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    title="Reenviar documento"
+                                    onClick={() => handleResend()}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Send className="w-4 h-4" />
+                                    Reenviar
+                                </Button>
+                            </div>
                         )}
                         <Button
                             variant="default"
@@ -892,6 +986,7 @@ const RetailPOS = () => {
                                             ...factura,
                                             idTipoDocumento: selectedId,
                                             idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
+                                            idFormaPago: selectedTipoDocumento?.idFormaPago || 0,
                                         });
                                     }}
                                     required
@@ -906,7 +1001,7 @@ const RetailPOS = () => {
                                 <input
                                     type="text"
                                     className="rounded border px-3 py-2 text-sm bg-background w-20"
-                                    value={factura.prefijoVenta}
+                                    value={factura.prefijoVenta || ''}
                                     onChange={(e) => setFactura({ ...factura, prefijoVenta: e.target.value })}
                                     readOnly
                                 />
@@ -914,7 +1009,7 @@ const RetailPOS = () => {
                                 <input
                                     type="text"
                                     className="rounded border px-3 py-2 text-sm bg-background w-28"
-                                    value={factura.numeroVenta}
+                                    value={factura.numeroVenta || ''}
                                     onChange={(e) => setFactura({ ...factura, numeroVenta: parseInt(e.target.value) })}
                                     readOnly
                                 />
@@ -950,7 +1045,13 @@ const RetailPOS = () => {
                                 <select
                                     className="w-full rounded border px-2 py-2 text-sm bg-background w-42"
                                     value={factura.terceroVenta?.idTipoDocumentoId}
-                                    onChange={(e) => setFactura({ ...factura, terceroVenta: { ...factura.terceroVenta, idTipoDocumentoId: parseInt(e.target.value) } })}
+                                    onChange={(e) => setFactura({
+                                        ...factura,
+                                        terceroVenta: {
+                                            ...factura.terceroVenta,
+                                            idTipoDocumentoId: parseInt(e.target.value)
+                                        }
+                                    })}
                                     required
                                 >
                                     {tiposDocumentoIdentidad.map(cat => (
@@ -1086,10 +1187,55 @@ const RetailPOS = () => {
 
                     </div>
 
+                    {/* Panel de Información Adicional */}
+                    <div className="border-b bg-muted/50">
+                        <div className="flex items-center gap-2 ml-3 mt-2 mb-2 mr-2">
+                            <div className="grid grid-cols-[2fr_1fr_1fr] gap-2 w-full">
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-sm font-medium whitespace-nowrap">Observaciones:</Label>
+                                    <Input
+                                        placeholder="Observaciones"
+                                        className="rounded border px-2 py-2 text-base bg-background flex-1"
+                                        value={factura.observaciones || ''}
+                                        onChange={(e) => setFactura({
+                                            ...factura,
+                                            observaciones: e.target.value
+                                        })}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-sm font-medium whitespace-nowrap">Orden Ref:</Label>
+                                    <Input
+                                        placeholder="Orden Referencia"
+                                        className="rounded border px-2 py-2 text-base bg-background flex-1"
+                                        value={factura.ordenReferencia || ''}
+                                        onChange={(e) => setFactura({
+                                            ...factura,
+                                            ordenReferencia: e.target.value
+                                        })}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-sm font-medium whitespace-nowrap">Fecha Ref:</Label>
+                                    <Input
+                                        type="date"
+                                        placeholder="Fecha Orden Referencia"
+                                        className="rounded border px-2 py-2 text-base bg-background flex-1"
+                                        value={factura.fechaOrdenReferencia || ''}
+                                        onChange={(e) => setFactura({
+                                            ...factura,
+                                            fechaOrdenReferencia: e.target.value
+                                        })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
 
                     {/* Items del Carrito */}
                     <div className="flex-1 overflow-y-auto p-4 min-h-[300px]">
-                        {factura.detalleVenta.length === 0 ? (
+                        {!factura.detalleVenta || factura.detalleVenta.length === 0 ? (
                             <div className="text-center py-12">
                                 <div className="text-6xl mb-4">🛒</div>
                                 <p className="text-muted-foreground font-medium">Carrito vacío</p>
@@ -1102,10 +1248,49 @@ const RetailPOS = () => {
                                         <div className="flex items-center justify-between">
                                             {/* Información del producto */}
                                             <div className="flex-1 min-w-0">
-                                                <h4 className="font-medium text-sm truncate">{item.nombreProducto}</h4>
+                                                {item.idTipoProducto === 2 ? (
+                                                    <Input
+                                                        value={item.nombreProducto}
+                                                        onChange={(e) => {
+                                                            setFactura({
+                                                                ...factura,
+                                                                detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                    detalleItem.registroVenta === item.registroVenta
+                                                                        ? { ...detalleItem, nombreProducto: e.target.value }
+                                                                        : detalleItem
+                                                                )
+                                                            });
+                                                        }}
+                                                        className="font-medium text-sm max-w-xl"
+                                                        placeholder="Nombre del producto"
+                                                    />
+                                                ) : (
+                                                    <h4 className="font-medium text-sm truncate">{item.nombreProducto}</h4>
+                                                )}
                                                 <div className="flex items-center space-x-2 mt-1">
                                                     <Badge variant="outline" className="text-xs">{item.codigoProducto}</Badge>
-                                                    <span className="text-sm text-muted-foreground">${formatCurrency(item.precioUnitarioVenta)}</span>
+                                                    {item.idTipoProducto === 2 ? (
+                                                        <Input
+                                                            type="number"
+                                                            value={item.precioUnitarioVenta || ''}
+                                                            onChange={(e) => {
+                                                                setFactura({
+                                                                    ...factura,
+                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                        detalleItem.registroVenta === item.registroVenta
+                                                                            ? { ...detalleItem, precioUnitarioVenta: parseFloat(e.target.value) || 0 }
+                                                                            : detalleItem
+                                                                    )
+                                                                });
+                                                            }}
+                                                            className="text-sm text-muted-foreground w-24"
+                                                            placeholder="Precio"
+                                                            min={0}
+                                                            onFocus={(e) => e.target.select()}
+                                                        />
+                                                    ) : (
+                                                        <span className="text-sm text-muted-foreground">${formatCurrency(item.precioUnitarioVenta)}</span>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -1120,6 +1305,8 @@ const RetailPOS = () => {
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.porcentajeDescuentoVenta || ''}
                                                             onChange={(e) => {
+                                                                const baseIvaVentaCalculada = parseFloat((item.cantidadVenta * item.precioUnitarioVenta - (parseFloat(e.target.value) || 0) / 100).toFixed(2));
+                                                                const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
                                                                 const valorDescuento = parseFloat(((item.precioUnitarioVenta * item.cantidadVenta) * ((parseFloat(e.target.value) || 0) / 100)).toFixed(2));
                                                                 setFactura({
                                                                     ...factura,
@@ -1128,7 +1315,11 @@ const RetailPOS = () => {
                                                                             ? {
                                                                                 ...detalleItem,
                                                                                 porcentajeDescuentoVenta: parseFloat(e.target.value) || 0,
-                                                                                descuentoVenta: valorDescuento
+                                                                                descuentoVenta: valorDescuento,
+                                                                                reteIvaVenta: parseFloat((ivaVentaCalculada * ((item.porcentajeReteIva || 0) / 100)).toFixed(2)),
+                                                                                reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                                                                                baseReteRenta: baseIvaVentaCalculada,
+                                                                                reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
                                                                             }
                                                                             : detalleItem
                                                                     )
@@ -1146,11 +1337,20 @@ const RetailPOS = () => {
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.descuentoVenta || ''}
                                                             onChange={(e) => {
+                                                                const baseIvaVentaCalculada = parseFloat((item.cantidadVenta * item.precioUnitarioVenta - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
+                                                                const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
                                                                 setFactura({
                                                                     ...factura,
                                                                     detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
-                                                                            ? { ...detalleItem, descuentoVenta: parseFloat(e.target.value) || 0 }
+                                                                            ? {
+                                                                                ...detalleItem,
+                                                                                descuentoVenta: parseFloat(e.target.value) || 0,
+                                                                                reteIvaVenta: parseFloat((ivaVentaCalculada * ((item.porcentajeReteIva || 0) / 100)).toFixed(2)),
+                                                                                reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                                                                                baseReteRenta: baseIvaVentaCalculada,
+                                                                                reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
+                                                                            }
                                                                             : detalleItem
                                                                     )
                                                                 });
@@ -1167,7 +1367,7 @@ const RetailPOS = () => {
                                                             onChange={(e) => {
                                                                 setFactura({
                                                                     ...factura,
-                                                                    detalleVenta: factura.detalleVenta.map(detalleItem =>
+                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
                                                                                 ...detalleItem, porcentajeIvaVenta: parseFloat(e.target.value) || 0,
@@ -1228,16 +1428,23 @@ const RetailPOS = () => {
                                                                 onChange={(e) => {
                                                                     const value = e.target.value;
                                                                     const newQuantity = value === '' ? 0 : parseFloat(value);
+                                                                    const baseIvaVentaCalculada = parseFloat((newQuantity * item.precioUnitarioVenta - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
+                                                                    const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
                                                                     if (newQuantity >= 0) {
                                                                         setFactura({
                                                                             ...factura,
-                                                                            detalleVenta: factura.detalleVenta.map(detalleItem =>
+                                                                            detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
                                                                                 detalleItem.idProducto === item.idProducto
                                                                                     ? {
                                                                                         ...detalleItem,
                                                                                         cantidadVenta: newQuantity,
-                                                                                        ivaVenta: parseFloat(((item.precioUnitarioVenta * newQuantity - item.descuentoVenta) * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2)),
+                                                                                        baseIvaVenta: baseIvaVentaCalculada,
+                                                                                        ivaVenta: ivaVentaCalculada,
                                                                                         descuentoVenta: parseFloat(((item.precioUnitarioVenta * newQuantity) * ((item.porcentajeDescuentoVenta || 0) / 100)).toFixed(2)),
+                                                                                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((item.porcentajeReteIva || 0) / 100)).toFixed(2)),
+                                                                                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                                                                                        baseReteRenta: baseIvaVentaCalculada,
+                                                                                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
                                                                                     }
                                                                                     : detalleItem
                                                                             )
@@ -1286,40 +1493,72 @@ const RetailPOS = () => {
                     {factura.detalleVenta.length > 0 && (
                         <div className="border-t flex flex-col h-[400px]" >
                             <div className="h-[100px] overflow-y-auto">
-
                                 {/* Totales */}
                                 <div className="p-2 space-y-2">
-                                    {/* Resumen */}
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Subtotal</span>
-                                            <span>${formatCurrency(subtotal)}</span>
+                                    {/* Resumen en dos columnas */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {/* Primera columna - Subtotal, Descuento, IVA */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Subtotal</span>
+                                                <span>${formatCurrency(subtotal)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Descuento</span>
+                                                <span>${formatCurrency(discount)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">IVA</span>
+                                                <span>${formatCurrency(tax)}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Descuento</span>
-                                            <span>${formatCurrency(discount)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">IVA</span>
-                                            <span>${formatCurrency(tax)}</span>
+
+                                        {/* Segunda columna - ReteFuente, ReteIVA, ReteICA */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">ReteFuente</span>
+                                                <span>${formatCurrency(totalReteRenta)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">ReteIVA</span>
+                                                <span>${formatCurrency(totalReteIva)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">ReteICA</span>
+                                                <span>${formatCurrency(totalReteIca)}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Botón de Pago */}
-                            <div className="h-[60px] p-4 border-t bg-background">
-                                <Button
-                                    onClick={() => setShowPayment(true)}
-                                    className="w-full h-[40px] text-lg font-bold"
-                                    size="lg"
-                                >
-                                    <Check className="h-5 w-5 mr-2" />
-                                    Procesar Venta
-                                </Button>
+                            <div className="payment-button-container h-[60px] p-2 border-t bg-background">
+                                <div className="flex gap-2 h-[44px]">
+                                    <Button
+                                        onClick={() => {
+                                            handleSaveVenta(true);
+                                        }}
+                                        variant="outline"
+                                        className="flex-1 h-full text-sm font-bold"
+                                        size="lg"
+                                    >
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        Guardar Borrador
+                                    </Button>
+                                    <Button
+                                        onClick={() => setShowPayment(true)}
+                                        className="flex-1 h-full text-sm font-bold"
+                                        size="lg"
+                                    >
+                                        <Check className="h-4 w-4 mr-2" />
+                                        Procesar Venta
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     )}
+
                 </div>
 
                 {/* Panel Derecho - Productos (30%) */}
@@ -1433,7 +1672,7 @@ const RetailPOS = () => {
 
                                     setFactura(prev => ({
                                         ...prev,
-                                        idFormaPago: nuevoMedioPago.idMedioPago,
+                                        //idFormaPago: nuevoMedioPago.idMedioPago,
                                         mediosPagoVenta: [nuevoMedioPago], // reemplaza o haz append si es necesario
                                     }));
                                 }}>
@@ -1451,7 +1690,7 @@ const RetailPOS = () => {
                         </div>
 
                         {/* Información del Cliente */}
-                        {factura.terceroVenta.primerApellido && (
+                        {factura.terceroVenta?.primerApellido && (
                             <Alert className="mb-6">
                                 <User className="h-4 w-4" />
                                 <AlertDescription className="flex flex-col space-y-1">
@@ -1493,7 +1732,7 @@ const RetailPOS = () => {
                                 onClick={() => {
                                     // Mostrar confirmación de pago
                                     setShowPayment(false);
-                                    handleSaveVenta();
+                                    handleSaveVenta(false);
                                     // Aquí podrías mostrar otro modal de confirmación
                                 }}
                                 className="flex-1"
@@ -1511,6 +1750,22 @@ const RetailPOS = () => {
                     </DialogContent>
                 </Dialog>
             </div>
+            {/* AlertDialog de éxito */}
+            <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Todo ha salido bien!!</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {successMessage}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
+                            Aceptar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div >
     );

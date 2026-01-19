@@ -3,6 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, Pencil, Search, X, CircleX, Save, Trash, Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -51,6 +53,11 @@ export default function SuppliersMaster() {
         terceroGeneral: false,
         idTipoRegimen: 0,
         idListaPreciosTercero: 0,
+        retenedorIva: false,
+        retenedorRenta: false,
+        retenedorIca: false,
+        declaraRenta: false,
+        tarifaIca: 0,
         responsabilidadesTerceros: [],
     });
 
@@ -91,6 +98,9 @@ export default function SuppliersMaster() {
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedTercero, setSelectedTercero] = useState<ITercero | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
+    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
 
     const handleSelectTercero = (terc: ITercero) => {
@@ -157,15 +167,13 @@ export default function SuppliersMaster() {
                 // Actualizar tercero existente
                 await TerceroService.update(tercero);
                 console.log("Tercero actualizado:", tercero);
-                toast.success("Tercero actualizado correctamente", {
-                    position: "top-center",
-                });
+                setSuccessMessage("Tercero actualizado correctamente");
+                setShowSuccessDialog(true);
             } else {
                 const result = await TerceroService.create(tercero);
                 console.log("Tercero guardado:", result);
-                toast.success("Tercero guardado correctamente", {
-                    position: "top-center",
-                });
+                setSuccessMessage("Tercero guardado correctamente");
+                setShowSuccessDialog(true);
             }
             fetchSuppliers();
         } catch (error) {
@@ -223,6 +231,11 @@ export default function SuppliersMaster() {
             terceroGeneral: false,
             idTipoRegimen: 0,
             idListaPreciosTercero: 0,
+            retenedorIva: false,
+            retenedorRenta: false,
+            retenedorIca: false,
+            declaraRenta: false,
+            tarifaIca: 0,
             responsabilidadesTerceros: [],
         });
     };
@@ -236,12 +249,19 @@ export default function SuppliersMaster() {
             return;
         }
 
-        // Confirmar la eliminación
-        if (!window.confirm(`¿Está seguro que desea eliminar el tercero "${tercero.razonSocial}"?`)) {
-            return;
-        }
+        setShowDeleteDialog(true);
+    };
 
+    // Agregar esta nueva función para confirmar la eliminación
+    const confirmDeleteTercero = async () => {
         try {
+            if (tercero.idTercero === null) {
+                toast.error("No se puede eliminar: ID de tercero no válido", {
+                    position: "top-center",
+                });
+                setShowDeleteDialog(false);
+                return;
+            }
             await TerceroService.delete(tercero.idTercero);
             console.log("Tercero eliminado:", tercero.idTercero);
             toast.success("Tercero eliminado correctamente", {
@@ -272,17 +292,26 @@ export default function SuppliersMaster() {
                 terceroGeneral: false,
                 idTipoRegimen: 0,
                 idListaPreciosTercero: 0,
+                retenedorIva: false,
+                retenedorRenta: false,
+                retenedorIca: false,
+                declaraRenta: false,
+                tarifaIca: 0,
                 responsabilidadesTerceros: [],
             });
             setSelectedTercero(null);
 
             // Recargar la lista de terceros
             fetchSuppliers();
+
+            // Cerrar el diálogo
+            setShowDeleteDialog(false);
         } catch (error) {
             console.error('Error al eliminar el tercero:', error);
             toast.error("Error al eliminar el tercero", {
                 position: "top-center",
             });
+            setShowDeleteDialog(false);
         }
     };
 
@@ -553,337 +582,426 @@ export default function SuppliersMaster() {
             </div>
 
             {/* Campos de terceros */}
-            <Card className="mb-6 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Tipo de Documento</label>
-                        <select
-                            className={
-                                (!tercero.idTipoDocumentoId || tercero.idTipoDocumentoId === 0) && formError
-                                    ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                    : "w-full rounded border px-3 py-2 text-sm bg-background"
-                            }
-                            value={tercero.idTipoDocumentoId}
-                            onChange={e => setTercero({ ...tercero, idTipoDocumentoId: Number(e.target.value) })}
-                            required
-                        >
-                            {tiposDocumentoIdentidad.map(cat => (
-                                <option key={cat.idTipoDocumentoId} value={cat.idTipoDocumentoId}>
-                                    {cat.nombreTipoDocumentoId} ({cat.codigoTipoDocumentoId})
-                                </option>
-                            ))}
-                        </select>
-                        {formError && (!tercero.idTipoDocumentoId || tercero.idTipoDocumentoId === 0) && (
-                            <span className="text-xs text-red-500">El tipo de documento es obligatorio.</span>
-                        )}
-                        {tipoError && (
-                            <span className="text-xs text-red-500">{tipoError}</span>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Número de Identificación</label>
-                        <Input
-                            value={tercero.numeroIdentificacion ?? ""}
-                            onChange={e => setTercero({ ...tercero, numeroIdentificacion: e.target.value })}
-                            placeholder="Número de identificación"
-                            required
-                            className={
-                                !tercero.numeroIdentificacion?.trim() && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
-                        />
-                        {formError && !tercero.numeroIdentificacion?.trim() && (
-                            <span className="text-xs text-red-500">El número de identificación es obligatorio.</span>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Digito de Verificación</label>
-                        <Input
-                            value={tercero.digitoVerificacion ?? ""}
-                            onChange={e => setTercero({ ...tercero, digitoVerificacion: e.target.value })}
-                            placeholder="DV"
-                            readOnly
-                            className={`w-20 ${!tercero.digitoVerificacion?.trim() && formError
-                                ? "border border-red-500"
-                                : ""
-                                }`}
-                        />
-                    </div>
-                    <div className="md:col-span-4 grid grid-cols-4 gap-4">
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Primer Nombre</label>
-                            <Input
-                                value={tercero.primerNombre ?? ""}
-                                onChange={e => setTercero({ ...tercero, primerNombre: e.target.value })}
-                                placeholder="Primer nombre"
-                                className={
-                                    !tercero.primerNombre?.trim() && formError
-                                        ? "border border-red-500"
-                                        : ""
-                                }
-                            />
-                            {/* {formError && (!tercero.primerNombre?.trim()) && (
-                            <span className="text-xs text-red-500">El primer nombre es obligatorio.</span>
-                        )} */}
-                        </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Primer Apellido</label>
-                            <Input
-                                value={tercero.primerApellido ?? ""}
-                                onChange={e => setTercero({ ...tercero, primerApellido: e.target.value })}
-                                placeholder="Primer apellido"
-                                className={
-                                    !tercero.primerApellido?.trim() && formError
-                                        ? "border border-red-500"
-                                        : ""
-                                }
-                            />
-                            {/* {formError && (!tercero.primerApellido?.trim()) && (
-                            <span className="text-xs text-red-500">El primer apellido es obligatorio.</span>
-                        )} */}
-                        </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Razón Social</label>
-                            <Input
-                                value={tercero.razonSocial ?? ""}
-                                onChange={e => setTercero({ ...tercero, razonSocial: e.target.value })}
-                                placeholder="Razón social"
-                                className={
-                                    !tercero.razonSocial?.trim() && formError
-                                        ? "border border-red-500"
-                                        : ""
-                                }
-                            />
-                            {/* {formError && (!tercero.razonSocial?.trim()) && (
-                            <span className="text-xs text-red-500">La razón social es obligatoria.</span>
-                        )} */}
-                        </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Dirección</label>
-                            <Input
-                                value={tercero.direccionTercero ?? ""}
-                                onChange={e => setTercero({ ...tercero, direccionTercero: e.target.value })}
-                                placeholder="Dirección"
-                                className={
-                                    !tercero.direccionTercero?.trim() && formError
-                                        ? "border border-red-500"
-                                        : ""
-                                }
-                            />
-                            {/* {formError && (!tercero.direccionTercero?.trim()) && (
-                            <span className="text-xs text-red-500">La dirección es obligatoria.</span>
-                        )} */}
-                        </div>
-                    </div>
-                    <div className="md:col-span-4 grid grid-cols-4 gap-4">
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Departamento</label>
-                            <select
-                                className={
-                                    (!tercero.idDepartamento || tercero.idDepartamento === 0) && formError
-                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
-                                }
-                                value={tercero.idDepartamento}
-                                onChange={e => {
-                                    const newDepartamentoId = Number(e.target.value);
-                                    setTercero({
-                                        ...tercero,
-                                        idDepartamento: newDepartamentoId,
-                                        idMunicipio: 0 // Resetear municipio cuando cambia el departamento
-                                    });
-                                }}
-                                required
-                            >
-                                {departamentos.map(cat => (
-                                    <option key={cat.idDepartamento} value={cat.idDepartamento}>
-                                        {cat.nombreDepartamento}
-                                    </option>
-                                ))}
-                            </select>
-                            {formError && (!tercero.idDepartamento || tercero.idDepartamento === 0) && (
-                                <span className="text-xs text-red-500">El departamento es obligatorio.</span>
-                            )}
-                            {tipoError && (
-                                <span className="text-xs text-red-500">{tipoError}</span>
-                            )}
-                        </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Municipio</label>
-                            <select
-                                className={
-                                    (!tercero.idMunicipio || tercero.idMunicipio === 0) && formError
-                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
-                                }
-                                value={tercero.idMunicipio}
-                                onChange={e => setTercero({ ...tercero, idMunicipio: Number(e.target.value) })}
-                                required
-                            >
-                                <option value={0}>Seleccione un municipio</option>
-                                {municipiosPorDepartamento
-                                    .find(dep => dep.idDepartamento === tercero.idDepartamento)
-                                    ?.municipios.map(mun => (
-                                        <option key={mun.idMunicipio} value={mun.idMunicipio}>
-                                            {mun.nombreMunicipio}
+            <Tabs defaultValue="general" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="general">Información General</TabsTrigger>
+                    <TabsTrigger value="impuestos">Impuestos</TabsTrigger>
+                </TabsList>
+                <TabsContent value="general" className="mt-4">
+                    <Card className="mb-6 p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label className="block text-xs text-muted-foreground mb-1">Tipo de Documento</label>
+                                <select
+                                    className={
+                                        (!tercero.idTipoDocumentoId || tercero.idTipoDocumentoId === 0) && formError
+                                            ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                            : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                    }
+                                    value={tercero.idTipoDocumentoId}
+                                    onChange={e => setTercero({ ...tercero, idTipoDocumentoId: Number(e.target.value) })}
+                                    required
+                                >
+                                    {tiposDocumentoIdentidad.map(cat => (
+                                        <option key={cat.idTipoDocumentoId} value={cat.idTipoDocumentoId}>
+                                            {cat.nombreTipoDocumentoId} ({cat.codigoTipoDocumentoId})
                                         </option>
                                     ))}
-                            </select>
-                            {formError && (!tercero.idMunicipio || tercero.idMunicipio === 0) && (
-                                <span className="text-xs text-red-500">El municipio es obligatorio.</span>
-                            )}
-                            {tipoError && (
-                                <span className="text-xs text-red-500">{tipoError}</span>
-                            )}
-                        </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Email</label>
-                            <Input
-                                type="email"
-                                value={tercero.emailTercero ?? ""}
-                                onChange={e => setTercero({ ...tercero, emailTercero: e.target.value })}
-                                placeholder="Email"
-                                className={
-                                    !tercero.emailTercero?.trim() && formError
+                                </select>
+                                {formError && (!tercero.idTipoDocumentoId || tercero.idTipoDocumentoId === 0) && (
+                                    <span className="text-xs text-red-500">El tipo de documento es obligatorio.</span>
+                                )}
+                                {tipoError && (
+                                    <span className="text-xs text-red-500">{tipoError}</span>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-xs text-muted-foreground mb-1">Número de Identificación</label>
+                                <Input
+                                    value={tercero.numeroIdentificacion ?? ""}
+                                    onChange={e => setTercero({ ...tercero, numeroIdentificacion: e.target.value })}
+                                    placeholder="Número de identificación"
+                                    required
+                                    className={
+                                        !tercero.numeroIdentificacion?.trim() && formError
+                                            ? "border border-red-500"
+                                            : ""
+                                    }
+                                />
+                                {formError && !tercero.numeroIdentificacion?.trim() && (
+                                    <span className="text-xs text-red-500">El número de identificación es obligatorio.</span>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-xs text-muted-foreground mb-1">Digito de Verificación</label>
+                                <Input
+                                    value={tercero.digitoVerificacion ?? ""}
+                                    onChange={e => setTercero({ ...tercero, digitoVerificacion: e.target.value })}
+                                    placeholder="DV"
+                                    readOnly
+                                    className={`w-20 ${!tercero.digitoVerificacion?.trim() && formError
                                         ? "border border-red-500"
                                         : ""
-                                }
-                            />
-                            {/* {formError && (!tercero.emailTercero?.trim()) && (
+                                        }`}
+                                />
+                            </div>
+                            <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Primer Nombre</label>
+                                    <Input
+                                        value={tercero.primerNombre ?? ""}
+                                        onChange={e => setTercero({ ...tercero, primerNombre: e.target.value })}
+                                        placeholder="Primer nombre"
+                                        className={
+                                            !tercero.primerNombre?.trim() && formError
+                                                ? "border border-red-500"
+                                                : ""
+                                        }
+                                    />
+                                    {/* {formError && (!tercero.primerNombre?.trim()) && (
+                            <span className="text-xs text-red-500">El primer nombre es obligatorio.</span>
+                        )} */}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Primer Apellido</label>
+                                    <Input
+                                        value={tercero.primerApellido ?? ""}
+                                        onChange={e => setTercero({ ...tercero, primerApellido: e.target.value })}
+                                        placeholder="Primer apellido"
+                                        className={
+                                            !tercero.primerApellido?.trim() && formError
+                                                ? "border border-red-500"
+                                                : ""
+                                        }
+                                    />
+                                    {/* {formError && (!tercero.primerApellido?.trim()) && (
+                            <span className="text-xs text-red-500">El primer apellido es obligatorio.</span>
+                        )} */}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Razón Social</label>
+                                    <Input
+                                        value={tercero.razonSocial ?? ""}
+                                        onChange={e => setTercero({ ...tercero, razonSocial: e.target.value })}
+                                        placeholder="Razón social"
+                                        className={
+                                            !tercero.razonSocial?.trim() && formError
+                                                ? "border border-red-500"
+                                                : ""
+                                        }
+                                    />
+                                    {/* {formError && (!tercero.razonSocial?.trim()) && (
+                            <span className="text-xs text-red-500">La razón social es obligatoria.</span>
+                        )} */}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Dirección</label>
+                                    <Input
+                                        value={tercero.direccionTercero ?? ""}
+                                        onChange={e => setTercero({ ...tercero, direccionTercero: e.target.value })}
+                                        placeholder="Dirección"
+                                        className={
+                                            !tercero.direccionTercero?.trim() && formError
+                                                ? "border border-red-500"
+                                                : ""
+                                        }
+                                    />
+                                    {/* {formError && (!tercero.direccionTercero?.trim()) && (
+                            <span className="text-xs text-red-500">La dirección es obligatoria.</span>
+                        )} */}
+                                </div>
+                            </div>
+                            <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Departamento</label>
+                                    <select
+                                        className={
+                                            (!tercero.idDepartamento || tercero.idDepartamento === 0) && formError
+                                                ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                                : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                        }
+                                        value={tercero.idDepartamento}
+                                        onChange={e => {
+                                            const newDepartamentoId = Number(e.target.value);
+                                            setTercero({
+                                                ...tercero,
+                                                idDepartamento: newDepartamentoId,
+                                                idMunicipio: 0 // Resetear municipio cuando cambia el departamento
+                                            });
+                                        }}
+                                        required
+                                    >
+                                        {departamentos.map(cat => (
+                                            <option key={cat.idDepartamento} value={cat.idDepartamento}>
+                                                {cat.nombreDepartamento}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {formError && (!tercero.idDepartamento || tercero.idDepartamento === 0) && (
+                                        <span className="text-xs text-red-500">El departamento es obligatorio.</span>
+                                    )}
+                                    {tipoError && (
+                                        <span className="text-xs text-red-500">{tipoError}</span>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Municipio</label>
+                                    <select
+                                        className={
+                                            (!tercero.idMunicipio || tercero.idMunicipio === 0) && formError
+                                                ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                                : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                        }
+                                        value={tercero.idMunicipio}
+                                        onChange={e => setTercero({ ...tercero, idMunicipio: Number(e.target.value) })}
+                                        required
+                                    >
+                                        <option value={0}>Seleccione un municipio</option>
+                                        {municipiosPorDepartamento
+                                            .find(dep => dep.idDepartamento === tercero.idDepartamento)
+                                            ?.municipios.map(mun => (
+                                                <option key={mun.idMunicipio} value={mun.idMunicipio}>
+                                                    {mun.nombreMunicipio}
+                                                </option>
+                                            ))}
+                                    </select>
+                                    {formError && (!tercero.idMunicipio || tercero.idMunicipio === 0) && (
+                                        <span className="text-xs text-red-500">El municipio es obligatorio.</span>
+                                    )}
+                                    {tipoError && (
+                                        <span className="text-xs text-red-500">{tipoError}</span>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Email</label>
+                                    <Input
+                                        type="email"
+                                        value={tercero.emailTercero ?? ""}
+                                        onChange={e => setTercero({ ...tercero, emailTercero: e.target.value })}
+                                        placeholder="Email"
+                                        className={
+                                            !tercero.emailTercero?.trim() && formError
+                                                ? "border border-red-500"
+                                                : ""
+                                        }
+                                    />
+                                    {/* {formError && (!tercero.emailTercero?.trim()) && (
                             <span className="text-xs text-red-500">El email es obligatorio.</span>
                         )} */}
-                        </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
-                            <Input
-                                type="number"
-                                value={tercero.telefonoTercero || ""}
-                                onChange={e => setTercero({ ...tercero, telefonoTercero: Number(e.target.value) })}
-                                placeholder="Teléfono"
-                                className={
-                                    !tercero.telefonoTercero && formError
-                                        ? "border border-red-500"
-                                        : ""
-                                }
-                            />
-                            {/* {formError && (!tercero.telefonoTercero) && (
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
+                                    <Input
+                                        type="number"
+                                        value={tercero.telefonoTercero || ""}
+                                        onChange={e => setTercero({ ...tercero, telefonoTercero: Number(e.target.value) })}
+                                        placeholder="Teléfono"
+                                        className={
+                                            !tercero.telefonoTercero && formError
+                                                ? "border border-red-500"
+                                                : ""
+                                        }
+                                    />
+                                    {/* {formError && (!tercero.telefonoTercero) && (
                             <span className="text-xs text-red-500">El teléfono es obligatorio.</span>
                         )} */}
-                        </div>
-                    </div>
-                    <div className="md:col-span-4 grid grid-cols-4 gap-4">
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Estado</label>
-                            <div className="flex items-center space-x-2 mt-2">
-                                <input
-                                    type="checkbox"
-                                    checked={tercero.terceroActivo || false}
-                                    onChange={e => setTercero({ ...tercero, terceroActivo: e.target.checked })}
-                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                />
-                                <span className="text-sm text-muted-foreground">
-                                    {tercero.terceroActivo ? "Tercero activo" : "Tercero inactivo"}
-                                </span>
+                                </div>
+                            </div>
+                            <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Estado</label>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.terceroActivo || false}
+                                            onChange={e => setTercero({ ...tercero, terceroActivo: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.terceroActivo ? "Tercero activo" : "Tercero inactivo"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Es Cliente?</label>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.terceroCliente || false}
+                                            onChange={e => setTercero({ ...tercero, terceroCliente: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.terceroCliente ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Es Proveedor?</label>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.terceroProveedor || false}
+                                            onChange={e => setTercero({ ...tercero, terceroProveedor: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.terceroProveedor ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Es General?</label>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.terceroGeneral || false}
+                                            onChange={e => setTercero({ ...tercero, terceroGeneral: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.terceroGeneral ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Tipo Régimen</label>
+                                    <select
+                                        className={
+                                            (!tercero.idTipoRegimen || tercero.idTipoRegimen === 0) && formError
+                                                ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                                : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                        }
+                                        value={tercero.idTipoRegimen}
+                                        onChange={e => setTercero({ ...tercero, idTipoRegimen: Number(e.target.value) })}
+                                        required
+                                    >
+                                        {tiposRegimen.map(cat => (
+                                            <option key={cat.idTipoRegimen} value={cat.idTipoRegimen}>
+                                                {cat.nombreTipoRegimen}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {formError && (!tercero.idTipoRegimen || tercero.idTipoRegimen === 0) && (
+                                        <span className="text-xs text-red-500">El tipo de régimen es obligatorio.</span>
+                                    )}
+                                    {tipoError && (
+                                        <span className="text-xs text-red-500">{tipoError}</span>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Lista de Precios</label>
+                                    <select
+                                        className={
+                                            (!tercero.idListaPreciosTercero || tercero.idListaPreciosTercero === 0) && formError
+                                                ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                                : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                        }
+                                        value={tercero.idListaPreciosTercero}
+                                        onChange={e => setTercero({ ...tercero, idListaPreciosTercero: Number(e.target.value) })}
+                                        required
+                                    >
+                                        {listaPrecios.map(cat => (
+                                            <option key={cat.idListaPrecio} value={cat.idListaPrecio}>
+                                                {cat.nombreListaPrecio}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {formError && (!tercero.idListaPreciosTercero || tercero.idListaPreciosTercero === 0) && (
+                                        <span className="text-xs text-red-500">La lista de precios es obligatoria.</span>
+                                    )}
+                                    {tipoError && (
+                                        <span className="text-xs text-red-500">{tipoError}</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Es Cliente?</label>
-                            <div className="flex items-center space-x-2 mt-2">
-                                <input
-                                    type="checkbox"
-                                    checked={tercero.terceroCliente || false}
-                                    onChange={e => setTercero({ ...tercero, terceroCliente: e.target.checked })}
-                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                />
-                                <span className="text-sm text-muted-foreground">
-                                    {tercero.terceroCliente ? "Si" : "No"}
-                                </span>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="impuestos" className="mt-4">
+                    <Card className="mb-6 p-4">
+                        <div className="grid grid-cols-1 gap-4">
+                            {/* Primera fila - 3 controles */}
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Iva</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.retenedorIva || false}
+                                            onChange={e => setTercero({ ...tercero, retenedorIva: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.retenedorIva ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Renta</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.retenedorRenta || false}
+                                            onChange={e => setTercero({ ...tercero, retenedorRenta: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.retenedorRenta ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Ica</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.retenedorIca || false}
+                                            onChange={e => setTercero({ ...tercero, retenedorIca: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.retenedorIca ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Segunda fila - 3 columnas (la tercera vacía) */}
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Declara Renta</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.declaraRenta || false}
+                                            onChange={e => setTercero({ ...tercero, declaraRenta: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.declaraRenta ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Tarifa Ica</label>
+                                    <Input
+                                        value={tercero.tarifaIca ?? ""}
+                                        onChange={e => setTercero({ ...tercero, tarifaIca: Number(e.target.value) })}
+                                        placeholder="Tarifa Ica"
+                                        className="w-48"
+                                    />
+                                </div>
+                                <div>
+                                    {/* Tercera columna vacía */}
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Es Proveedor?</label>
-                            <div className="flex items-center space-x-2 mt-2">
-                                <input
-                                    type="checkbox"
-                                    checked={tercero.terceroProveedor || false}
-                                    onChange={e => setTercero({ ...tercero, terceroProveedor: e.target.checked })}
-                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                />
-                                <span className="text-sm text-muted-foreground">
-                                    {tercero.terceroProveedor ? "Si" : "No"}
-                                </span>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Es General?</label>
-                            <div className="flex items-center space-x-2 mt-2">
-                                <input
-                                    type="checkbox"
-                                    checked={tercero.terceroGeneral || false}
-                                    onChange={e => setTercero({ ...tercero, terceroGeneral: e.target.checked })}
-                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                />
-                                <span className="text-sm text-muted-foreground">
-                                    {tercero.terceroGeneral ? "Si" : "No"}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="md:col-span-4 grid grid-cols-4 gap-4">
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Tipo Régimen</label>
-                            <select
-                                className={
-                                    (!tercero.idTipoRegimen || tercero.idTipoRegimen === 0) && formError
-                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
-                                }
-                                value={tercero.idTipoRegimen}
-                                onChange={e => setTercero({ ...tercero, idTipoRegimen: Number(e.target.value) })}
-                                required
-                            >
-                                {tiposRegimen.map(cat => (
-                                    <option key={cat.idTipoRegimen} value={cat.idTipoRegimen}>
-                                        {cat.nombreTipoRegimen}
-                                    </option>
-                                ))}
-                            </select>
-                            {formError && (!tercero.idTipoRegimen || tercero.idTipoRegimen === 0) && (
-                                <span className="text-xs text-red-500">El tipo de régimen es obligatorio.</span>
-                            )}
-                            {tipoError && (
-                                <span className="text-xs text-red-500">{tipoError}</span>
-                            )}
-                        </div>
-                        <div>
-                            <label className="block text-xs text-muted-foreground mb-1">Lista de Precios</label>
-                            <select
-                                className={
-                                    (!tercero.idListaPreciosTercero || tercero.idListaPreciosTercero === 0) && formError
-                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
-                                }
-                                value={tercero.idListaPreciosTercero}
-                                onChange={e => setTercero({ ...tercero, idListaPreciosTercero: Number(e.target.value) })}
-                                required
-                            >
-                                {listaPrecios.map(cat => (
-                                    <option key={cat.idListaPrecio} value={cat.idListaPrecio}>
-                                        {cat.nombreListaPrecio}
-                                    </option>
-                                ))}
-                            </select>
-                            {formError && (!tercero.idListaPreciosTercero || tercero.idListaPreciosTercero === 0) && (
-                                <span className="text-xs text-red-500">La lista de precios es obligatoria.</span>
-                            )}
-                            {tipoError && (
-                                <span className="text-xs text-red-500">{tipoError}</span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </Card>
+                    </Card>
+                </TabsContent>
+            </Tabs>
 
             {/* Tabla de responsabilidades */}
             <Card className="overflow-x-auto">
@@ -1041,7 +1159,40 @@ export default function SuppliersMaster() {
                     </tbody>
                 </table>
             </Card>
-
-        </div>
+            {/* AlertDialog de éxito */}
+            <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Todo ha salido bien!!</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {successMessage}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
+                            Aceptar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar eliminación</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            ¿Está seguro que desea eliminar el tercero "{tercero.razonSocial || tercero.primerNombre + ' ' + tercero.primerApellido}"? Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                            Cancelar
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDeleteTercero}>
+                            Eliminar
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div >
     );
 }

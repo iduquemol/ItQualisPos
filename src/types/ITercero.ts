@@ -23,5 +23,10 @@ export interface ITercero {
     terceroGeneral: boolean;
     idTipoRegimen: number;
     idListaPreciosTercero: number;
+    retenedorIva: boolean;
+    retenedorRenta: boolean;
+    retenedorIca: boolean;
+    declaraRenta: boolean;
+    tarifaIca: number;
     responsabilidadesTerceros: IResponsabilidadTercero[];
 }

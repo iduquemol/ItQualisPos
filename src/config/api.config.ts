@@ -1,4 +1,4 @@
-const isDevelopment = import.meta.env.MODE === 'development';
+const isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.VITE_ON_PREMISE === 'true';
 
 export const API_CONFIG = {
     BASE_URL: isDevelopment 
@@ -30,6 +30,8 @@ export const API_CONFIG = {
         COTIZACION: '/cotizacion',
         CONCEPTOS_NOTA_CREDITO: '/conceptosnotacredito',
         NOTA_CREDITO: '/notacredito',
+        TARIFAS_POR_TRIBUTO: '/tarifastributo',
+        RESEND_VENTA: '/enviar-dian'
     },
     getUrl: (endpoint: string) => {
         const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);

@@ -12,6 +12,10 @@ export interface IProducto {
     precioUnitario: number;
     precioPos: number;
     porcentajeIva: number | null;
+    porcentajeImpoConsumo: number | null;
+    porcentajeReteIva: number | null;
+    porcentajeReteRenta: number | null;
+    porcentajeReteIca: number | null;
     quantity: number;  
     idTipoProducto: number; // ID of the product type
     productoActivo: boolean; // Indicates if the product is active
