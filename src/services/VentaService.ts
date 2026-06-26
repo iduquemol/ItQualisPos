@@ -5,6 +5,7 @@ import { IResponseVenta } from "@/types/IResponseVenta";
 import { ITerceroDefault } from "@/types/ITerceroDefault";
 import { ITipoDocumentoDefault } from "@/types/ITipoDocumentoDefault";
 import { IVenta } from "@/types/IVenta";
+import { blob } from "stream/consumers";
 
 export const VentaService = {
     async getById(idventa: number): Promise<IVenta | null> {
@@ -57,6 +58,33 @@ export const VentaService = {
             return data;
         } catch (error) {
             console.error('Error en VentaService.printById:', error);
+            throw error;
+        }
+    },
+
+    async previewPdf(idventa: number, idMetodoDian: number): Promise<Blob> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.PREVIEW_PDF),
+                {
+                    method: "POST",
+                    headers: {
+                        ...API_CONFIG.OPTIONS.headers,
+                        "Content-Type": "application/json"
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ idventa: idventa, idMetodoDian: idMetodoDian })
+                }
+            );
+            //console.log(response.url);
+            if (!response.ok) {
+                throw new Error('Error al previsualizar PDF de venta por ID');
+            }
+            const blob = await response.blob();
+            return blob;
+        } catch (error) {
+            console.error('Error en VentaService.previewPdf:', error);
             throw error;
         }
     },

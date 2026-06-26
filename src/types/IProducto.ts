@@ -20,6 +20,8 @@ export interface IProducto {
     idTipoProducto: number; // ID of the product type
     productoActivo: boolean; // Indicates if the product is active
     porcentajeDescuento: number | null; // Percentage discount applied to the product
+    codigoItemSector: boolean | null; 
+    idTerceroMandato: number | null; // ID of the third-party mandate
     preciosProducto: IPrecioProducto[]; // Array of IPrecioProducto
     tributosProducto: ITributoProducto[]; // Array of ITributo  
 }

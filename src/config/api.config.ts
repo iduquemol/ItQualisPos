@@ -2,7 +2,7 @@ const isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.
 
 export const API_CONFIG = {
     BASE_URL: isDevelopment 
-        ? 'http://localhost:7049/api'
+        ? 'http://localhost:8087/api'
         : import.meta.env.VITE_API_URL,
     ENDPOINTS: {
         CATEGORIES: '/categorias',
@@ -31,7 +31,9 @@ export const API_CONFIG = {
         CONCEPTOS_NOTA_CREDITO: '/conceptosnotacredito',
         NOTA_CREDITO: '/notacredito',
         TARIFAS_POR_TRIBUTO: '/tarifastributo',
-        RESEND_VENTA: '/enviar-dian'
+        RESEND_VENTA: '/enviar-dian',
+        PREVIEW_PDF: '/preview-pdf',
+        TERCEROS_PROVEEDORES: '/terceros-proveedores'
     },
     getUrl: (endpoint: string) => {
         const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);
