@@ -507,6 +507,8 @@ const RetailPOS = () => {
         if (factura.idVenta) {
             const result = await VentaService.resend(factura.idVenta, factura.idMetodoDian || 2);
             console.log("Factura enviada a la Dian:", result);
+            setSuccessMessage(result.message || "Operación completada");
+            setShowSuccessDialog(true);  
         }
     }
 
@@ -568,9 +570,9 @@ const RetailPOS = () => {
 
         });
         setOpenDialog(false);
-        const dataPrint = await VentaService.printById(documento.idVenta);
-        setFacturaModalData(dataPrint);
         setShowFacturaModal(true);
+        const dataPrint = await VentaService.printById(documento.idVenta);
+        setFacturaModalData(dataPrint);        
     };
 
     const handleSaveVenta = async (indBorrador: boolean) => {
@@ -840,6 +842,7 @@ const RetailPOS = () => {
                                     facturaData={facturaModalData}
                                     triggerText="Imprimir Factura"
                                     triggerVariant="secondary"
+                                    idVenta={factura?.idVenta || 0}
                                     idMetodoDian={factura?.idMetodoDian || 0}
                                 />
                                 <Button
@@ -1291,6 +1294,28 @@ const RetailPOS = () => {
                                                     ) : (
                                                         <span className="text-sm text-muted-foreground">${formatCurrency(item.precioUnitarioVenta)}</span>
                                                     )}
+                                                    <div className="flex items-center space-x-1">
+                                                        <Checkbox
+                                                            id={`muestra-${item.registroVenta}`}
+                                                            checked={item.indMuestra || false}
+                                                            onCheckedChange={(checked) => {
+                                                                setFactura({
+                                                                    ...factura,
+                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                        detalleItem.registroVenta === item.registroVenta
+                                                                            ? { ...detalleItem, indMuestra: checked as boolean }
+                                                                            : detalleItem
+                                                                    )
+                                                                });
+                                                            }}
+                                                        />
+                                                        <Label
+                                                            htmlFor={`muestra-${item.registroVenta}`}
+                                                            className="text-xs cursor-pointer"
+                                                        >
+                                                            Es una Muestra?
+                                                        </Label>
+                                                    </div>
                                                 </div>
                                             </div>
 

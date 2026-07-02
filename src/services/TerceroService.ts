@@ -1,5 +1,6 @@
 import { ITercero } from "@/types/ITercero";
 import { API_CONFIG } from "@/config/api.config";
+import { ITerceroProveedor } from "@/types/ITerceroProveedor";
 
 export const TerceroService = {
     async getAll(): Promise<ITercero[]> {
@@ -99,6 +100,29 @@ export const TerceroService = {
             console.error('Error en TerceroService.delete:', error);
             throw error;
         }
-    },                        
+    },   
+    
+    async getTercerosProveedores(): Promise<ITerceroProveedor[]> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.TERCEROS_PROVEEDORES),
+                {
+                    headers: API_CONFIG.OPTIONS.headers,
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al cargar terceros proveedores');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error en TerceroService.getTercerosProveedores:', error);
+            throw error;
+        }
+    },
+    
+    
 
 };

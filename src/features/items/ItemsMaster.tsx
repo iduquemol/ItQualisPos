@@ -8,6 +8,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescript
 import { Check, Pencil, Search, X, CircleX, Trash, Save, Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { IProducto } from '@/types/IProducto';
 import { ICategory } from '@/types/ICategoria';
 import { Package } from "lucide-react";
@@ -25,6 +29,8 @@ import { IPrecioProducto } from "@/types/IPrecioProducto";
 import { IListaPrecio } from "@/types/IListaPrecio";
 import { ListaPrecioService } from "@/services/ListaPrecioService";
 import { ITarifasPorTributo } from "@/types/ITarifasPorTributo";
+import { TerceroService } from "@/services/TerceroService";
+import { ITerceroProveedor } from "@/types/ITerceroProveedor";
 
 
 export default function ItemsMaster() {
@@ -46,6 +52,12 @@ export default function ItemsMaster() {
         porcentajeDescuento: 0,
         precioPos: 0,
         porcentajeIva: 0,
+        porcentajeImpoConsumo: 0,
+        porcentajeReteIva: 0,
+        porcentajeReteRenta: 0,
+        porcentajeReteIca: 0,
+        codigoItemSector: false,
+        idTerceroMandato: null,
         tributosProducto: [],
         preciosProducto: [],
     });
@@ -67,6 +79,10 @@ export default function ItemsMaster() {
     const [tarifasTributo, setTarifasTributo] = useState<ITarifasPorTributo[]>([]);
     const [isLoadingTarifasTributo, setIsLoadingTarifasTributo] = useState(true);
     const [tarifasTributoError, setTarifasTributoError] = useState<string | null>(null);
+    const [tercerosProveedores, setTercerosProveedores] = useState<ITerceroProveedor[]>([]);
+    const [isLoadingTercerosProveedores, setIsLoadingTercerosProveedores] = useState(true);
+    const [tercerosProveedoresError, setTercerosProveedoresError] = useState<string | null>(null);
+    const [openCombobox, setOpenCombobox] = useState(false);
 
     // Estados para edición inline de tributos
     const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -77,7 +93,7 @@ export default function ItemsMaster() {
         tarifa: 0,
         idTarifaProducto: 0,
         codigoTarifa: "",
-        nombreTarifa: "",            
+        nombreTarifa: "",
         idTributoProducto: 0,
     });
     const [addMode, setAddMode] = useState(false);
@@ -132,6 +148,8 @@ export default function ItemsMaster() {
             precioUnitario: prod.precioUnitario,
             idTipoProducto: prod.idTipoProducto,
             productoActivo: prod.productoActivo,
+            codigoItemSector: prod.codigoItemSector || false,
+            idTerceroMandato: prod.idTerceroMandato || null,
             porcentajeDescuento: prod.porcentajeDescuento || 0,
             tributosProducto: prod.tributosProducto || [],
             preciosProducto: prod.preciosProducto || [],
@@ -156,6 +174,12 @@ export default function ItemsMaster() {
             precioPos: 0,
             porcentajeIva: 0,
             quantity: 0,
+            porcentajeImpoConsumo: 0,
+            porcentajeReteIva: 0,
+            porcentajeReteRenta: 0,
+            porcentajeReteIca: 0,
+            codigoItemSector: false,
+            idTerceroMandato: null,
             tributosProducto: [],
             preciosProducto: [],
         });
@@ -272,6 +296,12 @@ export default function ItemsMaster() {
                 idTipoProducto: 0,
                 productoActivo: true,
                 porcentajeDescuento: 0,
+                porcentajeImpoConsumo: 0,
+                porcentajeReteIva: 0,
+                porcentajeReteRenta: 0,
+                porcentajeReteIca: 0,
+                codigoItemSector: false,
+                idTerceroMandato: null,
                 preciosProducto: [],
                 tributosProducto: [],
             });
@@ -491,6 +521,28 @@ export default function ItemsMaster() {
         }
     };
 
+    const fetchTercerosProveedores = async () => {
+        try {
+            setTercerosProveedores([]);
+            setIsLoadingTercerosProveedores(true);
+            const data = await TerceroService.getTercerosProveedores();
+            console.log('Terceros proveedores cargados:', data);
+            setTercerosProveedores([
+                { idTercero: 0, numeroIdentificacion: "0", razonSocial: "Seleccione un tercero" },
+                ...data
+            ]);
+        } catch (error) {
+            console.error('Error:', error);
+            setTercerosProveedoresError('Error al cargar los terceros proveedores');
+            // Terceros proveedores por defecto en caso de error
+            setTercerosProveedores([
+                { idTercero: 0, numeroIdentificacion: "0", razonSocial: "Seleccione un tercero" }
+            ]);
+        } finally {
+            setIsLoadingTercerosProveedores(false);
+        }
+    };
+
     // Cargar data al iniciar el componente
     useEffect(() => {
         fetchCategories();
@@ -500,7 +552,7 @@ export default function ItemsMaster() {
         fetchTarifasPorTributo();
         fetchTipoProducto();
         fetchListasPrecios();
-
+        fetchTercerosProveedores();
     }, []);
 
     return (
@@ -615,213 +667,300 @@ export default function ItemsMaster() {
 
             {/* Campos de producto */}
             <Card className="mb-6 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Código</label>
-                        <Input
-                            value={producto.codigoProducto}
-                            onChange={e => {
-                                const newValue = e.target.value;
-                                // Si había un ID y el código realmente cambió, limpiar todo el producto
-                                if (producto.idProducto && newValue !== producto.codigoProducto) {
-                                    setProducto({
-                                        idProducto: null,
-                                        codigoProducto: newValue,
-                                        nombreProducto: "",
-                                        imagenProducto: "",
-                                        codigoBarras: "",
-                                        idCategoria: 0,
-                                        idUnidadMedida: 0,
-                                        precioUnitario: 0,
-                                        quantity: 0,
-                                        precioPos: 0,
-                                        idTipoProducto: 0,
-                                        productoActivo: false,
-                                        porcentajeDescuento: 0,
-                                        porcentajeIva: 0,
-                                        preciosProducto: [],
-                                        tributosProducto: [],
-                                    });
-                                    // También limpiar el producto seleccionado
-                                    setSelectedProduct(null);
-                                } else {
-                                    // Si no hay cambio significativo, solo actualizar el código
-                                    setProducto({
-                                        ...producto,
-                                        codigoProducto: newValue
-                                    });
+                {/* Sección 1: Datos Básicos */}
+                <div className="mb-4">
+                    {/* <h3 className="text-sm font-semibold text-muted-foreground mb-3 border-b pb-2">Datos Básicos</h3> */}
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Código</label>
+                            <Input
+                                value={producto.codigoProducto}
+                                onChange={e => {
+                                    const newValue = e.target.value;
+                                    if (producto.idProducto && newValue !== producto.codigoProducto) {
+                                        setProducto({
+                                            idProducto: null,
+                                            codigoProducto: newValue,
+                                            nombreProducto: "",
+                                            imagenProducto: "",
+                                            codigoBarras: "",
+                                            idCategoria: 0,
+                                            idUnidadMedida: 0,
+                                            precioUnitario: 0,
+                                            quantity: 0,
+                                            precioPos: 0,
+                                            idTipoProducto: 0,
+                                            productoActivo: false,
+                                            porcentajeDescuento: 0,
+                                            porcentajeIva: 0,
+                                            codigoItemSector: false,
+                                            idTerceroMandato: null,
+                                            porcentajeImpoConsumo: 0,
+                                            porcentajeReteIca: 0,
+                                            porcentajeReteRenta: 0,
+                                            porcentajeReteIva: 0,
+                                            preciosProducto: [],
+                                            tributosProducto: [],
+                                        });
+                                        setSelectedProduct(null);
+                                    } else {
+                                        setProducto({
+                                            ...producto,
+                                            codigoProducto: newValue
+                                        });
+                                    }
+                                }}
+                                placeholder="Código del producto"
+                                required
+                                className={
+                                    !producto.codigoProducto.trim() && formError
+                                        ? "border border-red-500"
+                                        : ""
                                 }
-                            }}
-                            placeholder="Código del producto"
-                            required
-                            className={
-                                !producto.codigoProducto.trim() && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
-                        />
-                        {formError && !producto.codigoProducto.trim() && (
-                            <span className="text-xs text-red-500">El código del producto es obligatorio.</span>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Nombre</label>
-                        <Input
-                            value={producto.nombreProducto}
-                            onChange={e => setProducto({ ...producto, nombreProducto: e.target.value })}
-                            placeholder="Nombre del producto"
-                            required
-                            className={
-                                !producto.nombreProducto.trim() && formError
-                                    ? "border border-red-500"
-                                    : ""
-                            }
-                        />
-                        {formError && !producto.nombreProducto.trim() && (
-                            <span className="text-xs text-red-500">El nombre del producto es obligatorio.</span>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Código de Barras</label>
-                        <Input
-                            value={producto.codigoBarras ?? ""}
-                            onChange={e => setProducto({ ...producto, codigoBarras: e.target.value })}
-                            placeholder="Código de barras"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Categoría</label>
-                        <select
-                            className={
-                                (!producto.idCategoria || producto.idCategoria === 0) && formError
-                                    ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                    : "w-full rounded border px-3 py-2 text-sm bg-background"
-                            }
-                            value={producto.idCategoria}
-                            onChange={e => setProducto({ ...producto, idCategoria: Number(e.target.value) })}
-                            required
-                        >
-                            {categories.map(cat => (
-                                <option key={cat.idCategoria} value={cat.idCategoria}>
-                                    {cat.iconCategoria} {cat.nombreCategoria}
-                                </option>
-                            ))}
-                        </select>
-                        {formError && (!producto.idCategoria || producto.idCategoria === 0) && (
-                            <span className="text-xs text-red-500">La categoría es obligatoria.</span>
-                        )}
-                        {categoryError && (
-                            <span className="text-xs text-red-500">{categoryError}</span>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Unidad de Medida</label>
-                        <select
-                            className={
-                                (!producto.idUnidadMedida || producto.idUnidadMedida === 0) && formError
-                                    ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                    : "w-full rounded border px-3 py-2 text-sm bg-background"
-                            }
-                            value={producto.idUnidadMedida}
-                            onChange={e => setProducto({ ...producto, idUnidadMedida: Number(e.target.value) })}
-                            required
-                        >
-                            {unidadesDeMedida.map(unidad => (
-                                <option key={unidad.idUnidadMedida} value={unidad.idUnidadMedida}>
-                                    {unidad.nombreUnidadMedida}
-                                </option>
-                            ))}
-                        </select>
-                        {formError && (!producto.idUnidadMedida || producto.idUnidadMedida === 0) && (
-                            <span className="text-xs text-red-500">La unidad de medida es obligatoria.</span>
-                        )}
-                        {unidadError && (
-                            <span className="text-xs text-red-500">{unidadError}</span>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Precio Unitario</label>
-                        <Input
-                            type="number"
-                            value={producto.precioUnitario ?? ""}
-                            onChange={e => setProducto({ ...producto, precioUnitario: Number(e.target.value) })}
-                            placeholder="Precio unitario"
-                            ref={precioUnitarioRef}
-                            onFocus={e => e.target.select()}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Stock Actual</label>
-                        <Input
-                            type="number"
-                            value={producto.stockActualProducto ?? ""}
-                            onChange={e => setProducto({ ...producto, stockActualProducto: Number(e.target.value) })}
-                            placeholder="Stock actual"
-                            disabled
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Costo Promedio</label>
-                        <Input
-                            type="number"
-                            value={producto.costoPromedioActualProducto ?? ""}
-                            onChange={e => setProducto({ ...producto, costoPromedioActualProducto: Number(e.target.value) })}
-                            placeholder="Costo promedio"
-                            disabled
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Tipo Producto</label>
-                        <select
-                            className={
-                                (!producto.idTipoProducto || producto.idTipoProducto === 0) && formError
-                                    ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                    : "w-full rounded border px-3 py-2 text-sm bg-background"
-                            }
-                            value={producto.idTipoProducto}
-                            onChange={e => setProducto({ ...producto, idTipoProducto: Number(e.target.value) })}
-                            required
-                        >
-                            {tiposProducto.map(cat => (
-                                <option key={cat.idTipoProducto} value={cat.idTipoProducto}>
-                                    {cat.nombreTipoProducto}
-                                </option>
-                            ))}
-                        </select>
-                        {formError && (!producto.idTipoProducto || producto.idTipoProducto === 0) && (
-                            <span className="text-xs text-red-500">El tipo de producto es obligatorio.</span>
-                        )}
-                        {tipoError && (
-                            <span className="text-xs text-red-500">{tipoError}</span>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Estado</label>
-                        <div className="flex items-center space-x-2 mt-2">
-                            <input
-                                type="checkbox"
-                                checked={producto.productoActivo || false}
-                                onChange={e => setProducto({ ...producto, productoActivo: e.target.checked })}
-                                className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
                             />
-                            <span className="text-sm text-muted-foreground">
-                                {producto.productoActivo ? "Producto activo" : "Producto inactivo"}
-                            </span>
+                            {formError && !producto.codigoProducto.trim() && (
+                                <span className="text-xs text-red-500">El código del producto es obligatorio.</span>
+                            )}
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs text-muted-foreground mb-1">Nombre</label>
+                            <Input
+                                value={producto.nombreProducto}
+                                onChange={e => setProducto({ ...producto, nombreProducto: e.target.value })}
+                                placeholder="Nombre del producto"
+                                required
+                                className={
+                                    !producto.nombreProducto.trim() && formError
+                                        ? "border border-red-500"
+                                        : ""
+                                }
+                            />
+                            {formError && !producto.nombreProducto.trim() && (
+                                <span className="text-xs text-red-500">El nombre del producto es obligatorio.</span>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Código de Barras</label>
+                            <Input
+                                value={producto.codigoBarras ?? ""}
+                                onChange={e => setProducto({ ...producto, codigoBarras: e.target.value })}
+                                placeholder="Código de barras"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Categoría</label>
+                            <select
+                                className={
+                                    (!producto.idCategoria || producto.idCategoria === 0) && formError
+                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                }
+                                value={producto.idCategoria}
+                                onChange={e => setProducto({ ...producto, idCategoria: Number(e.target.value) })}
+                                required
+                            >
+                                {categories.map(cat => (
+                                    <option key={cat.idCategoria} value={cat.idCategoria}>
+                                        {cat.iconCategoria} {cat.nombreCategoria}
+                                    </option>
+                                ))}
+                            </select>
+                            {formError && (!producto.idCategoria || producto.idCategoria === 0) && (
+                                <span className="text-xs text-red-500">La categoría es obligatoria.</span>
+                            )}
+                            {categoryError && (
+                                <span className="text-xs text-red-500">{categoryError}</span>
+                            )}
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Porcentaje Máximo Descuento</label>
-                        <Input
-                            type="number"
-                            value={producto.porcentajeDescuento ?? ""}
-                            onChange={e => setProducto({ ...producto, porcentajeDescuento: Number(e.target.value) })}
-                            placeholder="Porcentaje máximo descuento"
-                        />
+                </div>
+
+                {/* Sección 2: Configuración y Precios */}
+                <div>
+                    {/* <h3 className="text-sm font-semibold text-muted-foreground mb-3 border-b pb-2">Configuración y Precios</h3> */}
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Unidad de Medida</label>
+                            <select
+                                className={
+                                    (!producto.idUnidadMedida || producto.idUnidadMedida === 0) && formError
+                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                }
+                                value={producto.idUnidadMedida}
+                                onChange={e => setProducto({ ...producto, idUnidadMedida: Number(e.target.value) })}
+                                required
+                            >
+                                {unidadesDeMedida.map(unidad => (
+                                    <option key={unidad.idUnidadMedida} value={unidad.idUnidadMedida}>
+                                        {unidad.nombreUnidadMedida}
+                                    </option>
+                                ))}
+                            </select>
+                            {formError && (!producto.idUnidadMedida || producto.idUnidadMedida === 0) && (
+                                <span className="text-xs text-red-500">La unidad de medida es obligatoria.</span>
+                            )}
+                            {unidadError && (
+                                <span className="text-xs text-red-500">{unidadError}</span>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Tipo Producto</label>
+                            <select
+                                className={
+                                    (!producto.idTipoProducto || producto.idTipoProducto === 0) && formError
+                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
+                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
+                                }
+                                value={producto.idTipoProducto}
+                                onChange={e => setProducto({ ...producto, idTipoProducto: Number(e.target.value) })}
+                                required
+                            >
+                                {tiposProducto.map(cat => (
+                                    <option key={cat.idTipoProducto} value={cat.idTipoProducto}>
+                                        {cat.nombreTipoProducto}
+                                    </option>
+                                ))}
+                            </select>
+                            {formError && (!producto.idTipoProducto || producto.idTipoProducto === 0) && (
+                                <span className="text-xs text-red-500">El tipo de producto es obligatorio.</span>
+                            )}
+                            {tipoError && (
+                                <span className="text-xs text-red-500">{tipoError}</span>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Precio Unitario</label>
+                            <Input
+                                type="number"
+                                value={producto.precioUnitario ?? ""}
+                                onChange={e => setProducto({ ...producto, precioUnitario: Number(e.target.value) })}
+                                placeholder="Precio unitario"
+                                ref={precioUnitarioRef}
+                                onFocus={e => e.target.select()}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Stock Actual</label>
+                            <Input
+                                type="number"
+                                value={producto.stockActualProducto ?? ""}
+                                onChange={e => setProducto({ ...producto, stockActualProducto: Number(e.target.value) })}
+                                placeholder="Stock actual"
+                                disabled
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Costo Promedio</label>
+                            <Input
+                                type="number"
+                                value={producto.costoPromedioActualProducto ?? ""}
+                                onChange={e => setProducto({ ...producto, costoPromedioActualProducto: Number(e.target.value) })}
+                                placeholder="Costo promedio"
+                                disabled
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">% Máx. Descuento</label>
+                            <Input
+                                type="number"
+                                value={producto.porcentajeDescuento ?? ""}
+                                onChange={e => setProducto({ ...producto, porcentajeDescuento: Number(e.target.value) })}
+                                placeholder="Porcentaje máximo descuento"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Estado</label>
+                            <div className="flex items-center space-x-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={producto.productoActivo || false}
+                                    onChange={e => setProducto({ ...producto, productoActivo: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {producto.productoActivo ? "Activo" : "Inactivo"}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Indicador Mandato</label>
+                            <div className="flex items-center space-x-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={producto.codigoItemSector || false}
+                                    onChange={e => setProducto({ ...producto, codigoItemSector: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {producto.codigoItemSector ? "Si" : "No"}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs text-muted-foreground mb-1">Tercero del Mandato</label>
+                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={openCombobox}
+                                        className="w-full justify-between"
+                                    >
+                                        {producto.idTerceroMandato
+                                            ? tercerosProveedores.find(
+                                                (tercero) => tercero.idTercero === producto.idTerceroMandato
+                                            )?.razonSocial
+                                            : "Seleccione un tercero..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[400px] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Buscar tercero..." />
+                                        <CommandList>
+                                            <CommandEmpty>No se encontraron terceros.</CommandEmpty>
+                                            <CommandGroup>
+                                                {tercerosProveedores
+                                                    .filter(t => t.idTercero !== 0)
+                                                    .map((tercero) => (
+                                                        <CommandItem
+                                                            key={tercero.idTercero}
+                                                            value={`${tercero.numeroIdentificacion} ${tercero.razonSocial}`}
+                                                            onSelect={() => {
+                                                                setProducto({
+                                                                    ...producto,
+                                                                    idTerceroMandato: tercero.idTercero === producto.idTerceroMandato
+                                                                        ? null
+                                                                        : tercero.idTercero
+                                                                });
+                                                                setOpenCombobox(false);
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    producto.idTerceroMandato === tercero.idTercero
+                                                                        ? "opacity-100"
+                                                                        : "opacity-0"
+                                                                )}
+                                                            />
+                                                            <div className="flex flex-col">
+                                                                <span className="font-medium">{tercero.razonSocial}</span>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    NIT: {tercero.numeroIdentificacion}
+                                                                </span>
+                                                            </div>
+                                                        </CommandItem>
+                                                    ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                     </div>
                 </div>
-                {/* {formError && (
-                    <div className="text-red-600 text-sm mt-2">{formError}</div>
-                )} */}
             </Card>
 
             {/* Tabla de impuestos */}

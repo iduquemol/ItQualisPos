@@ -26,4 +26,5 @@ export interface IVentaDetalle {
     costoUnitarioVenta: number;
     costoTotalVenta: number;    
     idTipoProducto: number;
+    indMuestra: boolean;
 }

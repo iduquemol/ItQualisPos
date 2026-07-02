@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,44 +9,79 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Eye, Printer, X } from "lucide-react";
-import FacturaElectronica from './FacturaReport'; // Tu componente existente
-import FacturaReportTira from './FacturaReportTira';
-import FacturaServiTransReport from './FacturaServiTrans';
+import { Download, Printer, Loader2 } from "lucide-react";
+import { VentaService } from '@/services/VentaService';
 
 interface FacturaModalProps {
-  facturaData?: any; // Reemplaza con el tipo específico de tu factura
+  idVenta: number;
+  idMetodoDian?: number;
+  facturaData?: any;
   triggerText?: string;
   triggerVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-  idMetodoDian?: number;
 }
 
 const FacturaModal: React.FC<FacturaModalProps> = ({
+  idVenta,
+  idMetodoDian = 1,
   facturaData,
   triggerText = "Ver Factura",
   triggerVariant = "default",
-  idMetodoDian = 1
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Función para obtener el componente PDF correcto según idMetodoDian
-  const getPDFComponent = () => {
-    switch (idMetodoDian) {
-      case 1:
-        return <FacturaElectronica facturaData={facturaData} />;
-      case 2:
-        return <FacturaReportTira facturaData={facturaData} />;
-      default:
-        return <FacturaElectronica facturaData={facturaData} />;
+  // Cargar el PDF cuando se abre el modal
+  useEffect(() => {
+    if (isOpen && !pdfUrl) {
+      loadPdf();
+    }
+  }, [isOpen]);
+
+  // Limpiar URL cuando se cierra el modal
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
+  const loadPdf = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const pdfBlob = await VentaService.previewPdf(idVenta, idMetodoDian);
+      const url = URL.createObjectURL(pdfBlob);
+      setPdfUrl(url);
+    } catch (err) {
+      console.error('Error al cargar PDF:', err);
+      setError('Error al cargar la factura. Por favor intente nuevamente.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Generar nombre del archivo basado en los datos de la factura
+  const handleDownload = async () => {
+    try {
+      const pdfBlob = await VentaService.previewPdf(idVenta, idMetodoDian);
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = getFileName();
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error al descargar PDF:', err);
+    }
+  };
+
   const getFileName = () => {
     if (facturaData?.numeroVenta) {
       return `Factura_${facturaData.numeroVenta}.pdf`;
     }
-    return `Factura_${new Date().toISOString().split('T')[0]}.pdf`;
+    return `Factura_${idVenta}_${new Date().toISOString().split('T')[0]}.pdf`;
   };
 
   return (
@@ -71,22 +105,16 @@ const FacturaModal: React.FC<FacturaModalProps> = ({
               )}
 
               {/* Botón de descarga */}
-              <PDFDownloadLink
-                document={<FacturaElectronica facturaData={facturaData} />}
-                fileName={getFileName()}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownload}
+                disabled={isLoading || !pdfUrl}
+                className="flex items-center gap-2"
               >
-                {({ blob, url, loading, error }) => (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={loading}
-                    className="flex items-center gap-2"
-                  >
-                    <Download size={14} />
-                    {loading ? 'Generando...' : 'Descargar PDF'}
-                  </Button>
-                )}
-              </PDFDownloadLink>
+                <Download size={14} />
+                Descargar PDF
+              </Button>
             </div>
           </DialogTitle>
 
@@ -103,14 +131,29 @@ const FacturaModal: React.FC<FacturaModalProps> = ({
 
         {/* Visor del PDF */}
         <div className="flex-1 border rounded-lg overflow-hidden bg-gray-50">
-          <PDFViewer
-            width="100%"
-            height="100%"
-            showToolbar={true}
-            className="border-0"
-          >
-            {getPDFComponent()}
-          </PDFViewer>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                <p className="text-sm text-gray-600">Cargando factura...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-red-600">
+                <p className="mb-4">{error}</p>
+                <Button onClick={loadPdf} variant="outline">
+                  Reintentar
+                </Button>
+              </div>
+            </div>
+          ) : pdfUrl ? (
+            <iframe
+              src={pdfUrl}
+              className="w-full h-full"
+              title="Vista previa de factura"
+            />
+          ) : null}
         </div>
 
         {/* Footer con información adicional */}
@@ -139,56 +182,4 @@ const FacturaModal: React.FC<FacturaModalProps> = ({
   );
 };
 
-// Componente de ejemplo de uso
-const FacturaExample: React.FC = () => {
-  // Datos de ejemplo (puedes usar los mismos datos por defecto del componente original)
-  const facturaEjemplo = {
-    empresa: {
-      nombre: 'ROSA MARCELA PEA BUSTOS',
-      nit: '40341382',
-    },
-    factura: {
-      numero: 'EFE-4',
-      fechaEmision: '18/07/2025',
-    },
-    cliente: {
-      nombre: 'BIOSERVI SOLUCIONES S.A.S',
-    },
-    totales: {
-      totalPagar: 13347190,
-    },
-    items: [
-      { item: 1, descripcion: 'Producto ejemplo' }
-    ]
-  };
-
-  return (
-    <div className="p-8 space-y-4">
-      <h1 className="text-2xl font-bold">Sistema de Facturación</h1>
-
-      <div className="flex gap-4">
-        {/* Diferentes variantes del botón trigger */}
-        <FacturaModal
-          facturaData={facturaEjemplo}
-          triggerText="Ver Factura Completa"
-          triggerVariant="default"
-        />
-
-        <FacturaModal
-          facturaData={facturaEjemplo}
-          triggerText="Vista Rápida"
-          triggerVariant="outline"
-        />
-
-        <FacturaModal
-          facturaData={facturaEjemplo}
-          triggerText="Previsualizar"
-          triggerVariant="secondary"
-        />
-      </div>
-    </div>
-  );
-};
-
-export { FacturaModal, FacturaExample };
 export default FacturaModal;
