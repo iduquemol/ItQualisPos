@@ -11,17 +11,29 @@ export interface IProducto {
     idUnidadMedida: number;
     precioUnitario: number;
     precioPos: number;
+    
+    // Inventario y costos
+    stockActualProducto: number | null;
+    costoPromedioActualProducto: number | null;
+
+    // Porcentajes e Impuestos
     porcentajeIva: number | null;
     porcentajeImpoConsumo: number | null;
     porcentajeReteIva: number | null;
     porcentajeReteRenta: number | null;
     porcentajeReteIca: number | null;
-    quantity: number;  
+    porcentajeMaxDescuento: number | null; // Corregido aquí
+
+    quantity: number;
     idTipoProducto: number; // ID of the product type
     productoActivo: boolean; // Indicates if the product is active
-    porcentajeDescuento: number | null; // Percentage discount applied to the product
-    codigoItemSector: boolean | null; 
+    
+    // Tercero Mandato y Sector
+    idItemSector: number | null; // Corregido a number para manejar el ID del sector
     idTerceroMandato: number | null; // ID of the third-party mandate
+    indicadorMandato: boolean; 
+    
+    // Arrays / Relaciones
     preciosProducto: IPrecioProducto[]; // Array of IPrecioProducto
-    tributosProducto: ITributoProducto[]; // Array of ITributo  
+    tributosProducto: ITributoProducto[]; // Array of ITributo
 }

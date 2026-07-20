@@ -100,7 +100,26 @@ export const ProductoService = {
             console.error('Error en ProductoService.getProductosVentaByTercero:', error);
             throw error;
         }
-    }
+    },
 
+    async delete(id: number): Promise<void> {
+        try {
+            const response = await fetch(
+                `${API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.PRODUCTS)}/${id}`,
+                {
+                    method: "DELETE",
+                    headers: API_CONFIG.OPTIONS.headers,
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al eliminar producto');
+            }
+        } catch (error) {
+            console.error('Error en ProductoService.delete:', error);
+            throw error;
+        }
+    }
 
 };
