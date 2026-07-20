@@ -7,9 +7,11 @@ export interface ITercero {
     digitoVerificacion: string | null;
     numeroIdentificacion: string | null;
     primerNombre: string | null;
+    segundoNombre: string | null;
     primerApellido: string | null;
+    segundoApellido: string | null;
     razonSocial: string | null;
-    telefonoTercero: number | null;
+    telefonoTercero: string | null;
     direccionTercero: string | null;
     idDepartamento: number;
     nombreDepartamento: string | null;

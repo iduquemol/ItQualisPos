@@ -26,6 +26,8 @@ import { TipoDocumentoService } from '@/services/TipoDocumentoService';
 import { ITipoDocumentoIdentidad } from '@/types/ITipoDocumentoIdentidad';
 import { TipoDocumentoIdentidadService } from '@/services/TipoDocumentoIdentidadService';
 import { IVenta } from '@/types/IVenta';
+import { IVentaDetalle } from '@/types/IVentaDetalle';
+import { IVentaTercero } from '@/types/IVentaTercero';
 import { IDocumentoLista } from '@/types/IDocumentoLista';
 import { DocumentoListaService } from '@/services/DocumentoListaService';
 import { VentaService } from '@/services/VentaService';
@@ -73,25 +75,56 @@ const MainEstimate = () => {
 
     });
     const [selectedFactura, setSelectedFactura] = useState<IVenta | null>(null);
+    const [factura, setFactura] = useState<IVenta>({
+        idVenta: null,
+        idTipoDocumento: 0,
+        codigoDocumento: '',
+        nombreDocumento: null,
+        idMetodoDian: null,
+        idFormaPago: null,
+        numeroVenta: null,
+        prefijoVenta: '',
+        fechaVenta: '',
+        idPuntoVenta: null,
+        idUsuario: null,
+        totalRegistros: 0,
+        cantidadProductos: 0,
+        totalPrecio: 0,
+        totalDescuento: 0,
+        totalBaseIva: 0,
+        totalIva: 0,
+        totalVenta: 0,
+        observaciones: null,
+        ordenReferencia: null,
+        fechaOrdenReferencia: null,
+        terceroVenta: null,
+        detalleVenta: [],
+        mediosPagoVenta: [],
+    });
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('0');
     const [showPayment, setShowPayment] = useState(false);
     const [activePaymentMethod, setActivePaymentMethod] = useState('');
     const [customerDiscount, setCustomerDiscount] = useState('0');
     const [terceroInfo, setTerceroInfo] = useState<ITercero>({
+        
         idTercero: 1,
         idTipoDocumentoId: 7,
-        digitoVerificacion: '7',
-        numeroIdentificacion: '222222222222',
-        primerNombre: 'Consumidor',
-        primerApellido: 'Final',
-        razonSocial: '',
+        nombreTipoDocumentoId: "CC",
+        digitoVerificacion: "7",
+        numeroIdentificacion: "222222222222",
+        primerNombre: "Consumidor",
+        segundoNombre: "",
+        primerApellido: "",
+        segundoApellido: "",
+        razonSocial: "",
         telefonoTercero: 0,
-        direccionTercero: '',
-        idMunicipio: 0,
-        nombreTipoDocumentoId: 'CC',
-        nombreMunicipio: 'Bogota',
+        direccionTercero: "",
         emailTercero: 'iduque2001@hotmail.com',
+        idDepartamento: 0,
+        nombreDepartamento: 'Bogota',
+        idMunicipio: 0,
+        nombreMunicipio: 'Bogota',
         terceroActivo: true,
         terceroCliente: true,
         terceroEmpleado: true,
@@ -99,8 +132,11 @@ const MainEstimate = () => {
         terceroGeneral: true,
         idTipoRegimen: 0,
         idListaPreciosTercero: 0,
-        idDepartamento: 0,
-        nombreDepartamento: 'Bogota',
+        retenedorIva: false,
+        retenedorRenta: false,
+        retenedorIca: false,
+        declaraRenta: false,
+        tarifaIca: 0,
         responsabilidadesTerceros: [],
     });
     const [showCustomer, setShowCustomer] = useState(false);
@@ -493,9 +529,18 @@ const MainEstimate = () => {
             setFactura({
                 ...factura,
                 terceroVenta: {
-                    ...tercero,
-                    idTercero: tercero.idTercero ?? 0, // Asegurarse de que idTercero sea un número
-                    idTipoDocumentoId: tercero.idTipoDocumentoId ?? 7, // Asignar un tipo de documento por defecto si es necesario
+                    idTercero: tercero.idTercero ?? 0,
+                    idTipoDocumentoId: tercero.idTipoDocumentoId ?? 7,
+                    digitoVerificacion: tercero.digitoVerificacion ?? null,
+                    numeroIdentificacion: tercero.numeroIdentificacion ?? null,
+                    primerNombre: tercero.primerNombre ?? null,
+                    primerApellido: tercero.primerApellido ?? null,
+                    razonSocial: tercero.razonSocial ?? null,
+                    telefonoTercero: tercero.telefonoTercero ?? null,
+                    direccionTercero: tercero.direccionTercero ?? null,
+                    idMunicipio: tercero.idMunicipio ?? 0,
+                    emailTercero: tercero.emailTercero ?? null,
+                    idTipoPersona: null
                 }
             });
         } else {
@@ -571,49 +616,50 @@ const MainEstimate = () => {
                         position: "top-center",
                     }
                 );
-                // const data = await VentaService.getById(result.idFactura);
-                // setSelectedFactura(data);
-                // setFactura({
-                //     ...factura,
-                //     idVenta: data?.idVenta ?? null,
-                //     idTipoDocumento: data?.idTipoDocumento ?? 0,
-                //     codigoDocumento: data?.codigoDocumento ?? '',
-                //     nombreDocumento: data?.nombreDocumento ?? null,
-                //     numeroVenta: data?.numeroVenta ?? null,
-                //     prefijoVenta: data?.prefijoVenta ?? '',
-                //     fechaVenta: data?.fechaVenta ?? '',
-                //     idPuntoVenta: data?.idPuntoVenta ?? null,
-                //     idUsuario: data?.idUsuario ?? null,
-                //     totalRegistros: data?.totalRegistros ?? 0,
-                //     cantidadProductos: data?.cantidadProductos ?? 0,
-                //     totalPrecio: data?.totalPrecio ?? 0,
-                //     totalDescuento: data?.totalDescuento ?? 0,
-                //     totalBaseIva: data?.totalBaseIva ?? 0,
-                //     totalIva: data?.totalIva ?? 0,
-                //     totalVenta: data?.totalVenta ?? 0,
-                //     terceroVenta: data?.terceroVenta ?? {
-                //         idTercero: null,
-                //         idTipoDocumentoId: 0,
-                //         digitoVerificacion: null,
-                //         numeroIdentificacion: null,
-                //         primerNombre: null,
-                //         primerApellido: null,
-                //         razonSocial: null,
-                //         telefonoTercero: null,
-                //         direccionTercero: null,
-                //         idMunicipio: 0,
-                //         emailTercero: null,
-                //         idTipoPersona: null
-                //     },
-                //     detalleVenta: data?.detalleVenta ?? [],
-                //     mediosPagoVenta: data?.mediosPagoVenta ?? [],
+                const facturaId = result.idFactura ?? result.idCotizacion ?? 0;
+                const data = await VentaService.getById(facturaId);
+                setSelectedFactura(data);
+                setFactura({
+                    ...factura,
+                    idVenta: data?.idVenta ?? null,
+                    idTipoDocumento: data?.idTipoDocumento ?? 0,
+                    codigoDocumento: data?.codigoDocumento ?? '',
+                    nombreDocumento: data?.nombreDocumento ?? null,
+                    numeroVenta: data?.numeroVenta ?? null,
+                    prefijoVenta: data?.prefijoVenta ?? '',
+                    fechaVenta: data?.fechaVenta ?? '',
+                    idPuntoVenta: data?.idPuntoVenta ?? null,
+                    idUsuario: data?.idUsuario ?? null,
+                    totalRegistros: data?.totalRegistros ?? 0,
+                    cantidadProductos: data?.cantidadProductos ?? 0,
+                    totalPrecio: data?.totalPrecio ?? 0,
+                    totalDescuento: data?.totalDescuento ?? 0,
+                    totalBaseIva: data?.totalBaseIva ?? 0,
+                    totalIva: data?.totalIva ?? 0,
+                    totalVenta: data?.totalVenta ?? 0,
+                    terceroVenta: data?.terceroVenta ?? {
+                        idTercero: null,
+                        idTipoDocumentoId: 0,
+                        digitoVerificacion: null,
+                        numeroIdentificacion: null,
+                        primerNombre: null,
+                        primerApellido: null,
+                        razonSocial: null,
+                        telefonoTercero: null,
+                        direccionTercero: null,
+                        idMunicipio: 0,
+                         emailTercero: null,
+                         idTipoPersona: null
+                     },
+                     detalleVenta: data?.detalleVenta ?? [],
+                     mediosPagoVenta: data?.mediosPagoVenta ?? [],
 
-                // });
-                // const dataPrint = await VentaService.printById(result.idFactura);
-                // setFacturaModalData(dataPrint);
-                // setShowFacturaModal(true);
+                });
+                 const dataPrint = await VentaService.printById(facturaId);
+                 setFacturaModalData(dataPrint);
+                 setShowFacturaModal(true);
             }
-            //await fetchProducts();
+            await fetchProducts();
         } catch (error) {
             console.error('Error al guardar la cotizacion:', error);
         }
@@ -709,9 +755,9 @@ const MainEstimate = () => {
     };
 
     // Cálculos
-    const subtotal = cotizacion.detalleCotizacion?.reduce((sum, item) => sum + (item.precioUnitarioCotizacion * item.cantidadCotizacion), 0);
-    const discount = cotizacion.detalleCotizacion?.reduce((descuento, item) => descuento + item.descuentoCotizacion, 0);
-    const tax = cotizacion.detalleCotizacion?.reduce((iva, item) => iva + item.ivaCotizacion, 0);
+    const subtotal = (cotizacion.detalleCotizacion ?? []).reduce((sum, item) => sum + (item.precioUnitarioCotizacion * item.cantidadCotizacion), 0);
+    const discount = (cotizacion.detalleCotizacion ?? []).reduce((descuento, item) => descuento + (item.descuentoCotizacion || 0), 0);
+    const tax = (cotizacion.detalleCotizacion ?? []).reduce((iva, item) => iva + (item.ivaCotizacion || 0), 0);
     // const loyaltyDiscount = customerInfo.loyalty ? subtotal * 0.05 : 0; // 5% descuento por lealtad
     const total = subtotal - discount + tax;
     const totalItems = cotizacion.detalleCotizacion?.reduce((sum, item) => sum + item.cantidadCotizacion, 0);
@@ -749,6 +795,7 @@ const MainEstimate = () => {
                     <div className="flex items-center space-x-4 mb-2">
                         {showFacturaModal && (
                             <FacturaModal
+                                idVenta={(factura?.idVenta ?? selectedFactura?.idVenta) ?? 0}
                                 facturaData={facturaModalData}
                                 triggerText="Imprimir Factura"
                                 triggerVariant="secondary"
@@ -902,7 +949,7 @@ const MainEstimate = () => {
                                 <input
                                     type="text"
                                     className="rounded border px-3 py-2 text-sm bg-background w-20"
-                                    value={cotizacion.prefijoCotizacion}
+                                    value={cotizacion.prefijoCotizacion ?? ''}
                                     onChange={(e) => setCotizacion({ ...cotizacion, prefijoCotizacion: e.target.value })}
                                     readOnly
                                 />
@@ -910,8 +957,8 @@ const MainEstimate = () => {
                                 <input
                                     type="text"
                                     className="rounded border px-3 py-2 text-sm bg-background w-28"
-                                    value={cotizacion.numeroCotizacion}
-                                    onChange={(e) => setCotizacion({ ...cotizacion, numeroCotizacion: parseInt(e.target.value) })}
+                                                                value={cotizacion.numeroCotizacion ?? ''}
+                                                                onChange={(e) => setCotizacion({ ...cotizacion, numeroCotizacion: e.target.value === '' ? null : parseInt(e.target.value) })}
                                     readOnly
                                 />
                                 <h2 className="text-sm font-normal">Fecha</h2>
@@ -938,8 +985,8 @@ const MainEstimate = () => {
                             <div className="grid grid-cols-5 gap-1">
                                 <select
                                     className="w-full rounded border px-2 py-2 text-sm bg-background w-42"
-                                    value={cotizacion.terceroCotizacion?.idTipoDocumentoId}
-                                    onChange={(e) => setCotizacion({ ...cotizacion, terceroCotizacion: { ...cotizacion.terceroCotizacion, idTipoDocumentoId: parseInt(e.target.value) } })}
+                                    value={cotizacion.terceroCotizacion?.idTipoDocumentoId ?? 0}
+                                        onChange={(e) => setCotizacion({ ...cotizacion, terceroCotizacion: { ...(cotizacion.terceroCotizacion ?? {} as any), idTipoDocumentoId: parseInt(e.target.value) } })}
                                     required
                                 >
                                     {tiposDocumentoIdentidad.map(cat => (
@@ -952,12 +999,12 @@ const MainEstimate = () => {
                                     placeholder="Número de Identificación"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={cotizacion.terceroCotizacion?.numeroIdentificacion || ''}
-                                    onChange={(e) => {
+                                        onChange={(e) => {
                                         const value = e.target.value;
                                         setCotizacion({
                                             ...cotizacion,
                                             terceroCotizacion: {
-                                                ...cotizacion.terceroCotizacion,
+                                                ...(cotizacion.terceroCotizacion ?? {} as any),
                                                 numeroIdentificacion: value
                                             }
                                         });
@@ -981,7 +1028,7 @@ const MainEstimate = () => {
                                     onChange={(e) => setCotizacion({
                                         ...cotizacion,
                                         terceroCotizacion: {
-                                            ...cotizacion.terceroCotizacion,
+                                            ...(cotizacion.terceroCotizacion ?? {} as any),
                                             primerNombre: e.target.value
                                         }
                                     })}
@@ -993,7 +1040,7 @@ const MainEstimate = () => {
                                     onChange={(e) => setCotizacion({
                                         ...cotizacion,
                                         terceroCotizacion: {
-                                            ...cotizacion.terceroCotizacion,
+                                            ...(cotizacion.terceroCotizacion ?? {} as any),
                                             primerApellido: e.target.value
                                         }
                                     })}
@@ -1002,11 +1049,11 @@ const MainEstimate = () => {
                                     type="email"
                                     placeholder="Email"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={cotizacion.terceroCotizacion.emailTercero || ''}
+                                    value={cotizacion.terceroCotizacion?.emailTercero || ''}
                                     onChange={(e) => setCotizacion({
                                         ...cotizacion,
                                         terceroCotizacion: {
-                                            ...cotizacion.terceroCotizacion,
+                                            ...(cotizacion.terceroCotizacion ?? {} as any),
                                             emailTercero: e.target.value
                                         }
                                     })}
@@ -1078,7 +1125,7 @@ const MainEstimate = () => {
 
                     {/* Items del Carrito */}
                     <div className="flex-1 overflow-y-auto p-4 min-h-[300px]">
-                        {cotizacion.detalleCotizacion.length === 0 ? (
+                        {(cotizacion.detalleCotizacion ?? []).length === 0 ? (
                             <div className="text-center py-12">
                                 <div className="text-6xl mb-4">🛒</div>
                                 <p className="text-muted-foreground font-medium">Carrito vacío</p>
@@ -1156,7 +1203,7 @@ const MainEstimate = () => {
                                                             onChange={(e) => {
                                                                 setCotizacion({
                                                                     ...cotizacion,
-                                                                    detalleCotizacion: cotizacion.detalleCotizacion.map(detalleItem =>
+                                                                    detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
                                                                                 ...detalleItem, porcentajeIvaCotizacion: parseFloat(e.target.value) || 0,
@@ -1181,7 +1228,7 @@ const MainEstimate = () => {
                                                             onChange={(e) => {
                                                                 setCotizacion({
                                                                     ...cotizacion,
-                                                                    detalleCotizacion: cotizacion.detalleCotizacion.map(detalleItem =>
+                                                                    detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? { ...detalleItem, ivaCotizacion: parseFloat(e.target.value) || 0 }
                                                                             : detalleItem
@@ -1220,7 +1267,7 @@ const MainEstimate = () => {
                                                                     if (newQuantity >= 0) {
                                                                         setCotizacion({
                                                                             ...cotizacion,
-                                                                            detalleCotizacion: cotizacion.detalleCotizacion.map(detalleItem =>
+                                                                            detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
                                                                                 detalleItem.idProducto === item.idProducto
                                                                                     ? {
                                                                                         ...detalleItem,
@@ -1272,7 +1319,7 @@ const MainEstimate = () => {
                     </div>
 
                     {/* Panel de Totales y Pago */}
-                    {cotizacion.detalleCotizacion.length > 0 && (
+                    {(cotizacion.detalleCotizacion ?? []).length > 0 && (
                         <div className="border-t flex flex-col h-[400px]" >
                             <div className="h-[100px] overflow-y-auto">
 
@@ -1353,7 +1400,7 @@ const MainEstimate = () => {
                             {filteredProducts.map(product => (
                                 <Card
                                     key={product.idProducto}
-                                    className={`cursor-pointer transition-all hover:shadow-lg ${product.stock <= product.minStock ? 'border-destructive/50' : ''
+                                    className={`cursor-pointer transition-all hover:shadow-lg ${((product.stockActualProducto ?? 0) <= 0) ? 'border-destructive/50' : ''
                                         }`}
                                     onClick={() => addToCart(product)}
                                 >
@@ -1362,7 +1409,7 @@ const MainEstimate = () => {
                                             <Badge variant="secondary" className="text-xs">
                                                 {product.codigoProducto}
                                             </Badge>
-                                            {/* {product.stock <= product.minStock && (
+                                            {/* {product.stockActualProducto !== null && product.stockActualProducto <= 0 && (
                                                 <AlertTriangle className="h-4 w-4 text-destructive" />
                                             )} */}
                                         </div>
@@ -1385,13 +1432,12 @@ const MainEstimate = () => {
                                         <div className="text-lg font-bold text-primary">
                                             ${formatCurrency(product.precioPos)}
                                         </div>
-                                        {/* <Badge
-                                            variant={product.stock > product.minStock ? "secondary" :
-                                                product.stock > 0 ? "outline" : "destructive"}
-                                            className="text-xs"
-                                        >
-                                            Stock: {product.stock}
-                                        </Badge> */}
+                                            <Badge
+                                                variant={(product.stockActualProducto ?? 0) > 0 ? "secondary" : "destructive"}
+                                                className="text-xs"
+                                            >
+                                                Stock: {product.stockActualProducto ?? 0}
+                                            </Badge>
                                     </CardFooter>
                                 </Card>
                             ))}

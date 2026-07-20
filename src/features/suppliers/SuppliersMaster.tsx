@@ -37,9 +37,11 @@ export default function SuppliersMaster() {
         digitoVerificacion: "",
         numeroIdentificacion: "",
         primerNombre: "",
+        segundoNombre: "",
         primerApellido: "",
+        segundoApellido: "",
         razonSocial: "",
-        telefonoTercero: 0,
+        telefonoTercero: null,
         direccionTercero: "",
         emailTercero: "",
         idDepartamento: 0,
@@ -60,6 +62,8 @@ export default function SuppliersMaster() {
         tarifaIca: 0,
         responsabilidadesTerceros: [],
     });
+
+    const tarifaIcaStrRef = useRef<string>(tercero.tarifaIca ? tercero.tarifaIca.toString() : "");
 
     // Estados para edición inline de responsabilidades
     const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -113,7 +117,9 @@ export default function SuppliersMaster() {
             digitoVerificacion: terc.digitoVerificacion,
             numeroIdentificacion: terc.numeroIdentificacion,
             primerNombre: terc.primerNombre,
+            segundoNombre: terc.segundoNombre,
             primerApellido: terc.primerApellido,
+            segundoApellido: terc.segundoApellido,
             razonSocial: terc.razonSocial,
             emailTercero: terc.emailTercero,
             telefonoTercero: terc.telefonoTercero,
@@ -142,6 +148,13 @@ export default function SuppliersMaster() {
         }
     };
 
+    // Eliminar responsabilidad
+    const handleDelete = (idx: number) => {
+        const nuevasResponsabilidades = [...(tercero.responsabilidadesTerceros || [])];
+        nuevasResponsabilidades.splice(idx, 1);
+        setTercero({ ...tercero, responsabilidadesTerceros: nuevasResponsabilidades });
+    };
+
     // Guardar edición
     const handleSave = (idx: number) => {
         const nuevasResponsabilidades = [...(tercero.responsabilidadesTerceros || [])];
@@ -157,10 +170,22 @@ export default function SuppliersMaster() {
 
     const handleSaveTercero = async () => {
         // Validación de campos obligatorios
-        if (!tercero.numeroIdentificacion?.trim()) {
-            setFormError("El número de identificación es obligatorio.");
-            return;
-        }
+        if (
+            !tercero.numeroIdentificacion?.trim() || 
+            !tercero.primerNombre?.trim() || 
+            !tercero.primerApellido?.trim() || 
+            !tercero.razonSocial?.trim() || 
+            !tercero.direccionTercero?.trim() || 
+            tercero.idDepartamento === 0 || 
+            tercero.idMunicipio === 0 || 
+            !tercero.emailTercero?.trim() || 
+            !tercero.telefonoTercero?.trim() || 
+            tercero.idTipoRegimen === 0 || 
+            tercero.idListaPreciosTercero === 0
+            ) {
+                setFormError("Por favor, complete todos los campos obligatorios (*).");
+                return;
+            }
         setFormError(null);
         try {
             if (tercero.idTercero) {
@@ -215,7 +240,9 @@ export default function SuppliersMaster() {
             digitoVerificacion: "",
             numeroIdentificacion: "",
             primerNombre: "",
+            segundoNombre: "",
             primerApellido: "",
+            segundoApellido: "",
             razonSocial: "",
             telefonoTercero: null,
             direccionTercero: "",
@@ -276,7 +303,9 @@ export default function SuppliersMaster() {
                 digitoVerificacion: "",
                 numeroIdentificacion: "",
                 primerNombre: "",
+                segundoNombre: "",
                 primerApellido: "",
+                segundoApellido: "",
                 razonSocial: "",
                 telefonoTercero: null,
                 direccionTercero: "",
@@ -619,13 +648,23 @@ export default function SuppliersMaster() {
                                 <label className="block text-xs text-muted-foreground mb-1">Número de Identificación</label>
                                 <Input
                                     value={tercero.numeroIdentificacion ?? ""}
-                                    onChange={e => setTercero({ ...tercero, numeroIdentificacion: e.target.value })}
+                                    onChange={e => {
+                                        // Reemplaza de inmediato cualquier caracter que NO sea un número
+                                        const soloNumeros = e.target.value.replace(/\D/g, "");
+                                        setTercero({ ...tercero, numeroIdentificacion: soloNumeros });
+                                    }}
+                                    onKeyDown={e => {
+                                        // Bloquea directamente las teclas de caracteres especiales comunes en inputs de número
+                                        if (["e", "E", "+", "-", ".", ","].includes(e.key)) {
+                                        e.preventDefault();
+                                        }
+                                    }}
                                     placeholder="Número de identificación"
                                     required
                                     className={
                                         !tercero.numeroIdentificacion?.trim() && formError
-                                            ? "border border-red-500"
-                                            : ""
+                                        ? "border border-red-500"
+                                        : ""
                                     }
                                 />
                                 {formError && !tercero.numeroIdentificacion?.trim() && (
@@ -652,15 +691,26 @@ export default function SuppliersMaster() {
                                         value={tercero.primerNombre ?? ""}
                                         onChange={e => setTercero({ ...tercero, primerNombre: e.target.value })}
                                         placeholder="Primer nombre"
+                                        required
                                         className={
                                             !tercero.primerNombre?.trim() && formError
                                                 ? "border border-red-500"
                                                 : ""
                                         }
                                     />
-                                    {/* {formError && (!tercero.primerNombre?.trim()) && (
-                            <span className="text-xs text-red-500">El primer nombre es obligatorio.</span>
-                        )} */}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Segundo Nombre</label>
+                                    <Input
+                                        value={tercero.segundoNombre ?? ""}
+                                        onChange={e => setTercero({ ...tercero, segundoNombre: e.target.value })}
+                                        placeholder="Segundo nombre"
+                                        className={
+                                            !tercero.segundoNombre?.trim() && formError
+                                                ? "border border-red-500"
+                                                : ""
+                                        }
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Primer Apellido</label>
@@ -668,47 +718,56 @@ export default function SuppliersMaster() {
                                         value={tercero.primerApellido ?? ""}
                                         onChange={e => setTercero({ ...tercero, primerApellido: e.target.value })}
                                         placeholder="Primer apellido"
+                                        required
                                         className={
                                             !tercero.primerApellido?.trim() && formError
                                                 ? "border border-red-500"
                                                 : ""
                                         }
                                     />
-                                    {/* {formError && (!tercero.primerApellido?.trim()) && (
-                            <span className="text-xs text-red-500">El primer apellido es obligatorio.</span>
-                        )} */}
                                 </div>
                                 <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Segundo Apellido</label>
+                                    <Input
+                                        value={tercero.segundoApellido ?? ""}
+                                        onChange={e => setTercero({ ...tercero, segundoApellido: e.target.value })}
+                                        placeholder="Segundo apellido"
+                                        className={
+                                            !tercero.segundoApellido?.trim() && formError
+                                                ? "border border-red-500"
+                                                : ""
+                                        }
+                                    />
+                                </div>
+                            </div>
+                            <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                                <div className="col-span-2">
                                     <label className="block text-xs text-muted-foreground mb-1">Razón Social</label>
                                     <Input
                                         value={tercero.razonSocial ?? ""}
                                         onChange={e => setTercero({ ...tercero, razonSocial: e.target.value })}
                                         placeholder="Razón social"
+                                        required 
                                         className={
                                             !tercero.razonSocial?.trim() && formError
                                                 ? "border border-red-500"
                                                 : ""
                                         }
                                     />
-                                    {/* {formError && (!tercero.razonSocial?.trim()) && (
-                            <span className="text-xs text-red-500">La razón social es obligatoria.</span>
-                        )} */}
                                 </div>
-                                <div>
+                                <div className="col-span-2">
                                     <label className="block text-xs text-muted-foreground mb-1">Dirección</label>
                                     <Input
                                         value={tercero.direccionTercero ?? ""}
                                         onChange={e => setTercero({ ...tercero, direccionTercero: e.target.value })}
                                         placeholder="Dirección"
+                                        required
                                         className={
                                             !tercero.direccionTercero?.trim() && formError
                                                 ? "border border-red-500"
                                                 : ""
                                         }
                                     />
-                                    {/* {formError && (!tercero.direccionTercero?.trim()) && (
-                            <span className="text-xs text-red-500">La dirección es obligatoria.</span>
-                        )} */}
                                 </div>
                             </div>
                             <div className="md:col-span-4 grid grid-cols-4 gap-4">
@@ -775,16 +834,27 @@ export default function SuppliersMaster() {
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Email</label>
                                     <Input
-                                        type="email"
-                                        value={tercero.emailTercero ?? ""}
-                                        onChange={e => setTercero({ ...tercero, emailTercero: e.target.value })}
-                                        placeholder="Email"
-                                        className={
-                                            !tercero.emailTercero?.trim() && formError
-                                                ? "border border-red-500"
-                                                : ""
-                                        }
-                                    />
+                                    type="email"
+                                    value={tercero.emailTercero ?? ""}
+                                    onChange={e => {
+                                        // Convertimos a minúsculas automáticamente para estandarizar correos y quitamos espacios vacíos
+                                        const emailLimpio = e.target.value.toLowerCase().replace(/\s/g, "");
+                                        setTercero({ ...tercero, emailTercero: emailLimpio });
+                                    }}
+                                    placeholder="Email"
+                                    required
+                                    className={
+                                        // Se pone rojo si está vacío teniendo un formError, O si tiene texto pero el formato es inválido
+                                        (formError && !tercero.emailTercero?.trim()) || 
+                                        (tercero.emailTercero?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tercero.emailTercero))
+                                        ? "border border-red-500"
+                                        : ""
+                                    }
+                                />
+                                {/* Mensaje de error dinámico debajo del input */}
+                                {tercero.emailTercero?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tercero.emailTercero) && (
+                                <span className="text-xs text-red-500">El formato de correo electrónico no es válido.</span>
+                                )}
                                     {/* {formError && (!tercero.emailTercero?.trim()) && (
                             <span className="text-xs text-red-500">El email es obligatorio.</span>
                         )} */}
@@ -792,14 +862,32 @@ export default function SuppliersMaster() {
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
                                     <Input
-                                        type="number"
+                                        type="text"
                                         value={tercero.telefonoTercero || ""}
-                                        onChange={e => setTercero({ ...tercero, telefonoTercero: Number(e.target.value) })}
-                                        placeholder="Teléfono"
+                                        onChange={e => {
+                                            // 1. Dejar solo dígitos numéricos
+                                            const digitos = e.target.value.replace(/\D/g, "");
+                                            
+                                            // 2. Limitar a un máximo de 10 dígitos (longitud celular estándar)
+                                            const digitosLimitados = digitos.slice(0, 10);
+                                            
+                                            // 3. Aplicar formato visual dinámico: "300 123 4567"
+                                            let formatoTelefono = digitosLimitados;
+                                            if (digitosLimitados.length > 3 && digitosLimitados.length <= 6) {
+                                            formatoTelefono = `${digitosLimitados.slice(0, 3)} ${digitosLimitados.slice(3)}`;
+                                            } else if (digitosLimitados.length > 6) {
+                                            formatoTelefono = `${digitosLimitados.slice(0, 3)} ${digitosLimitados.slice(3, 6)} ${digitosLimitados.slice(6)}`;
+                                            }
+
+                                            // 4. Guardar como cadena de texto en el estado
+                                            setTercero({ ...tercero, telefonoTercero: formatoTelefono });
+                                        }}
+                                        placeholder="Ej: 300 123 4567"
+                                        required
                                         className={
-                                            !tercero.telefonoTercero && formError
-                                                ? "border border-red-500"
-                                                : ""
+                                            !tercero.telefonoTercero?.trim() && formError
+                                            ? "border border-red-500"
+                                            : ""
                                         }
                                     />
                                     {/* {formError && (!tercero.telefonoTercero) && (
@@ -988,11 +1076,42 @@ export default function SuppliersMaster() {
                                 <div className="flex items-center gap-4">
                                     <label className="text-xs text-muted-foreground min-w-32">Tarifa Ica</label>
                                     <Input
-                                        value={tercero.tarifaIca ?? ""}
-                                        onChange={e => setTercero({ ...tercero, tarifaIca: Number(e.target.value) })}
-                                        placeholder="Tarifa Ica"
-                                        className="w-48"
-                                    />
+                                    type="text"
+                                    inputMode="decimal"
+                                    pattern="[0-9]*[.,]?[0-9]*"
+                                    // MODIFICACIÓN: Si el valor en el estado es 0 y la referencia está vacía, mostramos texto vacío para poder borrarlo
+                                    value={tarifaIcaStrRef.current || (tercero.tarifaIca === 0 ? "" : (tercero.tarifaIca ?? "").toString())}
+                                    onChange={e => {
+                                        const rawValue = e.target.value;
+
+                                        if (/^[0-9]*[.,]?[0-9]*$/.test(rawValue)) {
+                                            tarifaIcaStrRef.current = rawValue;
+
+                                            // Si el usuario borró todo por completo
+                                            if (rawValue === "") {
+                                                tarifaIcaStrRef.current = ""; // Limpiamos la referencia visual
+                                                
+                                                setTercero({
+                                                    ...tercero,
+                                                    tarifaIca: 0, // En el estado/base de datos se sigue guardando como un 0 numérico
+                                                });
+                                                return; // Cortamos la ejecución aquí
+                                            }
+
+                                            // Si hay texto, procedemos con la conversión normal
+                                            const normalized = rawValue.replace(',', '.');
+                                            const parsed = parseFloat(normalized);
+                                            const numericValue = Number.isNaN(parsed) ? 0 : parsed;
+
+                                            setTercero({
+                                                ...tercero,
+                                                tarifaIca: numericValue,
+                                            });
+                                        }
+                                    }}
+                                    placeholder="Tarifa Ica"
+                                    className="w-48"
+                                />
                                 </div>
                                 <div>
                                     {/* Tercera columna vacía */}
@@ -1071,13 +1190,20 @@ export default function SuppliersMaster() {
                                     <>
                                         <td className="px-2 py-2">{item.idResponsabilidadFiscal}</td>
                                         <td className="px-4 py-2">{item.nombreResponsabilidadFiscal}</td>
-                                        <td className="px-4 py-2">
+                                        <td className="px-4 py-2 flex gap-2 items-center">
                                             <button
                                                 className="text-blue-600 font-semibold flex items-center"
                                                 onClick={() => handleEdit(idx)}
                                                 title="Editar"
                                             >
                                                 <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                className="text-red-600 font-semibold flex items-center"
+                                                onClick={() => handleDelete(idx)}
+                                                title="Eliminar"
+                                            >
+                                                <Trash className="w-4 h-4" />
                                             </button>
                                         </td>
                                     </>

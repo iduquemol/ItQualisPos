@@ -38,26 +38,37 @@ export default function ItemsMaster() {
     const [search, setSearch] = useState("");
     // Estado para los campos del producto
     const [producto, setProducto] = useState<IProducto>({
-        idProducto: null,
+        idProducto: 0,
         codigoProducto: "",
         nombreProducto: "",
-        imagenProducto: "",
         codigoBarras: "",
         idCategoria: 0,
         idUnidadMedida: 0,
         precioUnitario: 0,
-        quantity: 0,
+        precioPos: 0,
         idTipoProducto: 0,
         productoActivo: true,
-        porcentajeDescuento: 0,
-        precioPos: 0,
+        imagenProducto: "",
+        quantity: 0,
+
+        // Nuevos campos de inventario y costo inicializados en null o 0
+        stockActualProducto: null,
+        costoPromedioActualProducto: null,
+
+        // Porcentajes e Impuestos corregidos
         porcentajeIva: 0,
         porcentajeImpoConsumo: 0,
         porcentajeReteIva: 0,
         porcentajeReteRenta: 0,
         porcentajeReteIca: 0,
-        codigoItemSector: false,
+        porcentajeMaxDescuento: 0, // Corregido el nombre aquí
+
+        // Tercero Mandato y Sector (Tipos corregidos)
+        idItemSector: null, 
         idTerceroMandato: null,
+        indicadorMandato: false,
+
+        // Arrays de detalles inicializados vacíos
         tributosProducto: [],
         preciosProducto: [],
     });
@@ -135,55 +146,72 @@ export default function ItemsMaster() {
     const [successMessage, setSuccessMessage] = useState("");
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-    const handleSelectProduct = (prod: IProducto) => {
-        setSelectedProduct(prod);
-        setProducto({
-            ...producto,
-            idProducto: prod.idProducto,
-            codigoProducto: prod.codigoProducto,
-            nombreProducto: prod.nombreProducto,
-            codigoBarras: prod.codigoBarras,
-            idCategoria: prod.idCategoria,
-            idUnidadMedida: prod.idUnidadMedida,
-            precioUnitario: prod.precioUnitario,
-            idTipoProducto: prod.idTipoProducto,
-            productoActivo: prod.productoActivo,
-            codigoItemSector: prod.codigoItemSector || false,
-            idTerceroMandato: prod.idTerceroMandato || null,
-            porcentajeDescuento: prod.porcentajeDescuento || 0,
-            tributosProducto: prod.tributosProducto || [],
-            preciosProducto: prod.preciosProducto || [],
-        });
-        setOpenDialog(false);
-    };
+   const handleSelectProduct = (prod: IProducto) => {
+    setSelectedProduct(prod);
+    setProducto({
+        ...producto,
+        idProducto: prod.idProducto,
+        codigoProducto: prod.codigoProducto,
+        nombreProducto: prod.nombreProducto,
+        codigoBarras: prod.codigoBarras,
+        idCategoria: prod.idCategoria,
+        idUnidadMedida: prod.idUnidadMedida,
+        precioUnitario: prod.precioUnitario,
+        idTipoProducto: prod.idTipoProducto,
+        productoActivo: prod.productoActivo,
+        
+        // Propiedades corregidas y añadidas
+        idItemSector: prod.idItemSector || null,
+        idTerceroMandato: prod.idTerceroMandato || null,
+        porcentajeMaxDescuento: prod.porcentajeMaxDescuento || 0,
+        stockActualProducto: prod.stockActualProducto || null,
+        costoPromedioActualProducto: prod.costoPromedioActualProducto || null,
+
+        // Arrays / Relaciones
+        tributosProducto: prod.tributosProducto || [],
+        preciosProducto: prod.preciosProducto || [],
+    });
+    setOpenDialog(false);
+};
 
     const handleNew = async () => {
-        setSelectedProduct(null);
-        setProducto({
-            idProducto: 0,
-            codigoProducto: "",
-            nombreProducto: "",
-            codigoBarras: "",
-            idCategoria: 0,
-            idUnidadMedida: 0,
-            precioUnitario: 0,
-            idTipoProducto: 0,
-            productoActivo: true,
-            porcentajeDescuento: 0,
-            imagenProducto: "",
-            precioPos: 0,
-            porcentajeIva: 0,
-            quantity: 0,
-            porcentajeImpoConsumo: 0,
-            porcentajeReteIva: 0,
-            porcentajeReteRenta: 0,
-            porcentajeReteIca: 0,
-            codigoItemSector: false,
-            idTerceroMandato: null,
-            tributosProducto: [],
-            preciosProducto: [],
-        });
-    };
+    setSelectedProduct(null);
+    setProducto({
+        idProducto: 0,
+        codigoProducto: "",
+        nombreProducto: "",
+        codigoBarras: "",
+        idCategoria: 0,
+        idUnidadMedida: 0,
+        precioUnitario: 0,
+        precioPos: 0,
+        idTipoProducto: 0,
+        productoActivo: true,
+        imagenProducto: "",
+        quantity: 0,
+
+        // Nuevos campos de inventario y costo inicializados en null o 0
+        stockActualProducto: null,
+        costoPromedioActualProducto: null,
+
+        // Porcentajes e Impuestos corregidos
+        porcentajeIva: 0,
+        porcentajeImpoConsumo: 0,
+        porcentajeReteIva: 0,
+        porcentajeReteRenta: 0,
+        porcentajeReteIca: 0,
+        porcentajeMaxDescuento: 0, // Corregido el nombre aquí
+
+        // Tercero Mandato y Sector (Tipos corregidos)
+        idItemSector: null, 
+        idTerceroMandato: null,
+        indicadorMandato: false,
+
+        // Arrays de detalles inicializados vacíos
+        tributosProducto: [],
+        preciosProducto: [],
+    });
+};
     // Editar tributo
     const handleEdit = (idx: number) => {
         const tributo = producto.tributosProducto?.[idx];
@@ -226,6 +254,17 @@ export default function ItemsMaster() {
     // Cancelar edición de precios
     const handleCancelPrecio = () => {
         setEditPrecioIdx(null);
+    };
+
+    // Eliminar precio
+    const handleDeletePrecio = (idx: number) => {
+        const nuevosPrecios = (producto.preciosProducto || []).filter((_, i) => i !== idx);
+        setProducto({ ...producto, preciosProducto: nuevosPrecios });
+    };
+
+    const handleDeleteImpuesto = (idx: number) => {
+        const nuevosTributos = (producto.tributosProducto || []).filter((_, i) => i !== idx);
+        setProducto({ ...producto, tributosProducto: nuevosTributos });
     };
 
     const handleSaveProduct = async () => {
@@ -274,7 +313,7 @@ export default function ItemsMaster() {
     // Agregar esta nueva función para confirmar la eliminación
     const confirmDeleteProduct = async () => {
         try {
-            //await ProductoService.delete(producto.idProducto);
+            await ProductoService.delete(producto.idProducto!);
             console.log("Producto eliminado:", producto.idProducto);
             toast.success("Producto eliminado correctamente", {
                 position: "top-center",
@@ -282,7 +321,7 @@ export default function ItemsMaster() {
 
             // Limpiar el formulario después de eliminar
             setProducto({
-                idProducto: null,
+                idProducto: 0,
                 codigoProducto: "",
                 nombreProducto: "",
                 imagenProducto: "",
@@ -291,19 +330,26 @@ export default function ItemsMaster() {
                 idUnidadMedida: 0,
                 precioUnitario: 0,
                 precioPos: 0,
+                // Nuevos campos de inventario y costo inicializados en null o 0
+                stockActualProducto: null,
+                costoPromedioActualProducto: null,
+                // Porcentajes e Impuestos corregidos
                 porcentajeIva: 0,
-                quantity: 0,
-                idTipoProducto: 0,
-                productoActivo: true,
-                porcentajeDescuento: 0,
                 porcentajeImpoConsumo: 0,
                 porcentajeReteIva: 0,
                 porcentajeReteRenta: 0,
                 porcentajeReteIca: 0,
-                codigoItemSector: false,
+                porcentajeMaxDescuento: 0, // Corregido el nombre aquí
+                quantity: 0,
+                idTipoProducto: 0,
+                productoActivo: true,
+                // Tercero Mandato y Sector (Tipos corregidos)
+                idItemSector: null,
                 idTerceroMandato: null,
-                preciosProducto: [],
+                indicadorMandato: false,
+                // Arrays de detalles inicializados vacíos
                 tributosProducto: [],
+                preciosProducto: [],
             });
             setSelectedProduct(null);
 
@@ -679,28 +725,35 @@ export default function ItemsMaster() {
                                     const newValue = e.target.value;
                                     if (producto.idProducto && newValue !== producto.codigoProducto) {
                                         setProducto({
-                                            idProducto: null,
-                                            codigoProducto: newValue,
+                                            idProducto: 0,
+                                            codigoProducto: "",
                                             nombreProducto: "",
                                             imagenProducto: "",
                                             codigoBarras: "",
                                             idCategoria: 0,
                                             idUnidadMedida: 0,
                                             precioUnitario: 0,
-                                            quantity: 0,
                                             precioPos: 0,
-                                            idTipoProducto: 0,
-                                            productoActivo: false,
-                                            porcentajeDescuento: 0,
+                                            // Nuevos campos de inventario y costo inicializados en null o 0
+                                            stockActualProducto: null,
+                                            costoPromedioActualProducto: null,
+                                            // Porcentajes e Impuestos corregidos
                                             porcentajeIva: 0,
-                                            codigoItemSector: false,
-                                            idTerceroMandato: null,
                                             porcentajeImpoConsumo: 0,
-                                            porcentajeReteIca: 0,
-                                            porcentajeReteRenta: 0,
                                             porcentajeReteIva: 0,
-                                            preciosProducto: [],
+                                            porcentajeReteRenta: 0,
+                                            porcentajeReteIca: 0,
+                                            porcentajeMaxDescuento: 0, // Corregido el nombre aquí
+                                            quantity: 0,
+                                            idTipoProducto: 0,
+                                            productoActivo: true,
+                                            // Tercero Mandato y Sector (Tipos corregidos)
+                                            idItemSector: null,
+                                            idTerceroMandato: null,
+                                            indicadorMandato: false,
+                                            // Arrays de detalles inicializados vacíos
                                             tributosProducto: [],
+                                            preciosProducto: [],
                                         });
                                         setSelectedProduct(null);
                                     } else {
@@ -864,8 +917,8 @@ export default function ItemsMaster() {
                             <label className="block text-xs text-muted-foreground mb-1">% Máx. Descuento</label>
                             <Input
                                 type="number"
-                                value={producto.porcentajeDescuento ?? ""}
-                                onChange={e => setProducto({ ...producto, porcentajeDescuento: Number(e.target.value) })}
+                                value={producto.porcentajeMaxDescuento ?? ""}
+                                onChange={e => setProducto({ ...producto, porcentajeMaxDescuento: Number(e.target.value) })}
                                 placeholder="Porcentaje máximo descuento"
                             />
                         </div>
@@ -888,12 +941,18 @@ export default function ItemsMaster() {
                             <div className="flex items-center space-x-2 mt-2">
                                 <input
                                     type="checkbox"
-                                    checked={producto.codigoItemSector || false}
-                                    onChange={e => setProducto({ ...producto, codigoItemSector: e.target.checked })}
+                                    checked={Boolean(producto.indicadorMandato)}
+                                    onChange={e =>
+                                        setProducto({
+                                            ...producto,
+                                            indicadorMandato: e.target.checked,
+                                            idTerceroMandato: e.target.checked ? producto.idTerceroMandato ?? null : null,
+                                        })
+                                    }
                                     className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
                                 />
                                 <span className="text-sm text-muted-foreground">
-                                    {producto.codigoItemSector ? "Si" : "No"}
+                                    {producto.indicadorMandato ? "Sí" : "No"}
                                 </span>
                             </div>
                         </div>
@@ -1067,13 +1126,20 @@ export default function ItemsMaster() {
                                                 <td className="px-2 py-2">{item.codigoTributo}</td>
                                                 <td className="px-4 py-2">{item.nombreTributo}</td>
                                                 <td className="px-4 py-2">{item.nombreTarifa}</td>
-                                                <td className="px-4 py-2">
+                                                <td className="px-4 py-2 flex gap-2 items-center">
                                                     <button
                                                         className="text-blue-600 font-semibold flex items-center"
                                                         onClick={() => handleEdit(idx)}
                                                         title="Editar"
                                                     >
                                                         <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        className="text-red-600 font-semibold flex items-center"
+                                                        onClick={() => handleDeleteImpuesto(idx)}
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash className="w-4 h-4" />
                                                     </button>
                                                 </td>
                                             </>
@@ -1276,7 +1342,13 @@ export default function ItemsMaster() {
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
-
+                                                    <button
+                                                        className="text-red-600 font-semibold flex items-center"
+                                                        onClick={() => handleDeletePrecio(idx)}
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash className="w-4 h-4" />
+                                                    </button>
                                                 </td>
                                             </>
                                         )}
