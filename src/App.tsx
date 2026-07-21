@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import FacturaReportPage from './pages/facturaReportPage';
 import CreditNotePage from './pages/creditNotePage';
 import EstimatePage from './pages/estimatePage';
+import EmpresasPage from './pages/empresasPage';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -50,6 +51,9 @@ function App() {
                 <Route path="/reporte" element={
                     // isAuthenticated ? <FacturaReportPage /> : <Navigate to="/login" />
                     <FacturaReportPage />
+                } />
+                <Route path="/empresas" element={
+                    isAuthenticated ? <EmpresasPage /> : <Navigate to="/login" />
                 } />
                 <Route
                     path="/pos"

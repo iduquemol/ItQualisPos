@@ -91,7 +91,7 @@ const RetailPOS = () => {
         primerNombre: 'Consumidor',
         primerApellido: 'Final',
         razonSocial: '',
-        telefonoTercero: 0,
+        telefonoTercero: "",
         direccionTercero: '',
         idMunicipio: 0,
         nombreTipoDocumentoId: 'CC',
