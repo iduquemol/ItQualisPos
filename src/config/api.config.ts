@@ -36,7 +36,8 @@ export const API_CONFIG = {
         TERCEROS_PROVEEDORES: '/terceros-proveedores',
         EMPRESAS: '/empresas',
         TIPO_PERSONA: '/tipospersona',
-        MEDIOS_PAGO: '/mediospago'
+        MEDIOS_PAGO: '/mediospago',
+        RESOLUCIONES: '/resoluciones'
     },
     getUrl: (endpoint: string) => {
         const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);
