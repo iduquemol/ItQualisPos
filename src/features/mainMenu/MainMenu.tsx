@@ -10,6 +10,7 @@ const menuItems = [
   { label: "Productos", icon: "📦", color: "bg-green-100", route: "/items" },
   { label: "Terceros", icon: "👥", color: "bg-blue-100", route: "/terceros" },
   { label: "Empresas", icon: "🏢", color: "bg-yellow-100", route: "/empresas" },
+  { label: "Resoluciones", icon: "📜", color: "bg-purple-100", route: "/resoluciones" },
   // { label: "Reporte", icon: "📊", color: "bg-red-100", route: "/reporte" }
 ];
 

@@ -11,6 +11,7 @@ import FacturaReportPage from './pages/facturaReportPage';
 import CreditNotePage from './pages/creditNotePage';
 import EstimatePage from './pages/estimatePage';
 import EmpresasPage from './pages/empresasPage';
+import ResolutionsPage from './pages/resolucionesPage';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -54,6 +55,9 @@ function App() {
                 } />
                 <Route path="/empresas" element={
                     isAuthenticated ? <EmpresasPage /> : <Navigate to="/login" />
+                } />
+                <Route path="/resoluciones" element={
+                    isAuthenticated ? <ResolutionsPage /> : <Navigate to="/login" />
                 } />
                 <Route
                     path="/pos"
