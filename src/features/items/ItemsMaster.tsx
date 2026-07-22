@@ -13,9 +13,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IProducto } from '@/types/IProducto';
-import { ICategory } from '@/types/ICategoria';
+import { ICategorias } from '@/types/ICategorias';
 import { Package } from "lucide-react";
-import { CategoryService } from '@/services/CategoryService';
+import { CategoriasService } from '@/services/CategoryService';
 import { IUnidadDeMedida } from '@/types/IUnidadDeMedida';
 import { UnidadDeMedidaService } from '@/services/UnidadDeMedidaService';
 import { ITributoProducto } from "@/types/ITributoProducto";
@@ -72,7 +72,7 @@ export default function ItemsMaster() {
         tributosProducto: [],
         preciosProducto: [],
     });
-    const [categories, setCategories] = useState<ICategory[]>([]);
+    const [categories, setCategories] = useState<ICategorias[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
     const [categoryError, setCategoryError] = useState<string | null>(null);
     const [unidadesDeMedida, setUnidadesDeMedida] = useState<IUnidadDeMedida[]>([]);
@@ -444,9 +444,9 @@ export default function ItemsMaster() {
         try {
             setCategoryError(null);
             setIsLoadingCategories(true);
-            const data = await CategoryService.getAll();
+            const data = await CategoriasService.getAll();
             setCategories([
-                { idCategoria: 0, nombreCategoria: "Seleccione una categoría", iconCategoria: "🏪", codigoCategoria: "0" }, // Categoría por defecto
+                { idCategoria: 0, nombreCategoria: "Seleccione una categoría", iconoCategoria: "🏪", codigoCategoria: "0" }, // Categoría por defecto
                 ...data
             ]);
         } catch (error) {
@@ -454,7 +454,7 @@ export default function ItemsMaster() {
             setCategoryError('Error al cargar las categorías');
             // Categorías por defecto en caso de error
             setCategories([
-                { idCategoria: 0, nombreCategoria: "Seleccione una categoría", iconCategoria: "🏪", codigoCategoria: "0" },
+                { idCategoria: 0, nombreCategoria: "Seleccione una categoría", iconoCategoria: "🏪", codigoCategoria: "0" },
             ]);
         } finally {
             setIsLoadingCategories(false);
@@ -814,7 +814,7 @@ export default function ItemsMaster() {
                             >
                                 {categories.map(cat => (
                                     <option key={cat.idCategoria} value={cat.idCategoria}>
-                                        {cat.iconCategoria} {cat.nombreCategoria}
+                                        {cat.iconoCategoria} {cat.nombreCategoria}
                                     </option>
                                 ))}
                             </select>
