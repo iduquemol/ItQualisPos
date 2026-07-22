@@ -19,7 +19,7 @@ import Tesseract from 'tesseract.js';
 import { CategoryService } from '@/services/CategoryService';
 import { ProductoService } from '@/services/ProductoService';
 import { TerceroService } from '@/services/TerceroService';
-import { ICategory } from '@/types/ICategoria';
+import { ICategory } from '@/types/ICategorias';
 import { IProducto } from '@/types/IProducto';
 import { ITercero } from '@/types/ITercero';
 import { ITipoDocumento } from '@/types/ITipoDocumento';

@@ -11,6 +11,8 @@ const menuItems = [
   { label: "Terceros", icon: "👥", color: "bg-blue-100", route: "/terceros" },
   { label: "Empresas", icon: "🏢", color: "bg-yellow-100", route: "/empresas" },
   { label: "Resoluciones", icon: "📜", color: "bg-purple-100", route: "/resoluciones" },
+  { label: "Documentos Externos", icon: "📄", color: "bg-pink-100", route: "/documentos-externos" },
+  { label: "Categorías", icon: "🏷️", color: "bg-pink-100", route: "/categories" }
   // { label: "Reporte", icon: "📊", color: "bg-red-100", route: "/reporte" }
 ];
 

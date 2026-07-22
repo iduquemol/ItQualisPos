@@ -16,10 +16,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import Tesseract from 'tesseract.js';
-import { CategoryService } from '@/services/CategoryService';
+import { CategoriasService } from '@/services/CategoryService';
 import { ProductoService } from '@/services/ProductoService';
 import { TerceroService } from '@/services/TerceroService';
-import { ICategory } from '@/types/ICategoria';
+import { ICategorias } from '@/types/ICategorias';
 import { IProducto } from '@/types/IProducto';
 import { ITercero } from '@/types/ITercero';
 import { ITipoDocumento } from '@/types/ITipoDocumento';
@@ -27,6 +27,8 @@ import { TipoDocumentoService } from '@/services/TipoDocumentoService';
 import { ITipoDocumentoIdentidad } from '@/types/ITipoDocumentoIdentidad';
 import { TipoDocumentoIdentidadService } from '@/services/TipoDocumentoIdentidadService';
 import { IVenta } from '@/types/IVenta';
+import { IVentaDetalle } from '@/types/IVentaDetalle';
+import { IVentaTercero } from '@/types/IVentaTercero';
 import { IDocumentoLista } from '@/types/IDocumentoLista';
 import { DocumentoListaService } from '@/services/DocumentoListaService';
 import { VentaService } from '@/services/VentaService';
@@ -35,6 +37,74 @@ import { ITerceroDefault } from '@/types/ITerceroDefault';
 import { IVentaMedioPago } from '@/types/IVentaMedioPago';
 import FacturaModal from '../reports/FacturaModal';
 import { IParametrosVentaDefault } from '@/types/IParametrosVentaDefault';
+
+const emptyVentaTercero: IVentaTercero = {
+    idTercero: null,
+    idTipoDocumentoId: 0,
+    digitoVerificacion: null,
+    numeroIdentificacion: null,
+    primerNombre: null,
+    primerApellido: null,
+    razonSocial: null,
+    telefonoTercero: null,
+    direccionTercero: null,
+    idMunicipio: 0,
+    emailTercero: null,
+    idTipoPersona: null,
+};
+
+const buildVentaDetalle = (product: IProducto, quantity: number = 1, registroVenta: number = 1): IVentaDetalle => {
+    const precioUnitario = Number(product.precioUnitario ?? 0);
+    const porcentajeIva = Number(product.porcentajeIva ?? 0);
+    const porcentajeImpoConsumo = Number(product.porcentajeImpoConsumo ?? 0);
+    const porcentajeReteIva = Number(product.porcentajeReteIva ?? 0);
+    const porcentajeReteRenta = Number(product.porcentajeReteRenta ?? 0);
+    const porcentajeReteIca = Number(product.porcentajeReteIca ?? 0);
+    const porcentajeDescuento = Number(product.porcentajeMaxDescuento ?? 0);
+    const cantidadVenta = Number(quantity ?? 1);
+    const baseIvaVentaCalculada = parseFloat((precioUnitario - (porcentajeDescuento / 100)).toFixed(2));
+    const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * (porcentajeIva / 100)).toFixed(2));
+    const impoConsumoVenta = parseFloat((precioUnitario * (porcentajeImpoConsumo / 100)).toFixed(2));
+    const reteIvaVenta = parseFloat((ivaVentaCalculada * (porcentajeReteIva / 100)).toFixed(2));
+    const reteRentaVenta = parseFloat((baseIvaVentaCalculada * (porcentajeReteRenta / 100)).toFixed(2));
+    const reteIcaVenta = parseFloat(((baseIvaVentaCalculada * (porcentajeReteIca / 100)) / 1000).toFixed(2));
+
+    return {
+        idDetalleVenta: 0,
+        registroVenta,
+        idProducto: Number(product.idProducto ?? 0),
+        codigoProducto: product.codigoProducto ?? '',
+        nombreProducto: product.nombreProducto ?? '',
+        cantidadVenta,
+        cantidadNotaCredito: 0,
+        indNotaCredito: false,
+        precioUnitarioVenta: precioUnitario,
+        baseIvaVenta: baseIvaVentaCalculada,
+        porcentajeIvaVenta: porcentajeIva,
+        ivaVenta: ivaVentaCalculada,
+        porcentajeDescuentoVenta: 0,
+        descuentoVenta: 0,
+        porcentajeImpoConsumo,
+        impoConsumoVenta,
+        porcentajeReteIva,
+        reteIvaVenta,
+        porcentajeReteRenta,
+        reteRentaVenta,
+        baseReteRenta: baseIvaVentaCalculada,
+        porcentajeReteIca,
+        reteIcaVenta,
+        totalVenta: 0,
+        costoUnitarioVenta: 0,
+        costoTotalVenta: 0,
+        idTipoProducto: Number(product.idTipoProducto ?? 0),
+        indMuestra: false,
+    };
+};
+
+const buildVentaTercero = (values: Partial<IVentaTercero> = {}): IVentaTercero => ({
+    ...emptyVentaTercero,
+    ...values,
+});
 
 const RetailPOS = () => {
     const navigate = useNavigate();
@@ -60,20 +130,7 @@ const RetailPOS = () => {
         observaciones: null,
         ordenReferencia: null,
         fechaOrdenReferencia: null,
-        terceroVenta: {
-            idTercero: null,
-            idTipoDocumentoId: 0,
-            digitoVerificacion: null,
-            numeroIdentificacion: null,
-            primerNombre: null,
-            primerApellido: null,
-            razonSocial: null,
-            telefonoTercero: null,
-            direccionTercero: null,
-            idMunicipio: 0,
-            emailTercero: null,
-            idTipoPersona: null
-        },
+        terceroVenta: buildVentaTercero(),
         detalleVenta: [],
         mediosPagoVenta: []
     });
@@ -89,7 +146,9 @@ const RetailPOS = () => {
         digitoVerificacion: '7',
         numeroIdentificacion: '222222222222',
         primerNombre: 'Consumidor',
+        segundoNombre: '',
         primerApellido: 'Final',
+        segundoApellido: '',
         razonSocial: '',
         telefonoTercero: "",
         direccionTercero: '',
@@ -118,7 +177,7 @@ const RetailPOS = () => {
     const [loyaltyPoints, setLoyaltyPoints] = useState(0);
     const [showScanner, setShowScanner] = useState(false);
     const [showOCR, setShowOCR] = useState(false);
-    const [categories, setCategories] = useState<ICategory[]>([]);
+    const [categories, setCategories] = useState<ICategorias[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
     const [categoryError, setCategoryError] = useState<string | null>(null);
     const [products, setProducts] = useState<IProducto[]>([]);
@@ -174,9 +233,9 @@ const RetailPOS = () => {
         try {
             setCategoryError(null);
             setIsLoadingCategories(true);
-            const data = await CategoryService.getAll();
+            const data = await CategoriasService.getAll();
             setCategories([
-                { idCategoria: 0, codigoCategoria: 'all', nombreCategoria: 'Todo', iconCategoria: '🏪' },
+                { idCategoria: 0, codigoCategoria: 'all', nombreCategoria: 'Todo', iconoCategoria: '🏪' },
                 ...data
             ]);
         } catch (error) {
@@ -440,30 +499,31 @@ const RetailPOS = () => {
     });
 
     const handleSelectTercero = (terc: ITercero) => {
-        setFactura({
-            ...factura,
-            terceroVenta: {
-                idTercero: terc.idTercero,
-                idTipoDocumentoId: terc.idTipoDocumentoId,
-                digitoVerificacion: terc.digitoVerificacion,
-                numeroIdentificacion: terc.numeroIdentificacion,
-                primerNombre: terc.primerNombre,
-                primerApellido: terc.primerApellido,
-                razonSocial: terc.razonSocial,
-                telefonoTercero: terc.telefonoTercero,
-                direccionTercero: terc.direccionTercero,
-                idMunicipio: terc.idMunicipio,
-                emailTercero: terc.emailTercero,
+        const telefonoTercero = terc.telefonoTercero ? Number(terc.telefonoTercero) : null;
+        setFactura(prev => ({
+            ...prev,
+            terceroVenta: buildVentaTercero({
+                idTercero: terc.idTercero ?? null,
+                idTipoDocumentoId: terc.idTipoDocumentoId ?? 0,
+                digitoVerificacion: terc.digitoVerificacion ?? null,
+                numeroIdentificacion: terc.numeroIdentificacion ?? null,
+                primerNombre: terc.primerNombre ?? null,
+                primerApellido: terc.primerApellido ?? null,
+                razonSocial: terc.razonSocial ?? null,
+                telefonoTercero,
+                direccionTercero: terc.direccionTercero ?? null,
+                idMunicipio: terc.idMunicipio ?? 0,
+                emailTercero: terc.emailTercero ?? null,
                 idTipoPersona: 1
-            }
-        });
+            })
+        }));
         setOpenDialogTercero(false);
     };
 
     const handleNew = async () => {
         await initializeComponent();
-        setFactura({
-            ...factura,
+        setFactura(prev => ({
+            ...prev,
             idVenta: 0,
             idTipoDocumento: 4,
             codigoDocumento: '',
@@ -482,23 +542,23 @@ const RetailPOS = () => {
             totalBaseIva: 0,
             totalIva: 0,
             totalVenta: 0,
-            terceroVenta: {
-                idTercero: factura.terceroVenta?.idTercero ?? null,
-                idTipoDocumentoId: factura.terceroVenta?.idTipoDocumentoId ?? 0,
-                digitoVerificacion: factura.terceroVenta?.digitoVerificacion || null,
-                numeroIdentificacion: factura.terceroVenta?.numeroIdentificacion || null,
-                primerNombre: factura.terceroVenta?.primerNombre || null,
-                primerApellido: factura.terceroVenta?.primerApellido || null,
-                razonSocial: factura.terceroVenta?.razonSocial || null,
-                telefonoTercero: factura.terceroVenta?.telefonoTercero || null,
-                direccionTercero: factura.terceroVenta?.direccionTercero || null,
-                idMunicipio: factura.terceroVenta?.idMunicipio ?? 0,
-                emailTercero: factura.terceroVenta?.emailTercero || null,
-                idTipoPersona: factura.terceroVenta?.idTipoPersona || null
-            },
+            terceroVenta: buildVentaTercero({
+                idTercero: prev.terceroVenta?.idTercero ?? null,
+                idTipoDocumentoId: prev.terceroVenta?.idTipoDocumentoId ?? 0,
+                digitoVerificacion: prev.terceroVenta?.digitoVerificacion ?? null,
+                numeroIdentificacion: prev.terceroVenta?.numeroIdentificacion ?? null,
+                primerNombre: prev.terceroVenta?.primerNombre ?? null,
+                primerApellido: prev.terceroVenta?.primerApellido ?? null,
+                razonSocial: prev.terceroVenta?.razonSocial ?? null,
+                telefonoTercero: prev.terceroVenta?.telefonoTercero ?? null,
+                direccionTercero: prev.terceroVenta?.direccionTercero ?? null,
+                idMunicipio: prev.terceroVenta?.idMunicipio ?? 0,
+                emailTercero: prev.terceroVenta?.emailTercero ?? null,
+                idTipoPersona: prev.terceroVenta?.idTipoPersona ?? null
+            }),
             detalleVenta: [],
             mediosPagoVenta: [],
-        });
+        }));
         setActivePaymentMethod('');
     };
 
@@ -516,24 +576,31 @@ const RetailPOS = () => {
     const handleSearchTercero = (numeroIdentificacion: string) => {
         const tercero = terceros.find(t => t.numeroIdentificacion === numeroIdentificacion);
         if (tercero) {
-            setFactura({
-                ...factura,
-                terceroVenta: {
-                    ...tercero,
-                    idTercero: tercero.idTercero ?? 0, // Asegurarse de que idTercero sea un número
-                    idTipoDocumentoId: tercero.idTipoDocumentoId ?? 7, // Asignar un tipo de documento por defecto si es necesario
-                }
-            });
-        } else {
-
+            setFactura(prev => ({
+                ...prev,
+                terceroVenta: buildVentaTercero({
+                    idTercero: tercero.idTercero ?? null,
+                    idTipoDocumentoId: tercero.idTipoDocumentoId ?? 7,
+                    digitoVerificacion: tercero.digitoVerificacion ?? null,
+                    numeroIdentificacion: tercero.numeroIdentificacion ?? null,
+                    primerNombre: tercero.primerNombre ?? null,
+                    primerApellido: tercero.primerApellido ?? null,
+                    razonSocial: tercero.razonSocial ?? null,
+                    telefonoTercero: tercero.telefonoTercero ? Number(tercero.telefonoTercero) : null,
+                    direccionTercero: tercero.direccionTercero ?? null,
+                    idMunicipio: tercero.idMunicipio ?? 0,
+                    emailTercero: tercero.emailTercero ?? null,
+                    idTipoPersona: 1,
+                })
+            }));
         }
     };
 
     const handleSelectVenta = async (documento: IDocumentoLista) => {
         const data = await VentaService.getById(documento.idVenta);
         setSelectedFactura(data);
-        setFactura({
-            ...factura,
+        setFactura(prev => ({
+            ...prev,
             idVenta: data?.idVenta ?? null,
             idTipoDocumento: data?.idTipoDocumento ?? 0,
             codigoDocumento: data?.codigoDocumento ?? '',
@@ -551,24 +618,11 @@ const RetailPOS = () => {
             totalBaseIva: data?.totalBaseIva ?? 0,
             totalIva: data?.totalIva ?? 0,
             totalVenta: data?.totalVenta ?? 0,
-            terceroVenta: data?.terceroVenta ?? {
-                idTercero: null,
-                idTipoDocumentoId: 0,
-                digitoVerificacion: null,
-                numeroIdentificacion: null,
-                primerNombre: null,
-                primerApellido: null,
-                razonSocial: null,
-                telefonoTercero: null,
-                direccionTercero: null,
-                idMunicipio: 0,
-                emailTercero: null,
-                idTipoPersona: null
-            },
+            terceroVenta: data?.terceroVenta ? buildVentaTercero(data.terceroVenta) : buildVentaTercero(),
             detalleVenta: data?.detalleVenta ?? [],
             mediosPagoVenta: data?.mediosPagoVenta ?? [],
 
-        });
+        }));
         setOpenDialog(false);
         setShowFacturaModal(true);
         const dataPrint = await VentaService.printById(documento.idVenta);
@@ -649,132 +703,73 @@ const RetailPOS = () => {
 
     // Funciones del carrito
     const addToCart = (product: IProducto) => {
-        const baseIvaVentaCalculada = parseFloat((product.precioUnitario - (product.porcentajeDescuento || 0) / 100).toFixed(2));
-        const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((product.porcentajeIva || 0) / 100)).toFixed(2));
-        // Si el tipo de producto es 2, siempre agregar como nuevo item
-        if (product.idTipoProducto === 2) {
-            setFactura({
-                ...factura,
-                detalleVenta: [
-                    ...(factura.detalleVenta || []),
-                    {
-                        idDetalleVenta: 0,
-                        registroVenta: (factura.detalleVenta ? factura.detalleVenta.length : 0) + 1,
-                        idProducto: product.idProducto ?? 0,
-                        codigoProducto: product.codigoProducto,
-                        nombreProducto: product.nombreProducto,
-                        precioUnitarioVenta: product.precioUnitario,
-                        cantidadVenta: 1.0,
-                        descuentoVenta: 0,
-                        baseIvaVenta: baseIvaVentaCalculada,
-                        ivaVenta: ivaVentaCalculada,
-                        totalVenta: 0,
-                        costoUnitarioVenta: 0,
-                        costoTotalVenta: 0,
-                        porcentajeIvaVenta: product.porcentajeIva || 0,
-                        porcentajeDescuentoVenta: 0,
-                        porcentajeImpoConsumo: product.porcentajeImpoConsumo || 0,
-                        impoConsumoVenta: parseFloat((product.precioUnitario * ((product.porcentajeImpoConsumo || 0) / 100)).toFixed(2)),
-                        porcentajeReteIva: product.porcentajeReteIva || 0,
-                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((product.porcentajeReteIva || 0) / 100)).toFixed(2)),
-                        porcentajeReteRenta: product.porcentajeReteRenta || 0,
-                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((product.porcentajeReteRenta || 0) / 100)).toFixed(2)),
-                        baseReteRenta: baseIvaVentaCalculada,
-                        porcentajeReteIca: product.porcentajeReteIca || 0,
-                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((product.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
-                        cantidadNotaCredito: 0,
-                        indNotaCredito: false,
-                        idTipoProducto: product.idTipoProducto || 0
-                    }
-                ]
-            });
-        } else {
-            // Para otros tipos de producto, mantener la lógica original
-            const existingItem = factura.detalleVenta?.find(item => item.idProducto === product.idProducto);
-            if (existingItem) {
-                // Si el producto ya está en el carrito, incrementa la cantidad
-                setFactura({
-                    ...factura,
-                    detalleVenta: (factura.detalleVenta ?? []).map(item =>
-                        item.idProducto === product.idProducto
-                            ? { ...item, cantidadVenta: item.cantidadVenta + 1 }
-                            : item
-                    )
-                });
-            } else {
-                setFactura({
-                    ...factura,
-                    detalleVenta: [
-                        ...(factura.detalleVenta || []),
-                        {
-                            idDetalleVenta: 0,
-                            registroVenta: (factura.detalleVenta ? factura.detalleVenta.length : 0) + 1,
-                            idProducto: product.idProducto ?? 0,
-                            codigoProducto: product.codigoProducto,
-                            nombreProducto: product.nombreProducto,
-                            precioUnitarioVenta: product.precioUnitario,
-                            cantidadVenta: 1.0,
-                            descuentoVenta: 0,
-                            baseIvaVenta: baseIvaVentaCalculada,
-                            ivaVenta: ivaVentaCalculada,
-                            totalVenta: 0,
-                            costoUnitarioVenta: 0,
-                            costoTotalVenta: 0,
-                            porcentajeIvaVenta: product.porcentajeIva || 0,
-                            porcentajeDescuentoVenta: 0,
-                            porcentajeImpoConsumo: product.porcentajeImpoConsumo || 0,
-                            impoConsumoVenta: parseFloat((product.precioUnitario * ((product.porcentajeImpoConsumo || 0) / 100)).toFixed(2)),
-                            porcentajeReteIva: product.porcentajeReteIva || 0,
-                            reteIvaVenta: parseFloat((ivaVentaCalculada * ((product.porcentajeReteIva || 0) / 100)).toFixed(2)),
-                            porcentajeReteRenta: product.porcentajeReteRenta || 0,
-                            reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((product.porcentajeReteRenta || 0) / 100)).toFixed(2)),
-                            baseReteRenta: baseIvaVentaCalculada,
-                            porcentajeReteIca: product.porcentajeReteIca || 0,
-                            reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((product.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
-                            cantidadNotaCredito: 0,
-                            indNotaCredito: false,
-                            idTipoProducto: product.idTipoProducto || 0
-                        }
-                    ]
-                });
+        setFactura(prev => {
+            const detalleVentaActual = prev.detalleVenta ?? [];
+            const existingItem = detalleVentaActual.find(item => item.idProducto === Number(product.idProducto ?? 0));
+
+            if (product.idTipoProducto === 2) {
+                const nuevoDetalle = buildVentaDetalle(product, 1, detalleVentaActual.length + 1);
+                return {
+                    ...prev,
+                    detalleVenta: [...detalleVentaActual, nuevoDetalle],
+                };
             }
-        }
+
+            if (existingItem) {
+                return {
+                    ...prev,
+                    detalleVenta: detalleVentaActual.map(item =>
+                        item.idProducto === Number(product.idProducto ?? 0)
+                            ? {
+                                ...item,
+                                cantidadVenta: Number(item.cantidadVenta ?? 0) + 1,
+                            }
+                            : item
+                    ),
+                };
+            }
+
+            const nuevoDetalle = buildVentaDetalle(product, 1, detalleVentaActual.length + 1);
+            return {
+                ...prev,
+                detalleVenta: [...detalleVentaActual, nuevoDetalle],
+            };
+        });
     };
 
     const updateQuantity = (id: number, change: number) => {
-        setFactura({
-            ...factura,
-            detalleVenta: (factura.detalleVenta ?? []).map(item => {
+        setFactura(prev => ({
+            ...prev,
+            detalleVenta: (prev.detalleVenta ?? []).map(item => {
                 if (item.idProducto === id) {
-                    const newQuantity = item.cantidadVenta + change;
-                    const baseIvaVentaCalculada = parseFloat((newQuantity * item.precioUnitarioVenta - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
-                    const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
+                    const newQuantity = Number(item.cantidadVenta ?? 0) + change;
+                    const baseIvaVentaCalculada = parseFloat((newQuantity * Number(item.precioUnitarioVenta ?? 0) - (Number(item.porcentajeDescuentoVenta ?? 0) / 100)).toFixed(2));
+                    const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((Number(item.porcentajeIvaVenta ?? 0)) / 100)).toFixed(2));
                     return {
                         ...item,
                         cantidadVenta: newQuantity,
                         baseIvaVenta: baseIvaVentaCalculada,
                         ivaVenta: ivaVentaCalculada,
                         descuentoVenta: parseFloat(
-                            ((item.precioUnitarioVenta * newQuantity) * ((item.porcentajeDescuentoVenta || 0) / 100)).toFixed(2)
+                            ((Number(item.precioUnitarioVenta ?? 0) * newQuantity) * ((Number(item.porcentajeDescuentoVenta ?? 0)) / 100)).toFixed(2)
                         ),
-                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((item.porcentajeReteIva || 0) / 100)).toFixed(2)),
-                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((Number(item.porcentajeReteIva ?? 0)) / 100)).toFixed(2)),
+                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((Number(item.porcentajeReteRenta ?? 0)) / 100)).toFixed(2)),
                         baseReteRenta: baseIvaVentaCalculada,
-                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
+                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((Number(item.porcentajeReteIca ?? 0)) / 100)) / 1000).toFixed(2)),
                     };
                 }
                 return item;
             })
-        });
+        }));
 
     };
 
     const removeFromCart = (id: number) => {
-        // Elimina el producto del carrito
-        setFactura({
-            ...factura,
-            detalleVenta: factura.detalleVenta ? factura.detalleVenta.filter(item => item.idProducto !== id) : []
-        });
+        setFactura(prev => ({
+            ...prev,
+            detalleVenta: (prev.detalleVenta ?? []).filter(item => item.idProducto !== id)
+        }));
     };
 
     const formatCurrency = (amount: number | null | undefined): string => {
@@ -1047,14 +1042,14 @@ const RetailPOS = () => {
                             <div className="grid grid-cols-5 gap-1">
                                 <select
                                     className="w-full rounded border px-2 py-2 text-sm bg-background w-42"
-                                    value={factura.terceroVenta?.idTipoDocumentoId}
-                                    onChange={(e) => setFactura({
-                                        ...factura,
-                                        terceroVenta: {
-                                            ...factura.terceroVenta,
-                                            idTipoDocumentoId: parseInt(e.target.value)
-                                        }
-                                    })}
+                                    value={factura.terceroVenta?.idTipoDocumentoId ?? 0}
+                                    onChange={(e) => setFactura(prev => ({
+                                        ...prev,
+                                        terceroVenta: buildVentaTercero({
+                                            ...(prev.terceroVenta ?? buildVentaTercero()),
+                                            idTipoDocumentoId: Number.parseInt(e.target.value, 10) || 0
+                                        })
+                                    }))}
                                     required
                                 >
                                     {tiposDocumentoIdentidad.map(cat => (
@@ -1066,16 +1061,16 @@ const RetailPOS = () => {
                                 <Input
                                     placeholder="Número de Identificación"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={factura.terceroVenta?.numeroIdentificacion || ''}
+                                    value={factura.terceroVenta?.numeroIdentificacion ?? ''}
                                     onChange={(e) => {
                                         const value = e.target.value;
-                                        setFactura({
-                                            ...factura,
-                                            terceroVenta: {
-                                                ...factura.terceroVenta,
+                                        setFactura(prev => ({
+                                            ...prev,
+                                            terceroVenta: buildVentaTercero({
+                                                ...(prev.terceroVenta ?? buildVentaTercero()),
                                                 numeroIdentificacion: value
-                                            }
-                                        });
+                                            })
+                                        }));
                                         // Buscar tercero después de un pequeño delay para evitar muchas búsquedas
                                         if (value.length >= 3) {
                                             handleSearchTercero(value);
@@ -1092,39 +1087,39 @@ const RetailPOS = () => {
                                 <Input
                                     placeholder="Primer Nombre"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={factura.terceroVenta?.primerNombre || ''}
-                                    onChange={(e) => setFactura({
-                                        ...factura,
-                                        terceroVenta: {
-                                            ...factura.terceroVenta,
+                                    value={factura.terceroVenta?.primerNombre ?? ''}
+                                    onChange={(e) => setFactura(prev => ({
+                                        ...prev,
+                                        terceroVenta: buildVentaTercero({
+                                            ...(prev.terceroVenta ?? buildVentaTercero()),
                                             primerNombre: e.target.value
-                                        }
-                                    })}
+                                        })
+                                    }))}
                                 />
                                 <Input
                                     placeholder="Primer Apellido"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={factura.terceroVenta?.primerApellido || ''}
-                                    onChange={(e) => setFactura({
-                                        ...factura,
-                                        terceroVenta: {
-                                            ...factura.terceroVenta,
+                                    value={factura.terceroVenta?.primerApellido ?? ''}
+                                    onChange={(e) => setFactura(prev => ({
+                                        ...prev,
+                                        terceroVenta: buildVentaTercero({
+                                            ...(prev.terceroVenta ?? buildVentaTercero()),
                                             primerApellido: e.target.value
-                                        }
-                                    })}
+                                        })
+                                    }))}
                                 />
                                 <Input
                                     type="email"
                                     placeholder="Email"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={factura.terceroVenta.emailTercero || ''}
-                                    onChange={(e) => setFactura({
-                                        ...factura,
-                                        terceroVenta: {
-                                            ...factura.terceroVenta,
+                                    value={factura.terceroVenta?.emailTercero ?? ''}
+                                    onChange={(e) => setFactura(prev => ({
+                                        ...prev,
+                                        terceroVenta: buildVentaTercero({
+                                            ...(prev.terceroVenta ?? buildVentaTercero()),
                                             emailTercero: e.target.value
-                                        }
-                                    })}
+                                        })
+                                    }))}
                                 />
                             </div>
                             <Dialog open={openDialogTercero} onOpenChange={setOpenDialogTercero}>
@@ -1238,7 +1233,7 @@ const RetailPOS = () => {
 
                     {/* Items del Carrito */}
                     <div className="flex-1 overflow-y-auto p-4 min-h-[300px]">
-                        {!factura.detalleVenta || factura.detalleVenta.length === 0 ? (
+                        {!(factura.detalleVenta ?? []).length ? (
                             <div className="text-center py-12">
                                 <div className="text-6xl mb-4">🛒</div>
                                 <p className="text-muted-foreground font-medium">Carrito vacío</p>
@@ -1277,14 +1272,14 @@ const RetailPOS = () => {
                                                             type="number"
                                                             value={item.precioUnitarioVenta || ''}
                                                             onChange={(e) => {
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                setFactura(prev => ({
+                                                                    ...prev,
+                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.registroVenta === item.registroVenta
                                                                             ? { ...detalleItem, precioUnitarioVenta: parseFloat(e.target.value) || 0 }
                                                                             : detalleItem
                                                                     )
-                                                                });
+                                                                }));
                                                             }}
                                                             className="text-sm text-muted-foreground w-24"
                                                             placeholder="Precio"
@@ -1299,14 +1294,14 @@ const RetailPOS = () => {
                                                             id={`muestra-${item.registroVenta}`}
                                                             checked={item.indMuestra || false}
                                                             onCheckedChange={(checked) => {
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                setFactura(prev => ({
+                                                                    ...prev,
+                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.registroVenta === item.registroVenta
                                                                             ? { ...detalleItem, indMuestra: checked as boolean }
                                                                             : detalleItem
                                                                     )
-                                                                });
+                                                                }));
                                                             }}
                                                         />
                                                         <Label
@@ -1333,9 +1328,9 @@ const RetailPOS = () => {
                                                                 const baseIvaVentaCalculada = parseFloat((item.cantidadVenta * item.precioUnitarioVenta - (parseFloat(e.target.value) || 0) / 100).toFixed(2));
                                                                 const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
                                                                 const valorDescuento = parseFloat(((item.precioUnitarioVenta * item.cantidadVenta) * ((parseFloat(e.target.value) || 0) / 100)).toFixed(2));
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                setFactura(prev => ({
+                                                                    ...prev,
+                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
                                                                                 ...detalleItem,
@@ -1348,7 +1343,7 @@ const RetailPOS = () => {
                                                                             }
                                                                             : detalleItem
                                                                     )
-                                                                });
+                                                                }));
                                                             }}
                                                             min={0}
                                                             max={100}
@@ -1364,9 +1359,9 @@ const RetailPOS = () => {
                                                             onChange={(e) => {
                                                                 const baseIvaVentaCalculada = parseFloat((item.cantidadVenta * item.precioUnitarioVenta - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
                                                                 const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                setFactura(prev => ({
+                                                                    ...prev,
+                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
                                                                                 ...detalleItem,
@@ -1378,7 +1373,7 @@ const RetailPOS = () => {
                                                                             }
                                                                             : detalleItem
                                                                     )
-                                                                });
+                                                                }));
                                                             }}
                                                             placeholder="0"
                                                         />
@@ -1390,17 +1385,17 @@ const RetailPOS = () => {
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.porcentajeIvaVenta || ''}
                                                             onChange={(e) => {
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                setFactura(prev => ({
+                                                                    ...prev,
+                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
                                                                                 ...detalleItem, porcentajeIvaVenta: parseFloat(e.target.value) || 0,
-                                                                                ivaVenta: (detalleItem.precioUnitarioVenta * detalleItem.cantidadVenta) * ((parseFloat(e.target.value) || 0) / 100)
+                                                                                ivaVenta: (Number(detalleItem.precioUnitarioVenta ?? 0) * Number(detalleItem.cantidadVenta ?? 0)) * ((parseFloat(e.target.value) || 0) / 100)
                                                                             }
                                                                             : detalleItem
                                                                     )
-                                                                });
+                                                                }));
                                                             }}
                                                             min={0}
                                                             max={100}
@@ -1415,14 +1410,14 @@ const RetailPOS = () => {
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.ivaVenta || ''}
                                                             onChange={(e) => {
-                                                                setFactura({
-                                                                    ...factura,
-                                                                    detalleVenta: factura.detalleVenta.map(detalleItem =>
+                                                                setFactura(prev => ({
+                                                                    ...prev,
+                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? { ...detalleItem, ivaVenta: parseFloat(e.target.value) || 0 }
                                                                             : detalleItem
                                                                     )
-                                                                });
+                                                                }));
                                                             }}
                                                             placeholder="0"
                                                             disabled
@@ -1456,24 +1451,24 @@ const RetailPOS = () => {
                                                                     const baseIvaVentaCalculada = parseFloat((newQuantity * item.precioUnitarioVenta - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
                                                                     const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
                                                                     if (newQuantity >= 0) {
-                                                                        setFactura({
-                                                                            ...factura,
-                                                                            detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
+                                                                        setFactura(prev => ({
+                                                                            ...prev,
+                                                                            detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                                 detalleItem.idProducto === item.idProducto
                                                                                     ? {
                                                                                         ...detalleItem,
                                                                                         cantidadVenta: newQuantity,
                                                                                         baseIvaVenta: baseIvaVentaCalculada,
                                                                                         ivaVenta: ivaVentaCalculada,
-                                                                                        descuentoVenta: parseFloat(((item.precioUnitarioVenta * newQuantity) * ((item.porcentajeDescuentoVenta || 0) / 100)).toFixed(2)),
-                                                                                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((item.porcentajeReteIva || 0) / 100)).toFixed(2)),
-                                                                                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                                                                                        descuentoVenta: parseFloat(((Number(item.precioUnitarioVenta ?? 0) * newQuantity) * ((Number(item.porcentajeDescuentoVenta ?? 0)) / 100)).toFixed(2)),
+                                                                                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((Number(item.porcentajeReteIva ?? 0)) / 100)).toFixed(2)),
+                                                                                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((Number(item.porcentajeReteRenta ?? 0)) / 100)).toFixed(2)),
                                                                                         baseReteRenta: baseIvaVentaCalculada,
-                                                                                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
+                                                                                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((Number(item.porcentajeReteIca ?? 0)) / 100)) / 1000).toFixed(2)),
                                                                                     }
                                                                                     : detalleItem
                                                                             )
-                                                                        });
+                                                                        }));
                                                                     }
                                                                 }}
                                                                 className="w-16 h-8 text-center rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -1515,7 +1510,7 @@ const RetailPOS = () => {
                     </div>
 
                     {/* Panel de Totales y Pago */}
-                    {factura.detalleVenta.length > 0 && (
+                    {(factura.detalleVenta ?? []).length > 0 && (
                         <div className="border-t flex flex-col h-[400px]" >
                             <div className="h-[100px] overflow-y-auto">
                                 {/* Totales */}
@@ -1607,14 +1602,14 @@ const RetailPOS = () => {
                     <div className="border-b p-2 h-[80px]">
                         <Tabs value={selectedCategory.toString()} onValueChange={setSelectedCategory} className="w-full">
                             <TabsList className="flex flex-wrap gap-1 h-full">
-                                {categories.map(category => (
+                                {categories.map((category, index) => (
                                     <TabsTrigger
-                                        key={category.idCategoria}
-                                        value={category.idCategoria.toString()}
+                                        key={category.idCategoria ?? index}
+                                        value={category.idCategoria?.toString() ?? ""}
                                         disabled={isLoadingCategories}
                                         className="flex items-center space-x-1 px-2 py-1 flex-1 min-w-[calc(33.33%-4px)]"
                                     >
-                                        <span>{category.iconCategoria}</span>
+                                        <span>{category.iconoCategoria}</span>
                                         <span className="text-sm">{category.nombreCategoria}</span>
                                     </TabsTrigger>
                                 ))}
@@ -1628,7 +1623,7 @@ const RetailPOS = () => {
                             {filteredProducts.map(product => (
                                 <Card
                                     key={product.idProducto}
-                                    className={`cursor-pointer transition-all hover:shadow-lg ${product.stock <= product.minStock ? 'border-destructive/50' : ''
+                                    className={`cursor-pointer transition-all hover:shadow-lg ${(product.stockActualProducto ?? 0) <= 0 ? 'border-destructive/50' : ''
                                         }`}
                                     onClick={() => addToCart(product)}
                                 >

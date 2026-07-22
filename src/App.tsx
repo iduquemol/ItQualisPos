@@ -12,6 +12,8 @@ import CreditNotePage from './pages/creditNotePage';
 import EstimatePage from './pages/estimatePage';
 import EmpresasPage from './pages/empresasPage';
 import ResolutionsPage from './pages/resolucionesPage';
+import DocumentosExternosPage from './pages/documentosExternosPage';
+import CategoriesPage from './pages/categoriasPage';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -64,6 +66,18 @@ function App() {
                     element={
                         isAuthenticated ? <POSPage /> : <Navigate to="/login" />
                         // <POSPage />
+                    }
+                />
+                <Route
+                    path="/documentos-externos"
+                    element={
+                        isAuthenticated ? <DocumentosExternosPage /> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/categories"
+                    element={
+                        isAuthenticated ? <CategoriesPage /> : <Navigate to="/login" />
                     }
                 />
                 <Route
