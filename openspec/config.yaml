@@ -1,0 +1,68 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+context: |
+  Producto: Sistema POS (Punto de Venta) para el mercado colombiano, con
+  facturación electrónica DIAN, notas de crédito, cotizaciones y gestión
+  de terceros/proveedores.
+
+  Stack:
+  - React 18 + TypeScript, build con Vite
+  - Estilos: Tailwind CSS + componentes basados en Radix UI (patrón shadcn/ui) en src/components/ui
+  - Routing: react-router-dom v7
+  - Notificaciones: sonner
+  - PDFs: @react-pdf/renderer; emails: @react-email
+  - Escaneo de códigos: html5-qrcode; OCR: tesseract.js
+
+  Estructura de carpetas (feature-based):
+  - src/features/<dominio>/          -> componentes de UI por dominio de negocio
+    (auth, pos, items, estimate, creditNote, suppliers, reports, mainMenu)
+  - src/pages/                       -> páginas que componen features para una ruta
+  - src/services/<Dominio>Service.ts -> llamadas HTTP al backend (fetch sobre API_CONFIG)
+  - src/types/I<Nombre>.ts           -> interfaces de dominio, prefijo "I"
+  - src/config/api.config.ts         -> configuración central de endpoints (API_CONFIG)
+  - src/components/ui/               -> componentes UI genéricos reutilizables (shadcn-style)
+  - src/lib/utils.ts                 -> helpers compartidos (cn, etc.)
+
+  Convenciones:
+  - Componentes de feature en PascalCase (ej. MainPos.tsx, ItemsMaster.tsx)
+  - Tipos de dominio con prefijo "I" (ej. IProducto, IVenta, INotaCredito)
+  - Servicios encapsulan el acceso a la API; los componentes no hacen fetch directo
+  - Nombres de dominio y variables en español (terceros, ventas, cotizacion, notaCredito),
+    identificadores de código (funciones, props, tipos) en inglés/español mixto según
+    lo existente en cada archivo - seguir el estilo del archivo que se está modificando
+  - Testing: Vitest + @testing-library/react (jsdom). Config en vite.config.ts
+    (bloque "test"), setup en src/test/setup.ts. Comandos: "npm test" (una vez,
+    CI-style) y "npm run test:watch" (modo watch). Los tests unitarios/de
+    componente viven junto al código o en src/test/, con extensión .test.ts(x)
+  - Variables de entorno por modo: .env.development, .env.production, .env.onpremise
+    (VITE_API_URL, VITE_API_KEY, VITE_ON_PREMISE)
+
+  Dominio de negocio (glosario):
+  - Tercero: cliente o proveedor (persona/empresa)
+  - Venta: transacción de venta / factura
+  - Cotización (estimate): presupuesto no facturado aún
+  - Nota de crédito: documento de ajuste/devolución sobre una venta ya facturada
+  - DIAN: autoridad tributaria colombiana; hay flujos de envío/reenvío de facturas
+    electrónicas (RESEND_VENTA) y preview de PDF antes de enviar
+
+# Per-artifact rules (optional)
+rules:
+  proposal:
+    - Explicar el impacto en el dominio de negocio colombiano (DIAN, facturación,
+      notas de crédito) cuando aplique, no solo el cambio técnico
+    - Mantener el nombre de la feature/dominio afectada explícito (pos, items,
+      estimate, creditNote, suppliers, reports, auth)
+  design:
+    - "Respetar la separación existente: UI en features/, acceso a datos en services/, tipos en types/"
+    - Reutilizar componentes de src/components/ui antes de crear nuevos
+    - No introducir un state manager global nuevo (Redux, Zustand, etc.) sin
+      justificarlo explícitamente frente al estado local/prop-drilling actual
+  tasks:
+    - Incluir pruebas con Vitest (+ Testing Library para componentes) para la
+      lógica y los flujos que agregue o modifique el cambio
+    - Si la lógica no es fácilmente testeable de forma automática (ej. flujos
+      que dependen del hardware de impresión/escaneo), incluir igual un paso
+      de verificación manual explícito en el navegador
+    - Correr "npm test" como parte de los criterios de aceptación de la tarea

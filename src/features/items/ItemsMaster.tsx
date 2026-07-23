@@ -169,7 +169,14 @@ export default function ItemsMaster() {
 
         // Arrays / Relaciones
         tributosProducto: prod.tributosProducto || [],
-        preciosProducto: prod.preciosProducto || [],
+        preciosProducto: (prod.preciosProducto || []).map(precio => {
+            const lista = listaPrecios.find(l => l.idListaPrecio === precio.idListaPrecio);
+            return {
+                ...precio,
+                codigoListaPrecio: lista?.codigoListaPrecio || precio.codigoListaPrecio || "",
+                nombreListaPrecio: lista?.nombreListaPrecio || precio.nombreListaPrecio || "",
+            };
+        }),
     });
     setOpenDialog(false);
 };
@@ -418,13 +425,6 @@ export default function ItemsMaster() {
         });
         setAddPrecioMode(false);
     };
-
-    // Filtrado simple por concepto o descripción de tributos
-    const filteredTributos = (producto.tributosProducto || []).filter(
-        (item) =>
-            item.idTributo.toLowerCase().includes(search.toLowerCase()) ||
-            item.nombreTributo.toLowerCase().includes(search.toLowerCase())
-    );
 
     const fetchProducts = async () => {
         try {
@@ -1041,7 +1041,7 @@ export default function ItemsMaster() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredTributos.map((item, idx) => (
+                                {(producto.tributosProducto || []).map((item, idx) => (
                                     <tr key={idx} className="border-b hover:bg-accent">
                                         {editIdx === idx ? (
                                             <>
