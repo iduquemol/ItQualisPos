@@ -12,7 +12,8 @@ const menuItems = [
   { label: "Empresas", icon: "🏢", color: "bg-yellow-100", route: "/empresas" },
   { label: "Resoluciones", icon: "📜", color: "bg-purple-100", route: "/resoluciones" },
   { label: "Documentos Externos", icon: "📄", color: "bg-pink-100", route: "/documentos-externos" },
-  { label: "Categorías", icon: "🏷️", color: "bg-pink-100", route: "/categories" }
+  { label: "Categorías", icon: "🏷️", color: "bg-pink-100", route: "/categories" },
+  { label: "Parámetros de Venta", icon: "⚙️", color: "bg-gray-100", route: "/parametros-venta" }
   // { label: "Reporte", icon: "📊", color: "bg-red-100", route: "/reporte" }
 ];
 

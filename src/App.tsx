@@ -14,6 +14,7 @@ import EmpresasPage from './pages/empresasPage';
 import ResolutionsPage from './pages/resolucionesPage';
 import DocumentosExternosPage from './pages/documentosExternosPage';
 import CategoriesPage from './pages/categoriasPage';
+import ParametrosVentasPage from './pages/parametrosVentasPage';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -66,6 +67,12 @@ function App() {
                     element={
                         isAuthenticated ? <POSPage /> : <Navigate to="/login" />
                         // <POSPage />
+                    }
+                />
+                <Route
+                    path="/parametros-venta"
+                    element={
+                        isAuthenticated ? <ParametrosVentasPage /> : <Navigate to="/login" />
                     }
                 />
                 <Route
