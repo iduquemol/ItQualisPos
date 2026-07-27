@@ -105,6 +105,7 @@ export default function SuppliersMaster() {
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [isValidandoTercero, setIsValidandoTercero] = useState(false);
 
 
     const handleSelectTercero = (terc: ITercero) => {
@@ -265,6 +266,74 @@ export default function SuppliersMaster() {
             tarifaIca: 0,
             responsabilidadesTerceros: [],
         });
+    };
+
+    // Valida si el número de identificación digitado ya corresponde a un tercero
+    // existente. Si existe, autocompleta el formulario y pasa a modo edición; si no,
+    // deja/vuelve al formulario en modo creación.
+    const handleValidarTerceroExistente = async () => {
+        const numeroIdentificacion = tercero.numeroIdentificacion?.trim();
+        if (!numeroIdentificacion) return;
+
+        setIsValidandoTercero(true);
+        try {
+            const resultados = await TerceroService.search(numeroIdentificacion);
+            // sp_Search_terceros hace coincidencia parcial (por NIT o por nombre);
+            // se debe filtrar por coincidencia exacta del número de identificación.
+            const encontrado = resultados.find(t => t.numeroIdentificacion === numeroIdentificacion) || null;
+
+            if (encontrado) {
+                if (encontrado.idTercero !== tercero.idTercero) {
+                    handleSelectTercero(encontrado);
+                    toast("Tercero existente. Se cargó para edición.", {
+                        position: "top-center",
+                    });
+                }
+            } else if (tercero.idTercero) {
+                // Estaba en modo edición por una detección previa y el número ya
+                // no corresponde a ese tercero: vuelve a modo creación.
+                setSelectedTercero(null);
+                setTercero({
+                    idTercero: null,
+                    idTipoDocumentoId: 0,
+                    nombreTipoDocumentoId: "",
+                    digitoVerificacion: "",
+                    numeroIdentificacion,
+                    primerNombre: "",
+                    segundoNombre: "",
+                    primerApellido: "",
+                    segundoApellido: "",
+                    razonSocial: "",
+                    telefonoTercero: null,
+                    direccionTercero: "",
+                    emailTercero: "",
+                    idDepartamento: 0,
+                    nombreDepartamento: null,
+                    idMunicipio: 0,
+                    nombreMunicipio: null,
+                    terceroActivo: false,
+                    terceroCliente: false,
+                    terceroProveedor: false,
+                    terceroEmpleado: false,
+                    terceroGeneral: false,
+                    idTipoRegimen: 0,
+                    idListaPreciosTercero: 0,
+                    retenedorIva: false,
+                    retenedorRenta: false,
+                    retenedorIca: false,
+                    declaraRenta: false,
+                    tarifaIca: 0,
+                    responsabilidadesTerceros: [],
+                });
+            }
+        } catch (error) {
+            console.error('Error al validar tercero existente:', error);
+            toast.error("No se pudo validar si el tercero ya existe. Puedes intentar guardar de nuevo.", {
+                position: "top-center",
+            });
+        } finally {
+            setIsValidandoTercero(false);
+        }
     };
 
     const handleDeleteTercero = async () => {
@@ -585,7 +654,8 @@ export default function SuppliersMaster() {
                     <Button
                         variant="default"
                         title="Guardar tercero"
-                        onClick={handleSaveTercero}>
+                        onClick={handleSaveTercero}
+                        disabled={isValidandoTercero}>
                         <Save className="w-4 h-4 mr-2" />
                         Guardar
                     </Button>
@@ -659,6 +729,7 @@ export default function SuppliersMaster() {
                                         e.preventDefault();
                                         }
                                     }}
+                                    onBlur={handleValidarTerceroExistente}
                                     placeholder="Número de identificación"
                                     required
                                     className={

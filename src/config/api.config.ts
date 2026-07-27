@@ -35,6 +35,7 @@ export const API_CONFIG = {
         RESEND_VENTA: '/enviar-dian',
         PREVIEW_PDF: '/preview-pdf',
         TERCEROS_PROVEEDORES: '/terceros-proveedores',
+        TERCEROS_BUSQUEDA: '/terceros-busqueda',
         EMPRESAS: '/empresas',
         TIPO_PERSONA: '/tipospersona',
         MEDIOS_PAGO: '/mediospago',
