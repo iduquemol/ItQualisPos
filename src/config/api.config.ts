@@ -21,6 +21,7 @@ export const API_CONFIG = {
         TIPOS_PRODUCTO: '/tiposproducto',
         LISTAS_PRECIOS: '/listasprecios',
         PARAMETROS_VENTA_DEFAULT: '/parametrosVentaDefault',
+        PARAMETROS_VENTA: '/parametrosVentas',
         PRODUCTS_VENTA_TERCERO: '/productos-venta-tercero',
         PRINT_VENTA: '/print-venta',
         DEPARTAMENTOS: '/departamentos',
