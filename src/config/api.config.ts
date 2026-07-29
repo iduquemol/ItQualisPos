@@ -40,7 +40,8 @@ export const API_CONFIG = {
         TIPO_PERSONA: '/tipospersona',
         MEDIOS_PAGO: '/mediospago',
         RESOLUCIONES: '/resoluciones',
-        TIPOS_DOCUMENTO_EXTERNO: '/tiposdocumentoexterno'
+        TIPOS_DOCUMENTO_EXTERNO: '/tiposdocumentoexterno',
+        ACTIVIDADES_ICA: '/actividadesIca',
     },
     getUrl: (endpoint: string) => {
         const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);
