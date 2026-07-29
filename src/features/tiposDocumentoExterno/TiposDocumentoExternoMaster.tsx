@@ -311,94 +311,99 @@ export default function TiposDocumentoExternoMaster() {
         <TabsContent value="general" className="mt-4">
           <Card className="mb-6 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              {/* Código */}
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">
-                  Código Documento Externo (*)
-                </label>
-                <Input
-                  value={tipoDocExterno.codigoTipoDocumentoExterno ?? ""}
-                  onChange={(e) =>
-                    setTipoDocExterno({
-                      ...tipoDocExterno,
-                      codigoTipoDocumentoExterno: e.target.value,
-                    })
-                  }
-                  placeholder="Código"
-                  className={
-                    !tipoDocExterno.codigoTipoDocumentoExterno?.trim() && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
-                />
-                {formError && !tipoDocExterno.codigoTipoDocumentoExterno?.trim() && (
-                  <span className="text-xs text-red-500">
-                    El código es obligatorio.
-                  </span>
-                )}
-              </div>
-
-              {/* Nombre */}
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">
-                  Nombre Documento Externo (*)
-                </label>
-                <Input
-                  value={tipoDocExterno.nombreTipoDocumentoExterno ?? ""}
-                  onChange={(e) =>
-                    setTipoDocExterno({
-                      ...tipoDocExterno,
-                      nombreTipoDocumentoExterno: e.target.value,
-                    })
-                  }
-                  placeholder="Nombre"
-                  className={
-                    !tipoDocExterno.nombreTipoDocumentoExterno?.trim() && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
-                />
-                {formError && !tipoDocExterno.nombreTipoDocumentoExterno?.trim() && (
-                  <span className="text-xs text-red-500">
-                    El nombre es obligatorio.
-                  </span>
-                )}
-              </div>
-
-              {/* ID Tipo Documento ERP */}
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">
-                  ID Tipo Documento ERP (*)
-                </label>
-                <Input
-                  type="number"
-                  value={tipoDocExterno.idTipoDocumento || ""}
-                  onChange={(e) =>
-                    setTipoDocExterno({
-                      ...tipoDocExterno,
-                      idTipoDocumento: Number(e.target.value),
-                    })
-                  }
-                  placeholder="ID Tipo Documento"
-                  className={
-                    !tipoDocExterno.idTipoDocumento && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
-                />
-                {formError && !tipoDocExterno.idTipoDocumento && (
-                  <span className="text-xs text-red-500">
-                    El ID Tipo Documento es obligatorio.
-                  </span>
-                )}
-              </div>
+            {/* 1. Código Documento Externo (Primero) */}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">
+                Código Documento Externo (*)
+              </label>
+              <Input
+                value={tipoDocExterno.codigoTipoDocumentoExterno ?? ""}
+                onChange={(e) =>
+                  setTipoDocExterno({
+                    ...tipoDocExterno,
+                    codigoTipoDocumentoExterno: e.target.value,
+                  })
+                }
+                placeholder="Código"
+                className={
+                  !tipoDocExterno.codigoTipoDocumentoExterno?.trim() && formError
+                    ? "border border-red-500"
+                    : ""
+                }
+              />
+              {formError && !tipoDocExterno.codigoTipoDocumentoExterno?.trim() && (
+                <span className="text-xs text-red-500 block mt-1">
+                  El código es obligatorio.
+                </span>
+              )}
             </div>
 
+            {/* 2. Nombre Documento Externo (Segundo) */}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">
+                Nombre Documento Externo (*)
+              </label>
+              <Input
+                value={tipoDocExterno.nombreTipoDocumentoExterno ?? ""}
+                onChange={(e) =>
+                  setTipoDocExterno({
+                    ...tipoDocExterno,
+                    nombreTipoDocumentoExterno: e.target.value,
+                  })
+                }
+                placeholder="Nombre"
+                className={
+                  !tipoDocExterno.nombreTipoDocumentoExterno?.trim() && formError
+                    ? "border border-red-500"
+                    : ""
+                }
+              />
+              {formError && !tipoDocExterno.nombreTipoDocumentoExterno?.trim() && (
+                <span className="text-xs text-red-500 block mt-1">
+                  El nombre es obligatorio.
+                </span>
+              )}
+            </div>
+
+            {/* 3. ID Tipo Documento ERP (Tercero y SELECT enlazado a idTipoDocumento) */}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">
+                ID Tipo Documento ERP (*)
+              </label>
+              <select
+                className={`w-full p-2 text-sm border rounded-md bg-background focus:ring-2 focus:ring-primary ${
+                  !tipoDocExterno.idTipoDocumento && formError
+                    ? "border-red-500"
+                    : "border-input"
+                }`}
+                value={tipoDocExterno.idTipoDocumento || ""}
+                onChange={(e) =>
+                  setTipoDocExterno({
+                    ...tipoDocExterno,
+                    idTipoDocumento: Number(e.target.value),
+                  })
+                }
+              >
+                <option value="">Seleccione un tipo de documento...</option>
+                {documentosExternos?.map((doc: ITipoDocumentoExterno) => (
+                  <option key={doc.idTipoDocumentoExterno ?? `doc-${doc.codigoTipoDocumentoExterno}`} value={doc.idTipoDocumento}>
+                    {doc.idTipoDocumento} - {doc.nombreTipoDocumentoExterno || "Sin nombre"}
+                  </option>
+                ))}
+              </select>
+              {formError && !tipoDocExterno.idTipoDocumento && (
+                <span className="text-xs text-red-500 block mt-1">
+                  El ID Tipo Documento es obligatorio.
+                </span>
+              )}
+            </div>
+          </div>
+
             {/* Grid para las Notas FE (notaFe1Externo a notaFe5Externo) */}
-            <div className="border-t pt-4 mt-2 grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="border-t pt-4 mt-2 grid grid-cols-1 md:grid-cols-1 gap-4">
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Nota FE 1
+                  Nota Facturación Electrónica 1
                 </label>
                 <Input
                   value={tipoDocExterno.notaFe1Externo ?? ""}
@@ -408,13 +413,13 @@ export default function TiposDocumentoExternoMaster() {
                       notaFe1Externo: e.target.value,
                     })
                   }
-                  placeholder="Nota FE 1"
+                  placeholder="Nota Facturación Electrónica 1"
                 />
               </div>
 
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Nota FE 2
+                  Nota Facturación Electrónica 2
                 </label>
                 <Input
                   value={tipoDocExterno.notaFe2Externo ?? ""}
@@ -424,13 +429,13 @@ export default function TiposDocumentoExternoMaster() {
                       notaFe2Externo: e.target.value,
                     })
                   }
-                  placeholder="Nota FE 2"
+                  placeholder="Nota Facturación Electrónica 2"
                 />
               </div>
 
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Nota FE 3
+                  Nota Facturación Electrónica 3
                 </label>
                 <Input
                   value={tipoDocExterno.notaFe3Externo ?? ""}
@@ -440,13 +445,13 @@ export default function TiposDocumentoExternoMaster() {
                       notaFe3Externo: e.target.value,
                     })
                   }
-                  placeholder="Nota FE 3"
+                  placeholder="Nota Facturación Electrónica 3"
                 />
               </div>
 
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Nota FE 4
+                  Nota Facturación Electrónica 4
                 </label>
                 <Input
                   value={tipoDocExterno.notaFe4Externo ?? ""}
@@ -456,13 +461,13 @@ export default function TiposDocumentoExternoMaster() {
                       notaFe4Externo: e.target.value,
                     })
                   }
-                  placeholder="Nota FE 4"
+                  placeholder="Nota Facturación Electrónica 4"
                 />
               </div>
 
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Nota FE 5
+                  Nota Facturación Electrónica 5
                 </label>
                 <Input
                   value={tipoDocExterno.notaFe5Externo ?? ""}
@@ -472,7 +477,7 @@ export default function TiposDocumentoExternoMaster() {
                       notaFe5Externo: e.target.value,
                     })
                   }
-                  placeholder="Nota FE 5"
+                  placeholder="Nota Facturación Electrónica 5"
                 />
               </div>
             </div>
