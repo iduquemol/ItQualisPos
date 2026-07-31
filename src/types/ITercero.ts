@@ -17,7 +17,7 @@ export interface ITercero {
     nombreDepartamento: string | null;
     idMunicipio: number;
     nombreMunicipio: string | null;
-    emailTercero: string | null;   
+    emailTercero: string | null;
     terceroActivo: boolean;
     terceroCliente: boolean;
     terceroProveedor: boolean;
@@ -30,5 +30,7 @@ export interface ITercero {
     retenedorIca: boolean;
     declaraRenta: boolean;
     tarifaIca: number;
+    idCodigoPostal: number | null;
+    registroMercantil: string | null;
     responsabilidadesTerceros: IResponsabilidadTercero[];
 }

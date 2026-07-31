@@ -25,6 +25,7 @@ import { ITipoRegimen } from "@/types/ITipoRegimen";
 import { TipoRegimenService } from "@/services/TipoRegimenService";
 import { IListaPrecio } from "@/types/IListaPrecio";
 import { ListaPrecioService } from "@/services/ListaPrecioService";
+import { ICodigoPostal } from "../../types/ICodigoPostal";
 
 export default function SuppliersMaster() {
     const navigate = useNavigate();
@@ -60,10 +61,15 @@ export default function SuppliersMaster() {
         retenedorIca: false,
         declaraRenta: false,
         tarifaIca: 0,
+        idCodigoPostal: null,
+        registroMercantil: null,
         responsabilidadesTerceros: [],
     });
 
     const tarifaIcaStrRef = useRef<string>(tercero.tarifaIca ? tercero.tarifaIca.toString() : "");
+
+    // Estado para almacenar los códigos postales disponibles según el municipio seleccionado
+    const [codigosPostalesDisponibles, setCodigosPostalesDisponibles] = useState<ICodigoPostal[]>([]);
 
     // Estados para edición inline de responsabilidades
     const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -264,6 +270,8 @@ export default function SuppliersMaster() {
             retenedorIca: false,
             declaraRenta: false,
             tarifaIca: 0,
+            idCodigoPostal: null,
+            registroMercantil: null,
             responsabilidadesTerceros: [],
         });
     };
@@ -323,6 +331,8 @@ export default function SuppliersMaster() {
                     retenedorIca: false,
                     declaraRenta: false,
                     tarifaIca: 0,
+                    idCodigoPostal: null,
+                    registroMercantil: null,
                     responsabilidadesTerceros: [],
                 });
             }
@@ -395,6 +405,8 @@ export default function SuppliersMaster() {
                 retenedorIca: false,
                 declaraRenta: false,
                 tarifaIca: 0,
+                idCodigoPostal: null,
+                registroMercantil: null,
                 responsabilidadesTerceros: [],
             });
             setSelectedTercero(null);
@@ -411,6 +423,29 @@ export default function SuppliersMaster() {
             });
             setShowDeleteDialog(false);
         }
+    };
+
+    const obtenerCodigosPostalesPorMunicipio = (idMunicipioSeleccionado: number): ICodigoPostal[] => {
+        // Buscar el municipio seleccionado en municipiosPorDepartamento
+        for (const departamento of municipiosPorDepartamento) {
+            const municipioEncontrado = departamento.municipios.find(
+                (municipio) => municipio.idMunicipio === idMunicipioSeleccionado
+            );
+            if (municipioEncontrado) {
+                return municipioEncontrado.codigosPostales || [];
+            }
+        }
+        return [];
+    };
+
+    const handleMunicipioChange = (idMunicipioSeleccionado: number) => {
+        setTercero((prev) => ({
+            ...prev,
+            idMunicipio: idMunicipioSeleccionado,
+            idCodigoPostal: null,
+        }));
+
+        setCodigosPostalesDisponibles(obtenerCodigosPostalesPorMunicipio(idMunicipioSeleccionado));
     };
 
     const fetchSuppliers = async () => {
@@ -560,6 +595,15 @@ export default function SuppliersMaster() {
         fetchListaPrecios();
         fetchSuppliers();
     }, []);
+
+    useEffect(() => {
+        if (!tercero.idMunicipio || tercero.idMunicipio === 0) {
+            setCodigosPostalesDisponibles([]);
+            return;
+        }
+
+        setCodigosPostalesDisponibles(obtenerCodigosPostalesPorMunicipio(tercero.idMunicipio));
+    }, [tercero.idMunicipio, departamentos, municipiosPorDepartamento]);
 
     return (
         <div className="p-6 bg-muted min-h-screen">
@@ -841,7 +885,7 @@ export default function SuppliersMaster() {
                                     />
                                 </div>
                             </div>
-                            <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                            <div className="md:col-span-4 grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Departamento</label>
                                     <select
@@ -856,7 +900,8 @@ export default function SuppliersMaster() {
                                             setTercero({
                                                 ...tercero,
                                                 idDepartamento: newDepartamentoId,
-                                                idMunicipio: 0 // Resetear municipio cuando cambia el departamento
+                                                idMunicipio: 0,
+                                                idCodigoPostal: null,
                                             });
                                         }}
                                         required
@@ -883,7 +928,7 @@ export default function SuppliersMaster() {
                                                 : "w-full rounded border px-3 py-2 text-sm bg-background"
                                         }
                                         value={tercero.idMunicipio}
-                                        onChange={e => setTercero({ ...tercero, idMunicipio: Number(e.target.value) })}
+                                        onChange={e => handleMunicipioChange(Number(e.target.value))}
                                         required
                                     >
                                         <option value={0}>Seleccione un municipio</option>
@@ -903,32 +948,55 @@ export default function SuppliersMaster() {
                                     )}
                                 </div>
                                 <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Código Postal</label>
+                                    <select
+                                        name="idCodigoPostal"
+                                        className="w-full rounded border px-3 py-2 text-sm bg-background"
+                                        value={tercero.idCodigoPostal ?? ""}
+                                        onChange={e => setTercero({ ...tercero, idCodigoPostal: e.target.value ? Number(e.target.value) : null })}
+                                        disabled={codigosPostalesDisponibles.length === 0}
+                                    >
+                                        <option value="">Seleccione un código postal</option>
+                                        {codigosPostalesDisponibles.map((cp: any) => {
+                                            const valCodigo = cp.codigoPostal || cp.codigo;
+                                            const texto = valCodigo 
+                                                ? `${valCodigo} - ${cp.nombreCodigoPostal}` 
+                                                : cp.nombreCodigoPostal;
+
+                                            return (
+                                                <option key={cp.idCodigoPostal} value={cp.idCodigoPostal}>
+                                                {texto}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="md:col-span-4 grid grid-cols-2 gap-4">
+                                <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Email</label>
                                     <Input
-                                    type="email"
-                                    value={tercero.emailTercero ?? ""}
-                                    onChange={e => {
-                                        // Convertimos a minúsculas automáticamente para estandarizar correos y quitamos espacios vacíos
-                                        const emailLimpio = e.target.value.toLowerCase().replace(/\s/g, "");
-                                        setTercero({ ...tercero, emailTercero: emailLimpio });
-                                    }}
-                                    placeholder="Email"
-                                    required
-                                    className={
-                                        // Se pone rojo si está vacío teniendo un formError, O si tiene texto pero el formato es inválido
-                                        (formError && !tercero.emailTercero?.trim()) || 
-                                        (tercero.emailTercero?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tercero.emailTercero))
-                                        ? "border border-red-500"
-                                        : ""
-                                    }
-                                />
-                                {/* Mensaje de error dinámico debajo del input */}
-                                {tercero.emailTercero?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tercero.emailTercero) && (
-                                <span className="text-xs text-red-500">El formato de correo electrónico no es válido.</span>
-                                )}
-                                    {/* {formError && (!tercero.emailTercero?.trim()) && (
-                            <span className="text-xs text-red-500">El email es obligatorio.</span>
-                        )} */}
+                                        type="email"
+                                        value={tercero.emailTercero ?? ""}
+                                        onChange={e => {
+                                            // Convertimos a minúsculas automáticamente para estandarizar correos y quitamos espacios vacíos
+                                            const emailLimpio = e.target.value.toLowerCase().replace(/\s/g, "");
+                                            setTercero({ ...tercero, emailTercero: emailLimpio });
+                                        }}
+                                        placeholder="Email"
+                                        required
+                                        className={
+                                            // Se pone rojo si está vacío teniendo un formError, O si tiene texto pero el formato es inválido
+                                            (formError && !tercero.emailTercero?.trim()) ||
+                                            (tercero.emailTercero?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tercero.emailTercero))
+                                                ? "border border-red-500"
+                                                : ""
+                                        }
+                                    />
+                                    {/* Mensaje de error dinámico debajo del input */}
+                                    {tercero.emailTercero?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tercero.emailTercero) && (
+                                        <span className="text-xs text-red-500">El formato de correo electrónico no es válido.</span>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
@@ -938,16 +1006,16 @@ export default function SuppliersMaster() {
                                         onChange={e => {
                                             // 1. Dejar solo dígitos numéricos
                                             const digitos = e.target.value.replace(/\D/g, "");
-                                            
+
                                             // 2. Limitar a un máximo de 10 dígitos (longitud celular estándar)
                                             const digitosLimitados = digitos.slice(0, 10);
-                                            
+
                                             // 3. Aplicar formato visual dinámico: "300 123 4567"
                                             let formatoTelefono = digitosLimitados;
                                             if (digitosLimitados.length > 3 && digitosLimitados.length <= 6) {
-                                            formatoTelefono = `${digitosLimitados.slice(0, 3)} ${digitosLimitados.slice(3)}`;
+                                                formatoTelefono = `${digitosLimitados.slice(0, 3)} ${digitosLimitados.slice(3)}`;
                                             } else if (digitosLimitados.length > 6) {
-                                            formatoTelefono = `${digitosLimitados.slice(0, 3)} ${digitosLimitados.slice(3, 6)} ${digitosLimitados.slice(6)}`;
+                                                formatoTelefono = `${digitosLimitados.slice(0, 3)} ${digitosLimitados.slice(3, 6)} ${digitosLimitados.slice(6)}`;
                                             }
 
                                             // 4. Guardar como cadena de texto en el estado
@@ -957,13 +1025,10 @@ export default function SuppliersMaster() {
                                         required
                                         className={
                                             !tercero.telefonoTercero?.trim() && formError
-                                            ? "border border-red-500"
-                                            : ""
+                                                ? "border border-red-500"
+                                                : ""
                                         }
                                     />
-                                    {/* {formError && (!tercero.telefonoTercero) && (
-                            <span className="text-xs text-red-500">El teléfono es obligatorio.</span>
-                        )} */}
                                 </div>
                             </div>
                             <div className="md:col-span-4 grid grid-cols-4 gap-4">
@@ -1024,7 +1089,7 @@ export default function SuppliersMaster() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                            <div className="md:col-span-4 grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Tipo Régimen</label>
                                     <select
@@ -1074,6 +1139,14 @@ export default function SuppliersMaster() {
                                     {tipoError && (
                                         <span className="text-xs text-red-500">{tipoError}</span>
                                     )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-muted-foreground mb-1">Número de registro mercantil</label>
+                                    <Input
+                                        value={tercero.registroMercantil ?? ""}
+                                        onChange={e => setTercero({ ...tercero, registroMercantil: e.target.value })}
+                                        placeholder="Número de registro mercantil"
+                                    />
                                 </div>
                             </div>
                         </div>

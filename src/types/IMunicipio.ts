@@ -1,3 +1,5 @@
+import { ICodigoPostal } from './ICodigoPostal';
+
 export interface IMunicipiosPorDepartamento {
     idDepartamento: number;
     codigoDepartamento: string;
@@ -7,6 +9,7 @@ export interface IMunicipiosPorDepartamento {
         codigoMunicipio: string;
         nombreMunicipio: string;
         idMunicipioFe: number;
+        codigosPostales?: ICodigoPostal[];
     }[];
 }
     
