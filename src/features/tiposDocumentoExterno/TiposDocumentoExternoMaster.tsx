@@ -39,6 +39,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ITipoDocumentoExterno } from "@/types/ITipoDocumentoExterno";
 import { TiposDocumentoExternoService } from "@/services/TiposDocumentoExternoService";
+import { ITipoDocumento } from "@/types/ITipoDocumento";
+import { TipoDocumentoService } from "@/services/TipoDocumentoService";
 
 export default function TiposDocumentoExternoMaster() {
   const navigate = useNavigate();
@@ -57,6 +59,8 @@ export default function TiposDocumentoExternoMaster() {
     notaFe5Externo: "",
     fechaGrabacionDocumentoExterno: null,
   });
+
+  const [tiposDocumento, setTiposDocumento] = useState<ITipoDocumento[]>([]);
 
   const [openDialog, setOpenDialog] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -81,8 +85,19 @@ export default function TiposDocumentoExternoMaster() {
     }
   };
 
+  // 3. NUEVA FUNCIÓN PARA OBTENER LOS TIPOS DE DOCUMENTO BASE
+  const fetchTiposDocumento = async () => {
+    try {
+      const data = await TipoDocumentoService.getAll();
+      setTiposDocumento(data);
+    } catch (error) {
+      console.error("Error al obtener los tipos de documento base:", error);
+    }
+  };
+
   useEffect(() => {
     fetchTiposDocumentoExterno();
+    fetchTiposDocumento();
   }, []);
 
   const handleSelectTipoDoc = (doc: ITipoDocumentoExterno) => {
@@ -232,7 +247,6 @@ export default function TiposDocumentoExternoMaster() {
                     <TableRow>
                       <TableHead>Código</TableHead>
                       <TableHead>Nombre</TableHead>
-                      <TableHead>ID Tipo Doc</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -254,7 +268,6 @@ export default function TiposDocumentoExternoMaster() {
                         >
                           <TableCell>{doc.codigoTipoDocumentoExterno}</TableCell>
                           <TableCell>{doc.nombreTipoDocumentoExterno}</TableCell>
-                          <TableCell>{doc.idTipoDocumento}</TableCell>
                         </TableRow>
                       ))}
                   </TableBody>
@@ -368,7 +381,7 @@ export default function TiposDocumentoExternoMaster() {
             {/* 3. ID Tipo Documento ERP (Tercero y SELECT enlazado a idTipoDocumento) */}
             <div>
               <label className="block text-xs text-muted-foreground mb-1">
-                ID Tipo Documento ERP (*)
+                Tipo Documento ERP (*)
               </label>
               <select
                 className={`w-full p-2 text-sm border rounded-md bg-background focus:ring-2 focus:ring-primary ${
@@ -385,22 +398,22 @@ export default function TiposDocumentoExternoMaster() {
                 }
               >
                 <option value="">Seleccione un tipo de documento...</option>
-                {documentosExternos?.map((doc: ITipoDocumentoExterno) => (
-                  <option key={doc.idTipoDocumentoExterno ?? `doc-${doc.codigoTipoDocumentoExterno}`} value={doc.idTipoDocumento}>
-                    {doc.idTipoDocumento} - {doc.nombreTipoDocumentoExterno || "Sin nombre"}
+                {tiposDocumento?.map((doc: ITipoDocumento) => (
+                  <option key={doc.idTipoDocumento ?? `doc-${doc.codigoDocumento}`} value={doc.idTipoDocumento}>
+                    {doc.nombreDocumento || "Sin nombre"}
                   </option>
                 ))}
               </select>
               {formError && !tipoDocExterno.idTipoDocumento && (
                 <span className="text-xs text-red-500 block mt-1">
-                  El ID Tipo Documento es obligatorio.
+                  Tipo Documento es obligatorio.
                 </span>
               )}
             </div>
           </div>
 
             {/* Grid para las Notas FE (notaFe1Externo a notaFe5Externo) */}
-            <div className="border-t pt-4 mt-2 grid grid-cols-1 md:grid-cols-1 gap-4">
+            <div className="border-t pt-4 mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
                   Nota Facturación Electrónica 1
