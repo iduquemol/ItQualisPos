@@ -6,7 +6,7 @@ export const TipoDocumentoService = {
         try {
             const response = await fetch(
                 API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.TIPOS_DOCUMENTO),
-                { 
+                {
                     headers: API_CONFIG.OPTIONS.headers,
                     mode: 'cors',
                     credentials: 'same-origin'
@@ -15,8 +15,15 @@ export const TipoDocumentoService = {
             if (!response.ok) {
                 throw new Error('Error al cargar tipos de documento');
             }
+
             const data = await response.json();
-            return data;
+            const tiposDocumento = Array.isArray(data)
+                ? data
+                : Array.isArray(data?.data)
+                    ? data.data
+                    : [];
+
+            return tiposDocumento as ITipoDocumento[];
         } catch (error) {
             console.error('Error en TipoDocumentoService.getAll:', error);
             throw error;
