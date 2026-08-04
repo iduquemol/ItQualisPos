@@ -25,7 +25,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Check,
   Pencil,
@@ -280,6 +279,8 @@ export default function CompaniesMaster() {
       retenedorIca: false,
       declaraRenta: false,
       tarifaIca: 0,
+      idCodigoPostal: null,
+      registroMercantil: null,
       responsabilidadesTerceros: [],
     });
     setAddMode(false);
@@ -318,6 +319,8 @@ export default function CompaniesMaster() {
     retenedorIca: false,
     declaraRenta: false,
     tarifaIca: 0,
+    idCodigoPostal: null,
+    registroMercantil: null,
     responsabilidadesTerceros: [],
   });
 
@@ -339,6 +342,35 @@ export default function CompaniesMaster() {
       nombreResponsabilidadFiscal: "",
     });
 
+  const isResponsabilidadAlreadyAssigned = (
+    idResponsabilidadFiscal: number | null | undefined,
+    excludeIdx?: number,
+  ) => {
+    if (!idResponsabilidadFiscal || idResponsabilidadFiscal === 0) return false;
+
+    return (tercero.responsabilidadesTerceros || []).some((item, idx) => {
+      if (excludeIdx !== undefined && idx === excludeIdx) return false;
+      return Number(item.idResponsabilidadFiscal) === Number(idResponsabilidadFiscal);
+    });
+  };
+
+  const getResponsabilidadesDisponibles = (
+    excludeIdx?: number,
+    currentId?: number | null,
+  ) => {
+    const usadas = (tercero.responsabilidadesTerceros || [])
+      .filter((_, idx) => excludeIdx === undefined || idx !== excludeIdx)
+      .map((item) => Number(item.idResponsabilidadFiscal))
+      .filter((id) => !Number.isNaN(id) && id !== 0);
+
+    return responsabilidadesFiscales.filter((item) => {
+      const id = Number(item.idResponsabilidadFiscal);
+      if (!id || id === 0) return false;
+      if (currentId && id === Number(currentId)) return true;
+      return !usadas.includes(id);
+    });
+  };
+
   // función para insertar fila desde el inline table
   const handleAddResponsabilidad = () => {
     if (
@@ -346,6 +378,11 @@ export default function CompaniesMaster() {
       !nuevaResponsabilidad.nombreResponsabilidadFiscal
     )
       return;
+
+    if (isResponsabilidadAlreadyAssigned(nuevaResponsabilidad.idResponsabilidadFiscal)) {
+      toast.error("Esta responsabilidad ya está agregada al tercero.");
+      return;
+    }
 
     setTercero({
       ...tercero,
@@ -382,6 +419,12 @@ export default function CompaniesMaster() {
     setEditNota(notasFe[idx]);
   };
 
+  const handleDeleteNota = (idx: number) => {
+    const copia = [...notasFe];
+    copia.splice(idx, 1);
+    setNotasFe(copia);
+  };
+
   const handleSaveNota = (idx: number) => {
     const copia = [...notasFe];
     copia[idx] = editNota;
@@ -411,8 +454,20 @@ export default function CompaniesMaster() {
     }
   };
 
+  // Eliminar responsabilidad
+    const handleDelete = (idx: number) => {
+        const nuevasResponsabilidades = [...(tercero.responsabilidadesTerceros || [])];
+        nuevasResponsabilidades.splice(idx, 1);
+        setTercero({ ...tercero, responsabilidadesTerceros: nuevasResponsabilidades });
+    };
+
   // Guardar edición
   const handleSave = (idx: number) => {
+    if (isResponsabilidadAlreadyAssigned(editResponsabilidad.idResponsabilidadFiscal, idx)) {
+      toast.error("Esta responsabilidad ya está agregada al tercero.");
+      return;
+    }
+
     const nuevasResponsabilidades = [
       ...(tercero.responsabilidadesTerceros || []),
     ];
@@ -577,6 +632,8 @@ export default function CompaniesMaster() {
       retenedorIca: false,
       declaraRenta: false,
       tarifaIca: 0,
+      idCodigoPostal: null,
+      registroMercantil: null,
       responsabilidadesTerceros: [],
     });
     setAddMode(false);
@@ -1058,14 +1115,9 @@ export default function CompaniesMaster() {
       </div>
 
       {/* Campos de empresas */}
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="general">Información General</TabsTrigger>
-          <TabsTrigger value="impuestos">Impuestos</TabsTrigger>
-        </TabsList>
-        <TabsContent value="general" className="mt-4">
-          <Card className="mb-6 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="w-full">
+        <Card className="mb-6 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
                   Tipo de Documento
@@ -1584,13 +1636,8 @@ export default function CompaniesMaster() {
                   )}
                 </div>
               </div>
-            </div>
-          </Card>
-        </TabsContent>
-        <TabsContent value="impuestos" className="mt-4">
-          <Card className="mb-6 p-4">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="md:col-span-4 mt-4 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="flex flex-col">
                   <span className="text-xs text-muted-foreground mb-1">
                     Habilitación de facturación electrónica
@@ -1808,9 +1855,9 @@ export default function CompaniesMaster() {
                 </div>
               </div>
             </div>
+          </div>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
 
       {/* Tabla de responsabilidades */}
       <Card className="overflow-x-auto">
@@ -1859,7 +1906,10 @@ export default function CompaniesMaster() {
                         <option value="0">
                           Seleccione la responsabilidad...
                         </option>
-                        {responsabilidadesFiscales
+                        {getResponsabilidadesDisponibles(
+                          idx,
+                          editResponsabilidad.idResponsabilidadFiscal,
+                        )
                           .filter((t) => t.idResponsabilidadFiscal !== 0)
                           .map((t) => (
                             <option
@@ -1910,13 +1960,20 @@ export default function CompaniesMaster() {
                     <td className="px-4 py-2">
                       {item.nombreResponsabilidadFiscal}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 flex gap-2 items-center">
                       <button
                         className="text-blue-600 font-semibold flex items-center"
                         onClick={() => handleEdit(idx)}
                         title="Editar"
                       >
                         <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="text-red-600 font-semibold flex items-center"
+                        onClick={() => handleDelete(idx)}
+                        title="Eliminar"
+                      >
+                        <Trash className="w-4 h-4" />
                       </button>
                     </td>
                   </>
@@ -1951,7 +2008,7 @@ export default function CompaniesMaster() {
                     <option value="0">
                       Seleccione la responsabilidad fiscal...
                     </option>
-                    {responsabilidadesFiscales
+                    {getResponsabilidadesDisponibles()
                       .filter((t) => t.idResponsabilidadFiscal !== 0)
                       .map((t) => (
                         <option
@@ -2022,7 +2079,7 @@ export default function CompaniesMaster() {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-muted">
-              <th className="px-4 py-2 text-left font-semibold">Nota FE</th>
+              <th className="px-4 py-2 text-left font-semibold">Nota Facturación Electrónica</th>
               <th className="px-4 py-2"></th>
             </tr>
           </thead>
@@ -2058,13 +2115,20 @@ export default function CompaniesMaster() {
                 ) : (
                   <>
                     <td className="px-2 py-2">{nota}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 flex gap-2 items-center"> 
                       <button
                         className="text-blue-600 font-semibold flex items-center"
                         onClick={() => handleEditNota(idx)}
                         title="Editar"
                       >
                         <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="text-red-600 font-semibold flex items-center"
+                        onClick={() => handleDeleteNota(idx)}
+                        title="Eliminar"
+                      >
+                        <Trash className="w-4 h-4" />
                       </button>
                     </td>
                   </>
@@ -2078,7 +2142,7 @@ export default function CompaniesMaster() {
                     className="w-full border rounded px-2 py-1"
                     value={newNota}
                     onChange={(e) => setNewNota(e.target.value)}
-                    placeholder="Nueva nota FE"
+                    placeholder="Nueva nota Facturación Electrónica"
                   />
                 </td>
                 <td className="px-4 py-2 flex gap-2">
@@ -2108,7 +2172,7 @@ export default function CompaniesMaster() {
                     className="bg-black text-white font-semibold px-4 py-2 rounded text-left"
                     onClick={() => setAddNotaMode(true)}
                   >
-                    + Agregar nota FE
+                    + Agregar nota Facturación Electrónica
                   </button>
                 </td>
               </tr>
