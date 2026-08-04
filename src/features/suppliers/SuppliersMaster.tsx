@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, Pencil, Search, X, CircleX, Save, Trash, Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -164,6 +163,11 @@ export default function SuppliersMaster() {
 
     // Guardar edición
     const handleSave = (idx: number) => {
+        if (isResponsabilidadAlreadyAssigned(editResponsabilidad.idResponsabilidadFiscal, idx)) {
+            toast.error("Esta responsabilidad ya está agregada al tercero.");
+            return;
+        }
+
         const nuevasResponsabilidades = [...(tercero.responsabilidadesTerceros || [])];
         nuevasResponsabilidades[idx] = { ...editResponsabilidad };
         setTercero({ ...tercero, responsabilidadesTerceros: nuevasResponsabilidades });
@@ -173,6 +177,29 @@ export default function SuppliersMaster() {
     // Cancelar edición
     const handleCancel = () => {
         setEditIdx(null);
+    };
+
+    const isResponsabilidadAlreadyAssigned = (idResponsabilidadFiscal: number | null | undefined, excludeIdx?: number) => {
+        if (!idResponsabilidadFiscal || idResponsabilidadFiscal === 0) return false;
+
+        return (tercero.responsabilidadesTerceros || []).some((item, idx) => {
+            if (excludeIdx !== undefined && idx === excludeIdx) return false;
+            return Number(item.idResponsabilidadFiscal) === Number(idResponsabilidadFiscal);
+        });
+    };
+
+    const getResponsabilidadesDisponibles = (excludeIdx?: number, currentId?: number | null) => {
+        const usadas = (tercero.responsabilidadesTerceros || [])
+            .filter((_, idx) => excludeIdx === undefined || idx !== excludeIdx)
+            .map(item => Number(item.idResponsabilidadFiscal))
+            .filter(id => !Number.isNaN(id) && id !== 0);
+
+        return responsabilidadesFiscales.filter(item => {
+            const id = Number(item.idResponsabilidadFiscal);
+            if (!id || id === 0) return false;
+            if (currentId && id === Number(currentId)) return true;
+            return !usadas.includes(id);
+        });
     };
 
     const handleSaveTercero = async () => {
@@ -217,6 +244,12 @@ export default function SuppliersMaster() {
     const handleAddResponsabilidad = () => {
         // Validar que los campos no estén vacíos
         if (!nuevaResponsabilidad.idResponsabilidadFiscal || !nuevaResponsabilidad.nombreResponsabilidadFiscal) return;
+
+        if (isResponsabilidadAlreadyAssigned(nuevaResponsabilidad.idResponsabilidadFiscal)) {
+            toast.error("Esta responsabilidad ya está agregada al tercero.");
+            return;
+        }
+
         setTercero({
             ...tercero,
             responsabilidadesTerceros: [
@@ -725,14 +758,9 @@ export default function SuppliersMaster() {
             </div>
 
             {/* Campos de terceros */}
-            <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="general">Información General</TabsTrigger>
-                    <TabsTrigger value="impuestos">Impuestos</TabsTrigger>
-                </TabsList>
-                <TabsContent value="general" className="mt-4">
-                    <Card className="mb-6 p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="w-full">
+                <Card className="mb-6 p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <label className="block text-xs text-muted-foreground mb-1">Tipo de Documento</label>
                                 <select
@@ -1031,7 +1059,104 @@ export default function SuppliersMaster() {
                                     />
                                 </div>
                             </div>
-                            <div className="md:col-span-4 grid grid-cols-4 gap-4">
+                            <div className="md:col-span-4 grid grid-cols-3 gap-4 mt-4">
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Iva</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.retenedorIva || false}
+                                            onChange={e => setTercero({ ...tercero, retenedorIva: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.retenedorIva ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Renta</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.retenedorRenta || false}
+                                            onChange={e => setTercero({ ...tercero, retenedorRenta: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.retenedorRenta ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Ica</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.retenedorIca || false}
+                                            onChange={e => setTercero({ ...tercero, retenedorIca: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.retenedorIca ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="md:col-span-4 grid grid-cols-3 gap-4 mt-2">
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Declara Renta</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={tercero.declaraRenta || false}
+                                            onChange={e => setTercero({ ...tercero, declaraRenta: e.target.checked })}
+                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            {tercero.declaraRenta ? "Si" : "No"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="text-xs text-muted-foreground min-w-32">Tarifa Ica</label>
+                                    <Input
+                                        type="text"
+                                        inputMode="decimal"
+                                        pattern="[0-9]*[.,]?[0-9]*"
+                                        value={tarifaIcaStrRef.current || (tercero.tarifaIca === 0 ? "" : (tercero.tarifaIca ?? "").toString())}
+                                        onChange={e => {
+                                            const rawValue = e.target.value;
+
+                                            if (/^[0-9]*[.,]?[0-9]*$/.test(rawValue)) {
+                                                tarifaIcaStrRef.current = rawValue;
+
+                                                if (rawValue === "") {
+                                                    tarifaIcaStrRef.current = "";
+                                                    setTercero({
+                                                        ...tercero,
+                                                        tarifaIca: 0,
+                                                    });
+                                                    return;
+                                                }
+
+                                                const normalized = rawValue.replace(',', '.');
+                                                const parsed = parseFloat(normalized);
+                                                const numericValue = Number.isNaN(parsed) ? 0 : parsed;
+
+                                                setTercero({
+                                                    ...tercero,
+                                                    tarifaIca: numericValue,
+                                                });
+                                            }
+                                        }}
+                                        placeholder="Tarifa Ica"
+                                        className="w-48"
+                                    />
+                                </div>
+                                <div />
+                            </div>
+                            <div className="md:col-span-4 grid grid-cols-4 gap-4 mt-4">
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Estado</label>
                                     <div className="flex items-center space-x-2 mt-2">
@@ -1151,120 +1276,7 @@ export default function SuppliersMaster() {
                             </div>
                         </div>
                     </Card>
-                </TabsContent>
-                <TabsContent value="impuestos" className="mt-4">
-                    <Card className="mb-6 p-4">
-                        <div className="grid grid-cols-1 gap-4">
-                            {/* Primera fila - 3 controles */}
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Iva</label>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={tercero.retenedorIva || false}
-                                            onChange={e => setTercero({ ...tercero, retenedorIva: e.target.checked })}
-                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                        />
-                                        <span className="text-sm text-muted-foreground">
-                                            {tercero.retenedorIva ? "Si" : "No"}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Renta</label>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={tercero.retenedorRenta || false}
-                                            onChange={e => setTercero({ ...tercero, retenedorRenta: e.target.checked })}
-                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                        />
-                                        <span className="text-sm text-muted-foreground">
-                                            {tercero.retenedorRenta ? "Si" : "No"}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Ica</label>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={tercero.retenedorIca || false}
-                                            onChange={e => setTercero({ ...tercero, retenedorIca: e.target.checked })}
-                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                        />
-                                        <span className="text-sm text-muted-foreground">
-                                            {tercero.retenedorIca ? "Si" : "No"}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Segunda fila - 3 columnas (la tercera vacía) */}
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Declara Renta</label>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={tercero.declaraRenta || false}
-                                            onChange={e => setTercero({ ...tercero, declaraRenta: e.target.checked })}
-                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                        />
-                                        <span className="text-sm text-muted-foreground">
-                                            {tercero.declaraRenta ? "Si" : "No"}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Tarifa Ica</label>
-                                    <Input
-                                    type="text"
-                                    inputMode="decimal"
-                                    pattern="[0-9]*[.,]?[0-9]*"
-                                    // MODIFICACIÓN: Si el valor en el estado es 0 y la referencia está vacía, mostramos texto vacío para poder borrarlo
-                                    value={tarifaIcaStrRef.current || (tercero.tarifaIca === 0 ? "" : (tercero.tarifaIca ?? "").toString())}
-                                    onChange={e => {
-                                        const rawValue = e.target.value;
-
-                                        if (/^[0-9]*[.,]?[0-9]*$/.test(rawValue)) {
-                                            tarifaIcaStrRef.current = rawValue;
-
-                                            // Si el usuario borró todo por completo
-                                            if (rawValue === "") {
-                                                tarifaIcaStrRef.current = ""; // Limpiamos la referencia visual
-                                                
-                                                setTercero({
-                                                    ...tercero,
-                                                    tarifaIca: 0, // En el estado/base de datos se sigue guardando como un 0 numérico
-                                                });
-                                                return; // Cortamos la ejecución aquí
-                                            }
-
-                                            // Si hay texto, procedemos con la conversión normal
-                                            const normalized = rawValue.replace(',', '.');
-                                            const parsed = parseFloat(normalized);
-                                            const numericValue = Number.isNaN(parsed) ? 0 : parsed;
-
-                                            setTercero({
-                                                ...tercero,
-                                                tarifaIca: numericValue,
-                                            });
-                                        }
-                                    }}
-                                    placeholder="Tarifa Ica"
-                                    className="w-48"
-                                />
-                                </div>
-                                <div>
-                                    {/* Tercera columna vacía */}
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-                </TabsContent>
-            </Tabs>
+                </div>
 
             {/* Tabla de responsabilidades */}
             <Card className="overflow-x-auto">
@@ -1296,7 +1308,7 @@ export default function SuppliersMaster() {
                                                 }}
                                             >
                                                 <option value="0">Seleccione la responsabilidad...</option>
-                                                {responsabilidadesFiscales
+                                                {getResponsabilidadesDisponibles(idx, editResponsabilidad.idResponsabilidadFiscal)
                                                     .filter(t => t.idResponsabilidadFiscal !== 0)
                                                     .map(t => (
                                                         <option key={t.idResponsabilidadFiscal} value={t.idResponsabilidadFiscal}>
@@ -1372,7 +1384,7 @@ export default function SuppliersMaster() {
                                         }}
                                     >
                                         <option value="0">Seleccione la responsabilidad fiscal...</option>
-                                        {responsabilidadesFiscales
+                                        {getResponsabilidadesDisponibles()
                                             .filter(t => t.idResponsabilidadFiscal !== 0)
                                             .map(t => (
                                                 <option key={t.idResponsabilidadFiscal} value={t.idResponsabilidadFiscal}>

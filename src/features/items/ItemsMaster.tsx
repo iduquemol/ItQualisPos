@@ -239,6 +239,11 @@ export default function ItemsMaster() {
 
     // Guardar edición tributos
     const handleSave = (idx: number) => {
+        if (isImpuestoAlreadyAssigned(editImpuesto.idTributo, idx)) {
+            toast.error("Este impuesto ya está agregado al producto.");
+            return;
+        }
+
         const nuevosTributos = [...(producto.tributosProducto || [])];
         nuevosTributos[idx] = { ...editImpuesto };
         setProducto({ ...producto, tributosProducto: nuevosTributos });
@@ -247,6 +252,11 @@ export default function ItemsMaster() {
 
     // Guardar edición de precio
     const handleSavePrecio = (idx: number) => {
+        if (isPrecioAlreadyAssigned(editPrecio.idListaPrecio, idx)) {
+            toast.error("Esta lista de precios ya está agregada al producto.");
+            return;
+        }
+
         const nuevosPrecios = [...(producto.preciosProducto || [])];
         nuevosPrecios[idx] = { ...editPrecio };
         setProducto({ ...producto, preciosProducto: nuevosPrecios });
@@ -374,10 +384,38 @@ export default function ItemsMaster() {
         }
     };
 
+    const isImpuestoAlreadyAssigned = (idTributo: string | null | undefined, excludeIdx?: number) => {
+        if (!idTributo || idTributo === "0") return false;
+
+        return (producto.tributosProducto || []).some((item, idx) => {
+            if (excludeIdx !== undefined && idx === excludeIdx) return false;
+            return String(item.idTributo) === String(idTributo);
+        });
+    };
+
+    const getImpuestosDisponibles = (excludeIdx?: number, currentId?: string | null) => {
+        const usadas = (producto.tributosProducto || [])
+            .filter((_, idx) => excludeIdx === undefined || idx !== excludeIdx)
+            .map((item) => String(item.idTributo));
+
+        return tributos.filter((item) => {
+            const id = String(item.idTributo);
+            if (!id || id === "0") return false;
+            if (currentId && id === String(currentId)) return true;
+            return !usadas.includes(id);
+        });
+    };
+
     // Función para agregar el impuesto desde la fila inline
     const handleAddImpuesto = () => {
         // Validar que los campos no estén vacíos
         if (!nuevoImpuesto.idTributo || !nuevoImpuesto.nombreTributo || !nuevoImpuesto.tarifa) return;
+
+        if (isImpuestoAlreadyAssigned(nuevoImpuesto.idTributo)) {
+            toast.error("Este impuesto ya está agregado al producto.");
+            return;
+        }
+
         setProducto({
             ...producto,
             tributosProducto: [
@@ -402,9 +440,37 @@ export default function ItemsMaster() {
     };
 
     // Función para agregar el precio desde la fila inline
+    const isPrecioAlreadyAssigned = (idListaPrecio: number | null | undefined, excludeIdx?: number) => {
+        if (!idListaPrecio || idListaPrecio === 0) return false;
+
+        return (producto.preciosProducto || []).some((item, idx) => {
+            if (excludeIdx !== undefined && idx === excludeIdx) return false;
+            return Number(item.idListaPrecio) === Number(idListaPrecio);
+        });
+    };
+
+    const getPreciosDisponibles = (excludeIdx?: number, currentId?: number | null) => {
+        const usadas = (producto.preciosProducto || [])
+            .filter((_, idx) => excludeIdx === undefined || idx !== excludeIdx)
+            .map((item) => Number(item.idListaPrecio))
+            .filter((id) => !Number.isNaN(id) && id !== 0);
+
+        return listaPrecios.filter((item) => {
+            const id = Number(item.idListaPrecio);
+            if (!id || id === 0) return false;
+            if (currentId && id === Number(currentId)) return true;
+            return !usadas.includes(id);
+        });
+    };
+
     const handleAddPrecio = () => {
         // Validar que los campos no estén vacíos
         if (!nuevoPrecio.nombreListaPrecio || !nuevoPrecio.precio) return;
+
+        if (isPrecioAlreadyAssigned(nuevoPrecio.idListaPrecio)) {
+            toast.error("Esta lista de precios ya está agregada al producto.");
+            return;
+        }
 
         setProducto({
             ...producto,
@@ -813,7 +879,7 @@ export default function ItemsMaster() {
                                 required
                             >
                                 {categories.map(cat => (
-                                    <option key={cat.idCategoria} value={cat.idCategoria}>
+                                    <option key={cat.idCategoria ?? 0} value={cat.idCategoria ?? 0}>
                                         {cat.iconoCategoria} {cat.nombreCategoria}
                                     </option>
                                 ))}
@@ -1061,7 +1127,7 @@ export default function ItemsMaster() {
                                                         }}
                                                     >
                                                         <option value="0">Seleccione el impuesto...</option>
-                                                        {tributos
+                                                        {getImpuestosDisponibles(idx, editImpuesto.idTributo)
                                                             .filter(t => t.idTributo !== 0)
                                                             .map(t => (
                                                                 <option key={t.idTributo} value={t.codigoTributo}>
@@ -1165,7 +1231,7 @@ export default function ItemsMaster() {
                                                 }}
                                             >
                                                 <option value="0">Seleccione el impuesto...</option>
-                                                {tributos
+                                                {getImpuestosDisponibles()
                                                     .filter(t => t.idTributo !== 0)
                                                     .map(t => (
                                                         <option key={t.codigoTributo} value={t.codigoTributo}>
@@ -1286,7 +1352,7 @@ export default function ItemsMaster() {
                                                         }}
                                                     >
                                                         <option value="0">Seleccione el precio...</option>
-                                                        {listaPrecios
+                                                        {getPreciosDisponibles(idx, editPrecio.idListaPrecio)
                                                             .filter(t => t.idListaPrecio !== 0)
                                                             .map(t => (
                                                                 <option key={t.idListaPrecio} value={t.idListaPrecio}>
@@ -1373,10 +1439,10 @@ export default function ItemsMaster() {
                                                 }}
                                             >
                                                 <option value="0">Seleccione la lista de precios...</option>
-                                                {listaPrecios
+                                                {getPreciosDisponibles()
                                                     .filter(t => t.idListaPrecio !== 0)
                                                     .map(t => (
-                                                        <option key={t.codigoListaPrecio} value={t.codigoListaPrecio}>
+                                                        <option key={t.codigoListaPrecio} value={t.idListaPrecio}>
                                                             {t.nombreListaPrecio} ({t.codigoListaPrecio})
                                                         </option>
                                                     ))}
