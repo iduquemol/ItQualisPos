@@ -36,6 +36,7 @@ export const API_CONFIG = {
         PREVIEW_PDF: '/preview-pdf',
         TERCEROS_PROVEEDORES: '/terceros-proveedores',
         TERCEROS_BUSQUEDA: '/terceros-busqueda',
+        TERCEROS_CONSULTA_EXTERNA: '/terceros-consulta-externa',
         EMPRESAS: '/empresas',
         TIPO_PERSONA: '/tipospersona',
         MEDIOS_PAGO: '/mediospago',

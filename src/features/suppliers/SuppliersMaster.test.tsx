@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import SuppliersMaster from "./SuppliersMaster";
 import { ITercero } from "@/types/ITercero";
 
 vi.mock("@/services/TipoDocumentoIdentidadService", () => ({
-    TipoDocumentoIdentidadService: { getAll: vi.fn().mockResolvedValue([]) },
+    TipoDocumentoIdentidadService: {
+        getAll: vi.fn().mockResolvedValue([
+            { idTipoDocumentoId: 4, codigoTipoDocumentoId: "13", nombreTipoDocumentoId: "Cédula de ciudadanía", observacionTipoDocumentoId: null },
+        ]),
+    },
 }));
 vi.mock("@/services/MunicipioService", () => ({
     MunicipioService: { getAll: vi.fn().mockResolvedValue([]) },
@@ -29,6 +33,7 @@ vi.mock("@/services/TerceroService", () => ({
         create: vi.fn(),
         update: vi.fn(),
         search: vi.fn(),
+        consultarDatosExternos: vi.fn(),
     },
 }));
 
@@ -67,6 +72,17 @@ function renderSuppliersMaster() {
             <SuppliersMaster />
         </MemoryRouter>
     );
+}
+
+function selectByLabel(labelText: string): HTMLSelectElement {
+    const label = screen.getByText(labelText);
+    return label.parentElement!.querySelector("select") as HTMLSelectElement;
+}
+
+async function selectTipoDocumento(value: string) {
+    const select = selectByLabel("Tipo de Documento");
+    await waitFor(() => expect(select.options.length).toBeGreaterThan(0));
+    await userEvent.setup().selectOptions(select, value);
 }
 
 describe("SuppliersMaster - validación de tercero existente al crear", () => {
@@ -133,5 +149,79 @@ describe("SuppliersMaster - validación de tercero existente al crear", () => {
         const inputPrimerNombre = screen.getByPlaceholderText("Primer nombre");
         await user.type(inputPrimerNombre, "Prueba");
         expect(inputPrimerNombre).toHaveValue("Prueba");
+    });
+});
+
+describe("SuppliersMaster - consulta de datos en API externa", () => {
+    it("autocompleta razón social y correo cuando el número no existe localmente", async () => {
+        vi.mocked(TerceroService.search).mockResolvedValue([]);
+        vi.mocked(TerceroService.consultarDatosExternos).mockResolvedValue({
+            message: null,
+            email: "astridiazc@gmail.com",
+            name: "DIAZ CAMACHO ASTRID",
+        });
+        renderSuppliersMaster();
+
+        const user = userEvent.setup();
+        await selectTipoDocumento("4");
+        const inputIdentificacion = await screen.findByPlaceholderText("Número de identificación");
+        await user.type(inputIdentificacion, "52082117");
+        await user.tab();
+
+        expect(await screen.findByPlaceholderText("Razón social")).toHaveValue("DIAZ CAMACHO ASTRID");
+        expect(TerceroService.consultarDatosExternos).toHaveBeenCalledWith("13", "52082117");
+    });
+
+    it("no consulta el proveedor externo si el tercero ya existe localmente", async () => {
+        vi.mocked(TerceroService.search).mockResolvedValue([terceroExistente]);
+        renderSuppliersMaster();
+
+        const user = userEvent.setup();
+        await selectTipoDocumento("4");
+        const inputIdentificacion = await screen.findByPlaceholderText("Número de identificación");
+        await user.type(inputIdentificacion, "1018511502");
+        await user.tab();
+
+        await screen.findByPlaceholderText("Primer nombre");
+        expect(TerceroService.consultarDatosExternos).not.toHaveBeenCalled();
+    });
+
+    it("no bloquea el formulario si la consulta externa falla", async () => {
+        vi.mocked(TerceroService.search).mockResolvedValue([]);
+        vi.mocked(TerceroService.consultarDatosExternos).mockRejectedValue(new Error("network error"));
+        renderSuppliersMaster();
+
+        const user = userEvent.setup();
+        await selectTipoDocumento("4");
+        const inputIdentificacion = await screen.findByPlaceholderText("Número de identificación");
+        await user.type(inputIdentificacion, "999999999");
+        await user.tab();
+
+        const inputRazonSocial = screen.getByPlaceholderText("Razón social");
+        expect(inputRazonSocial).toHaveValue("");
+        await user.type(inputRazonSocial, "Prueba Manual");
+        expect(inputRazonSocial).toHaveValue("Prueba Manual");
+    });
+
+    it("no repite la consulta externa para el mismo número de identificación", async () => {
+        vi.mocked(TerceroService.search).mockResolvedValue([]);
+        vi.mocked(TerceroService.consultarDatosExternos).mockResolvedValue({
+            message: null,
+            email: "astridiazc@gmail.com",
+            name: "DIAZ CAMACHO ASTRID",
+        });
+        renderSuppliersMaster();
+
+        const user = userEvent.setup();
+        await selectTipoDocumento("4");
+        const inputIdentificacion = await screen.findByPlaceholderText("Número de identificación");
+        await user.type(inputIdentificacion, "52082117");
+        await user.tab();
+        await screen.findByPlaceholderText("Razón social");
+
+        await user.click(inputIdentificacion);
+        await user.tab();
+
+        expect(TerceroService.consultarDatosExternos).toHaveBeenCalledTimes(1);
     });
 });
