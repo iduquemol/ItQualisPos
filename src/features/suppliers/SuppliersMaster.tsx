@@ -141,6 +141,11 @@ export default function SuppliersMaster() {
             terceroGeneral: terc.terceroGeneral,
             idTipoRegimen: terc.idTipoRegimen,
             idListaPreciosTercero: terc.idListaPreciosTercero,
+            retenedorIca: terc.retenedorIca,
+            retenedorIva: terc.retenedorIva,
+            retenedorRenta: terc.retenedorRenta,
+            declaraRenta: terc.declaraRenta,
+            tarifaIca: terc.tarifaIca,
             responsabilidadesTerceros: terc.responsabilidadesTerceros || [],
         });
         setOpenDialog(false);
@@ -205,21 +210,21 @@ export default function SuppliersMaster() {
     const handleSaveTercero = async () => {
         // Validación de campos obligatorios
         if (
-            !tercero.numeroIdentificacion?.trim() || 
-            !tercero.primerNombre?.trim() || 
-            !tercero.primerApellido?.trim() || 
-            !tercero.razonSocial?.trim() || 
-            !tercero.direccionTercero?.trim() || 
-            tercero.idDepartamento === 0 || 
-            tercero.idMunicipio === 0 || 
-            !tercero.emailTercero?.trim() || 
-            !tercero.telefonoTercero?.trim() || 
-            tercero.idTipoRegimen === 0 || 
+            !tercero.numeroIdentificacion?.trim() ||
+            !tercero.primerNombre?.trim() ||
+            !tercero.primerApellido?.trim() ||
+            !tercero.razonSocial?.trim() ||
+            !tercero.direccionTercero?.trim() ||
+            tercero.idDepartamento === 0 ||
+            tercero.idMunicipio === 0 ||
+            !tercero.emailTercero?.trim() ||
+            !tercero.telefonoTercero?.trim() ||
+            tercero.idTipoRegimen === 0 ||
             tercero.idListaPreciosTercero === 0
-            ) {
-                setFormError("Por favor, complete todos los campos obligatorios (*).");
-                return;
-            }
+        ) {
+            setFormError("Por favor, complete todos los campos obligatorios (*).");
+            return;
+        }
         setFormError(null);
         try {
             if (tercero.idTercero) {
@@ -309,9 +314,47 @@ export default function SuppliersMaster() {
         });
     };
 
+    // Recuerda la última consulta externa realizada (tipo + número) para no
+    // repetirla si el onBlur se dispara de nuevo con el mismo valor.
+    const ultimaConsultaExternaRef = useRef<string | null>(null);
+
+    // Consulta el proveedor externo de facturación electrónica para autocompletar
+    // razón social y correo. Solo se llama cuando el número de identificación NO
+    // corresponde a un tercero existente localmente. No lanza: los errores se
+    // registran y el formulario sigue utilizable.
+    const handleConsultarDatosExternos = async (numeroIdentificacion: string) => {
+        if (!tercero.idTipoDocumentoId) return; // "0" = placeholder "Seleccione un tipo de documento"
+        const codigoTipoDocumentoId = tiposDocumentoIdentidad.find(
+            t => t.idTipoDocumentoId === tercero.idTipoDocumentoId
+        )?.codigoTipoDocumentoId;
+        if (!codigoTipoDocumentoId) return;
+
+        const claveConsulta = `${codigoTipoDocumentoId}|${numeroIdentificacion}`;
+        if (ultimaConsultaExternaRef.current === claveConsulta) return;
+        ultimaConsultaExternaRef.current = claveConsulta;
+
+        try {
+            const resultado = await TerceroService.consultarDatosExternos(codigoTipoDocumentoId, numeroIdentificacion);
+            if (resultado.name || resultado.email) {
+                setTercero(prev => ({
+                    ...prev,
+                    razonSocial: resultado.name ?? prev.razonSocial,
+                    emailTercero: resultado.email ?? prev.emailTercero,
+                }));
+            }
+            if (resultado.message) {
+                toast(resultado.message, { position: "top-center" });
+            }
+        } catch (error) {
+            console.error('Error al consultar datos externos del tercero:', error);
+            // No bloquea el formulario: el usuario puede seguir digitando manualmente.
+        }
+    };
+
     // Valida si el número de identificación digitado ya corresponde a un tercero
     // existente. Si existe, autocompleta el formulario y pasa a modo edición; si no,
-    // deja/vuelve al formulario en modo creación.
+    // deja/vuelve al formulario en modo creación y consulta el proveedor externo
+    // para autocompletar razón social y correo.
     const handleValidarTerceroExistente = async () => {
         const numeroIdentificacion = tercero.numeroIdentificacion?.trim();
         if (!numeroIdentificacion) return;
@@ -330,44 +373,50 @@ export default function SuppliersMaster() {
                         position: "top-center",
                     });
                 }
-            } else if (tercero.idTercero) {
-                // Estaba en modo edición por una detección previa y el número ya
-                // no corresponde a ese tercero: vuelve a modo creación.
-                setSelectedTercero(null);
-                setTercero({
-                    idTercero: null,
-                    idTipoDocumentoId: 0,
-                    nombreTipoDocumentoId: "",
-                    digitoVerificacion: "",
-                    numeroIdentificacion,
-                    primerNombre: "",
-                    segundoNombre: "",
-                    primerApellido: "",
-                    segundoApellido: "",
-                    razonSocial: "",
-                    telefonoTercero: null,
-                    direccionTercero: "",
-                    emailTercero: "",
-                    idDepartamento: 0,
-                    nombreDepartamento: null,
-                    idMunicipio: 0,
-                    nombreMunicipio: null,
-                    terceroActivo: false,
-                    terceroCliente: false,
-                    terceroProveedor: false,
-                    terceroEmpleado: false,
-                    terceroGeneral: false,
-                    idTipoRegimen: 0,
-                    idListaPreciosTercero: 0,
-                    retenedorIva: false,
-                    retenedorRenta: false,
-                    retenedorIca: false,
-                    declaraRenta: false,
-                    tarifaIca: 0,
-                    idCodigoPostal: null,
+                // Ya existe localmente: no se consulta el proveedor externo.
+            } else {
+                if (tercero.idTercero) {
+                    // Estaba en modo edición por una detección previa y el número ya
+                    // no corresponde a ese tercero: vuelve a modo creación.
+                    setSelectedTercero(null);
+                    setTercero({
+                        idTercero: null,
+                        idTipoDocumentoId: 0,
+                        nombreTipoDocumentoId: "",
+                        digitoVerificacion: "",
+                        numeroIdentificacion,
+                        primerNombre: "",
+                        segundoNombre: "",
+                        primerApellido: "",
+                        segundoApellido: "",
+                        razonSocial: "",
+                        telefonoTercero: null,
+                        direccionTercero: "",
+                        emailTercero: "",
+                        idDepartamento: 0,
+                        nombreDepartamento: null,
+                        idMunicipio: 0,
+                        nombreMunicipio: null,
+                        terceroActivo: false,
+                        terceroCliente: false,
+                        terceroProveedor: false,
+                        terceroEmpleado: false,
+                        terceroGeneral: false,
+                        idTipoRegimen: 0,
+                        idListaPreciosTercero: 0,
+                        retenedorIva: false,
+                        retenedorRenta: false,
+                        retenedorIca: false,
+                        declaraRenta: false,
+                        tarifaIca: 0,
+                        idCodigoPostal: null,
                     registroMercantil: null,
                     responsabilidadesTerceros: [],
-                });
+                    });
+                } else {
+                    // Ya estaba en modo creación: consultar el proveedor externo.
+                    await handleConsultarDatosExternos(numeroIdentificacion);
+                }
             }
         } catch (error) {
             console.error('Error al validar tercero existente:', error);
@@ -798,7 +847,7 @@ export default function SuppliersMaster() {
                                     onKeyDown={e => {
                                         // Bloquea directamente las teclas de caracteres especiales comunes en inputs de número
                                         if (["e", "E", "+", "-", ".", ","].includes(e.key)) {
-                                        e.preventDefault();
+                                            e.preventDefault();
                                         }
                                     }}
                                     onBlur={handleValidarTerceroExistente}
@@ -806,8 +855,8 @@ export default function SuppliersMaster() {
                                     required
                                     className={
                                         !tercero.numeroIdentificacion?.trim() && formError
-                                        ? "border border-red-500"
-                                        : ""
+                                            ? "border border-red-500"
+                                            : ""
                                     }
                                 />
                                 {formError && !tercero.numeroIdentificacion?.trim() && (
@@ -821,10 +870,6 @@ export default function SuppliersMaster() {
                                     onChange={e => setTercero({ ...tercero, digitoVerificacion: e.target.value })}
                                     placeholder="DV"
                                     readOnly
-                                    className={`w-20 ${!tercero.digitoVerificacion?.trim() && formError
-                                        ? "border border-red-500"
-                                        : ""
-                                        }`}
                                 />
                             </div>
                             <div className="md:col-span-4 grid grid-cols-4 gap-4">
@@ -841,6 +886,9 @@ export default function SuppliersMaster() {
                                                 : ""
                                         }
                                     />
+                                    {formError && !tercero.primerNombre?.trim() && (
+                                        <span className="text-xs text-red-500">El primer nombre es obligatorio.</span>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Segundo Nombre</label>
@@ -848,11 +896,7 @@ export default function SuppliersMaster() {
                                         value={tercero.segundoNombre ?? ""}
                                         onChange={e => setTercero({ ...tercero, segundoNombre: e.target.value })}
                                         placeholder="Segundo nombre"
-                                        className={
-                                            !tercero.segundoNombre?.trim() && formError
-                                                ? "border border-red-500"
-                                                : ""
-                                        }
+                                        className={""}
                                     />
                                 </div>
                                 <div>
@@ -868,6 +912,9 @@ export default function SuppliersMaster() {
                                                 : ""
                                         }
                                     />
+                                    {formError && !tercero.primerApellido?.trim() && (
+                                        <span className="text-xs text-red-500">El primer apellido es obligatorio.</span>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Segundo Apellido</label>
@@ -875,11 +922,7 @@ export default function SuppliersMaster() {
                                         value={tercero.segundoApellido ?? ""}
                                         onChange={e => setTercero({ ...tercero, segundoApellido: e.target.value })}
                                         placeholder="Segundo apellido"
-                                        className={
-                                            !tercero.segundoApellido?.trim() && formError
-                                                ? "border border-red-500"
-                                                : ""
-                                        }
+                                        className={""}
                                     />
                                 </div>
                             </div>
@@ -890,7 +933,7 @@ export default function SuppliersMaster() {
                                         value={tercero.razonSocial ?? ""}
                                         onChange={e => setTercero({ ...tercero, razonSocial: e.target.value })}
                                         placeholder="Razón social"
-                                        required 
+                                        required
                                         className={
                                             !tercero.razonSocial?.trim() && formError
                                                 ? "border border-red-500"
@@ -911,6 +954,9 @@ export default function SuppliersMaster() {
                                                 : ""
                                         }
                                     />
+                                    {formError && !tercero.direccionTercero?.trim() && (
+                                        <span className="text-xs text-red-500">La dirección es obligatoria.</span>
+                                    )}
                                 </div>
                             </div>
                             <div className="md:col-span-4 grid grid-cols-3 gap-4">
@@ -1016,7 +1062,7 @@ export default function SuppliersMaster() {
                                         className={
                                             // Se pone rojo si está vacío teniendo un formError, O si tiene texto pero el formato es inválido
                                             (formError && !tercero.emailTercero?.trim()) ||
-                                            (tercero.emailTercero?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tercero.emailTercero))
+                                                (tercero.emailTercero?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tercero.emailTercero))
                                                 ? "border border-red-500"
                                                 : ""
                                         }
@@ -1025,6 +1071,10 @@ export default function SuppliersMaster() {
                                     {tercero.emailTercero?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tercero.emailTercero) && (
                                         <span className="text-xs text-red-500">El formato de correo electrónico no es válido.</span>
                                     )}
+                                    {formError && !tercero.emailTercero?.trim() && (
+                                        <span className="text-xs text-red-500">El correo electrónico es obligatorio.</span>
+                                    )}
+
                                 </div>
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
@@ -1055,8 +1105,13 @@ export default function SuppliersMaster() {
                                             !tercero.telefonoTercero?.trim() && formError
                                                 ? "border border-red-500"
                                                 : ""
+                                                ? "border border-red-500"
+                                                : ""
                                         }
                                     />
+                                    {formError && !tercero.telefonoTercero?.trim() && (
+                                        <span className="text-xs text-red-500">El teléfono es obligatorio.</span>
+                                    )}
                                 </div>
                             </div>
                             <div className="md:col-span-4 grid grid-cols-3 gap-4 mt-4">
@@ -1268,9 +1323,41 @@ export default function SuppliersMaster() {
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Número de registro mercantil</label>
                                     <Input
-                                        value={tercero.registroMercantil ?? ""}
-                                        onChange={e => setTercero({ ...tercero, registroMercantil: e.target.value })}
-                                        placeholder="Número de registro mercantil"
+                                        type="text"
+                                        inputMode="decimal"
+                                        pattern="[0-9]*[.,]?[0-9]*"
+                                        // MODIFICACIÓN: Si el valor en el estado es 0 y la referencia está vacía, mostramos texto vacío para poder borrarlo
+                                        value={tarifaIcaStrRef.current || (tercero.tarifaIca === 0 ? "" : (tercero.tarifaIca ?? "").toString())}
+                                        onChange={e => {
+                                            const rawValue = e.target.value;
+
+                                            if (/^[0-9]*[.,]?[0-9]*$/.test(rawValue)) {
+                                                tarifaIcaStrRef.current = rawValue;
+
+                                                // Si el usuario borró todo por completo
+                                                if (rawValue === "") {
+                                                    tarifaIcaStrRef.current = ""; // Limpiamos la referencia visual
+
+                                                    setTercero({
+                                                        ...tercero,
+                                                        tarifaIca: 0, // En el estado/base de datos se sigue guardando como un 0 numérico
+                                                    });
+                                                    return; // Cortamos la ejecución aquí
+                                                }
+
+                                                // Si hay texto, procedemos con la conversión normal
+                                                const normalized = rawValue.replace(',', '.');
+                                                const parsed = parseFloat(normalized);
+                                                const numericValue = Number.isNaN(parsed) ? 0 : parsed;
+
+                                                setTercero({
+                                                    ...tercero,
+                                                    tarifaIca: numericValue,
+                                                });
+                                            }
+                                        }}
+                                        placeholder="Tarifa Ica"
+                                        className="w-48"
                                     />
                                 </div>
                             </div>
@@ -1279,7 +1366,7 @@ export default function SuppliersMaster() {
                 </div>
 
             {/* Tabla de responsabilidades */}
-            <Card className="overflow-x-auto">
+            <Card className="overflow-x-auto border-2 border-border bg-muted/40 shadow-sm">
                 <table className="min-w-full text-sm">
                     <thead>
                         <tr className="bg-muted">
