@@ -34,3 +34,9 @@ export interface ITercero {
     registroMercantil: string | null;
     responsabilidadesTerceros: IResponsabilidadTercero[];
 }
+
+export interface ITerceroResponse {
+    error: boolean;
+    idTercero: number;
+    mensaje: string;
+}

@@ -6,9 +6,10 @@ export interface IVentaTercero {
     primerNombre: string | null;
     primerApellido: string | null;
     razonSocial: string | null;
-    telefonoTercero: number | null;
+    telefonoTercero: string | null;
     direccionTercero: string | null;
-    idMunicipio: number;
+    idMunicipio?: number | null;
     emailTercero: string | null;    
-    idTipoPersona: number | null; 
+    idTipoPersona?: number | null; 
+    terceroGeneral?: boolean | null;
 }

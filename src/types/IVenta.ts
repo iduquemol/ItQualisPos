@@ -12,6 +12,7 @@ export interface IVenta {
     numeroVenta: number | null;
     prefijoVenta: string | null;
     fechaVenta: string | null;
+    esBorrador: boolean;
     idPuntoVenta: number | null;
     idUsuario: number | null;
     totalRegistros: number | null;

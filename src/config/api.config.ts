@@ -7,7 +7,7 @@ export const API_CONFIG = {
     ENDPOINTS: {
         CATEGORIES: '/categorias',
         PRODUCTS: '/productos',
-        SALES: '/ventas',
+        SALES: '/venta',
         SUPPLIERS: '/terceros',
         UNIDADES_DE_MEDIDA: '/unidadesdemedida',
         TRIBUTOS: '/tributos',
@@ -16,7 +16,7 @@ export const API_CONFIG = {
         RESPONSABILIDADES_F: '/responsabilidadesfiscales',
         TIPOS_DOCUMENTO: '/tiposdocumento',
         DOCUMENTO_LISTA: '/documentoslista',
-        VENTA: '/ventas',
+        VENTA: '/venta',
         OBTENER_VENTA: '/obtener-venta',
         TIPOS_PRODUCTO: '/tiposproducto',
         LISTAS_PRECIOS: '/listasprecios',

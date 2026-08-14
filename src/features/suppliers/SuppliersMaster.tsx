@@ -208,7 +208,7 @@ export default function SuppliersMaster() {
     };
 
     const handleSaveTercero = async () => {
-        // Validación de campos obligatorios
+    // Validación de campos obligatorios
         if (
             !tercero.numeroIdentificacion?.trim() ||
             !tercero.primerNombre?.trim() ||
@@ -225,7 +225,28 @@ export default function SuppliersMaster() {
             setFormError("Por favor, complete todos los campos obligatorios (*).");
             return;
         }
+
         setFormError(null);
+
+        // Función auxiliar para formatear los mensajes provenientes de la BD (filtrando mensajes secundarios)
+        const parseMensajeBD = (mensajeRaw: string): string => {
+            try {
+                const parsed = JSON.parse(mensajeRaw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const mensajesFiltrados = parsed
+                        .map((e: { mensaje: string }) => e.mensaje)
+                        .filter((msg: string) => !msg.includes("Responsabilidad Tercero creada correctamente"));
+
+                    if (mensajesFiltrados.length > 0) {
+                        return mensajesFiltrados.join(" | ");
+                    }
+                }
+            } catch {
+                // Si no es un JSON válido, retornamos el string directamente
+            }
+            return mensajeRaw;
+        };
+
         try {
             if (tercero.idTercero) {
                 // Actualizar tercero existente
@@ -234,14 +255,26 @@ export default function SuppliersMaster() {
                 setSuccessMessage("Tercero actualizado correctamente");
                 setShowSuccessDialog(true);
             } else {
+                // Crear nuevo tercero
                 const result = await TerceroService.create(tercero);
                 console.log("Tercero guardado:", result);
-                setSuccessMessage("Tercero guardado correctamente");
+                
+                const mensajeLimpio = parseMensajeBD(result.mensaje);
+                
+                if (result.error) {
+                    setFormError(mensajeLimpio);
+                    return;
+                }
+
+                setSuccessMessage(mensajeLimpio || "Tercero guardado correctamente");
                 setShowSuccessDialog(true);
             }
+
             fetchSuppliers();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error al guardar el tercero:', error);
+            const errorMsg = error?.message ? parseMensajeBD(error.message) : 'Error al procesar la solicitud.';
+            setFormError(errorMsg);
         }
     };
 
