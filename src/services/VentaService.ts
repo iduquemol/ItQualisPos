@@ -4,6 +4,78 @@ import { IPrintVenta } from "@/types/IPrintVenta";
 import { IResponseVenta } from "@/types/IResponseVenta";
 import { IVenta } from "@/types/IVenta";
 
+export const toVentaApiPayload = (factura: IVenta) => ({
+    idVenta: factura.idVenta ?? 0,
+    idTipoDocumento: factura.idTipoDocumento ?? 0,
+    nombreDocumento: factura.nombreDocumento ?? null,
+    idFormaPago: factura.idFormaPago ?? null,
+    idMetodoPago: factura.idMetodoDian ?? null,
+    numeroVenta: factura.numeroVenta ?? 0,
+    prefijoVenta: factura.prefijoVenta ?? "",
+    fechaVenta: factura.fechaVenta ?? null,
+    esBorrador: !!factura.esBorrador,
+    idPuntoVenta: factura.idPuntoVenta ?? 0,
+    idUsuario: factura.idUsuario ?? 0,
+    totalRegistros: factura.totalRegistros ?? 0,
+    cantidadProductos: factura.cantidadProductos ?? 0,
+    totalPrecio: factura.totalPrecio ?? 0,
+    totalDescuento: factura.totalDescuento ?? 0,
+    totalBaseIva: factura.totalBaseIva ?? 0,
+    totalIva: factura.totalIva ?? 0,
+    totalVenta: factura.totalVenta ?? 0,
+    observaciones: factura.observaciones ?? null,
+    ordenReferencia: factura.ordenReferencia ?? null,
+    fechaOrdenReferencia: factura.fechaOrdenReferencia ?? null,
+    terceroVenta: factura.terceroVenta ? {
+        idTercero: factura.terceroVenta.idTercero ?? null,
+        idTipoDocumentoId: factura.terceroVenta.idTipoDocumentoId ?? 0,
+        numeroIdentificacion: factura.terceroVenta.numeroIdentificacion ?? null,
+        primerNombre: factura.terceroVenta.primerNombre ?? null,
+        primerApellido: factura.terceroVenta.primerApellido ?? null,
+        razonSocial: factura.terceroVenta.razonSocial ?? null,
+        telefonoTercero: factura.terceroVenta.telefonoTercero ?? null,
+        idMunicipio: factura.terceroVenta.idMunicipio ?? null,
+        emailTercero: factura.terceroVenta.emailTercero ?? null,
+        idTipoPersona: factura.terceroVenta.idTipoPersona ?? null,
+        terceroGeneral: !!factura.terceroVenta.terceroGeneral
+    } : null,
+    detalleVenta: (factura.detalleVenta ?? []).map(item => ({
+        idDetalleVenta: item.idDetalleVenta ?? 0,
+        registroVenta: item.registroVenta ?? 0,
+        idProducto: item.idProducto ?? 0,
+        codigoProducto: item.codigoProducto ?? "",
+        nombreProducto: item.nombreProducto ?? "",
+        cantidadVenta: item.cantidadVenta ?? 0,
+        cantidadNotaCredito: item.cantidadNotaCredito ?? 0,
+        indNotaCredito: !!item.indNotaCredito,
+        precioUnitarioVenta: item.precioUnitarioVenta ?? 0,
+        baseIvaVenta: item.baseIvaVenta ?? 0,
+        porcentajeIvaVenta: item.porcentajeIvaVenta ?? 0,
+        ivaVenta: item.ivaVenta ?? 0,
+        porcentajeDescuentoVenta: item.porcentajeDescuentoVenta ?? 0,
+        descuentoVenta: item.descuentoVenta ?? 0,
+        porcentajeImpoConsumo: item.porcentajeImpoConsumo ?? 0,
+        impoConsumoVenta: item.impoConsumoVenta ?? 0,
+        porcentajeReteIva: item.porcentajeReteIva ?? 0,
+        reteIvaVenta: item.reteIvaVenta ?? 0,
+        porcentajeReteRenta: item.porcentajeReteRenta ?? 0,
+        reteRentaVenta: item.reteRentaVenta ?? 0,
+        baseReteRenta: item.baseReteRenta ?? 0,
+        porcentajeReteIca: item.porcentajeReteIca ?? 0,
+        reteIcaVenta: item.reteIcaVenta ?? 0,
+        totalVenta: item.totalVenta ?? 0,
+        costoUnitarioVenta: item.costoUnitarioVenta ?? 0,
+        costoTotalVenta: item.costoTotalVenta ?? 0,
+        idTipoProducto: item.idTipoProducto ?? 0,
+        indMuestra: !!item.indMuestra
+    })),
+    mediosPagoVenta: (factura.mediosPagoVenta ?? []).map(item => ({
+        idMedioPagoVenta: item.idMedioPagoVenta ?? 0,
+        idMedioPago: item.idMedioPago ?? 0,
+        valorMedioPago: item.valorMedioPago ?? 0
+    }))
+});
+
 export const VentaService = {
     async getById(idventa: number): Promise<IVenta | null> {
         try {
@@ -90,6 +162,7 @@ export const VentaService = {
 
     async create(factura: IVenta): Promise<IResponseVenta> {
         try {
+            const payload = toVentaApiPayload(factura);
             const response = await fetch(
                 API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.VENTA),
                 {
@@ -100,7 +173,7 @@ export const VentaService = {
                     },
                     mode: 'cors',
                     credentials: 'same-origin',
-                    body: JSON.stringify(factura)
+                    body: JSON.stringify(payload)
                 }
             );
             if (!response.ok) {

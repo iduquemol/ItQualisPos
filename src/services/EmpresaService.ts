@@ -1,8 +1,9 @@
 import { API_CONFIG } from "@/config/api.config";
-import { IEmpresas } from "@/types/IEmpresas"; 
-    
+import { IEmpresas } from "@/types/IEmpresas";
+
 export const EmpresaService = {
-    async getAll(): Promise<IEmpresas[]> {
+    
+    async get(): Promise<IEmpresas | null> {
         try {
             const response = await fetch(
                 API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.EMPRESAS),
@@ -13,43 +14,17 @@ export const EmpresaService = {
                 }
             );
             if (!response.ok) {
-                throw new Error('Error al cargar empresas');
+                throw new Error('Error al cargar la empresa');
             }
-            const data = await response.json();
+            const data: IEmpresas | null = await response.json();
             return data;
         } catch (error) {
-            console.error('Error en EmpresaService.getAll:', error);
+            console.error('Error en EmpresaService.get:', error);
             throw error;
         }
     },
-
-    async create(empresas: IEmpresas): Promise<IEmpresas> {
-        try {
-            const response = await fetch(
-                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.EMPRESAS),
-                {
-                    method: "POST",
-                    headers: {
-                        ...API_CONFIG.OPTIONS.headers,
-                        "Content-Type": "application/json"
-                    },
-                    mode: 'cors',
-                    credentials: 'same-origin',
-                    body: JSON.stringify(empresas)
-                }
-            );
-            if (!response.ok) {
-                throw new Error('Error al crear empresa');
-            }
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Error en EmpresaService.create:', error);
-            throw error;
-        }
-    },
-
-    async update(empresas: IEmpresas): Promise<IEmpresas> {
+    
+    async update(empresas: IEmpresas): Promise<{ message: string; rowsAffected: number }> {
         try {
             const response = await fetch(
                 API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.EMPRESAS),
@@ -65,7 +40,7 @@ export const EmpresaService = {
                 }
             );
             if (!response.ok) {
-                throw new Error('Error al actualizar empresa');
+                throw new Error('Error al actualizar la empresa');
             }
             const data = await response.json();
             return data;
@@ -73,32 +48,5 @@ export const EmpresaService = {
             console.error('Error en EmpresaService.update:', error);
             throw error;
         }
-    },
-
-    async delete(idEmpresa: number): Promise<void> {
-        try {
-            const response = await fetch(
-                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.EMPRESAS),
-                {
-                    method: "DELETE",
-                    headers: {
-                        ...API_CONFIG.OPTIONS.headers,
-                        "Content-Type": "application/json"
-                    },
-                    mode: 'cors',
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ idEmpresa })
-                }
-            );
-            if (!response.ok) {
-                throw new Error('Error al eliminar empresa');
-            }
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Error en EmpresaService.delete:', error);
-            throw error;
-        }
-    },                        
-
+    }
 };
