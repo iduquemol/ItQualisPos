@@ -1138,8 +1138,6 @@ export default function SuppliersMaster() {
                                             !tercero.telefonoTercero?.trim() && formError
                                                 ? "border border-red-500"
                                                 : ""
-                                                ? "border border-red-500"
-                                                : ""
                                         }
                                     />
                                     {formError && !tercero.telefonoTercero?.trim() && (
