@@ -118,6 +118,7 @@ const RetailPOS = () => {
         numeroVenta: 0,
         prefijoVenta: '',
         fechaVenta: '',
+        esBorrador: false,
         idPuntoVenta: 1,
         idUsuario: 1,
         totalRegistros: 0,
@@ -170,6 +171,8 @@ const RetailPOS = () => {
         retenedorIca: false,
         declaraRenta: false,
         tarifaIca: 0,
+        idCodigoPostal: 0,
+        registroMercantil: '',
         responsabilidadesTerceros: [],
     });
     const [showCustomer, setShowCustomer] = useState(false);
@@ -297,7 +300,13 @@ const RetailPOS = () => {
             setProductError(null);
             setIsLoadingProducts(true);
             const data = await ProductoService.getProductosVentaByTercero(factura.terceroVenta?.numeroIdentificacion || "0");
-            setProducts(data);
+            
+            // 🔒 Filtramos duplicados por idProducto antes de guardar en el estado
+            const uniqueProducts = Array.from(
+                new Map(data.map((item: any) => [item.idProducto, item])).values()
+            );
+
+            setProducts(uniqueProducts);
         } catch (error) {
             console.error('Error:', error);
             setProductError('Error al cargar los productos');
@@ -352,7 +361,7 @@ const RetailPOS = () => {
                     primerApellido: data.terceroVenta[0].primerApellido,
                     razonSocial: data.terceroVenta[0].razonSocial,
                     emailTercero: data.terceroVenta[0].emailTercero,
-                    telefonoTercero: 0,
+                    telefonoTercero: null,
                     direccionTercero: "",
                     idMunicipio: 0,
                     idTipoPersona: null,
@@ -489,17 +498,32 @@ const RetailPOS = () => {
         return () => window.removeEventListener('keypress', handleKeyPress);
     }, [barcodeBuffer, lastKeyTime, products]);
 
-    // Filtrar productos
+    // Filtrar productos por búsqueda y categoría
     const filteredProducts = products.filter(product => {
-        const matchesSearch = product.nombreProducto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.codigoProducto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.codigoBarras ? product.codigoBarras.includes(searchTerm) : false);
-        const matchesCategory = parseInt(selectedCategory) === 0 || product.idCategoria === parseInt(selectedCategory);
+        // 1. Limpiar el texto buscado
+        const term = searchTerm.trim().toLowerCase();
+
+        // 2. Extraer y convertir a string de forma segura todos los campos
+        const nombre = String(product?.nombreProducto ?? '').toLowerCase();
+        const codigo = String(product?.codigoProducto ?? '').toLowerCase();
+        const barras = String(product?.codigoBarras ?? '').toLowerCase();
+
+        // 3. Evaluar la búsqueda
+        const matchesSearch = term === '' 
+            ? true 
+            : (nombre.includes(term) || codigo.includes(term) || barras.includes(term));
+
+        // 4. Evaluar la categoría (0 = "Todo")
+        const categoryId = parseInt(selectedCategory, 10);
+        const matchesCategory = categoryId === 0 || Number(product?.idCategoria) === categoryId;
+
+        // Ambas condiciones deben cumplirse
         return matchesSearch && matchesCategory;
     });
 
+
     const handleSelectTercero = (terc: ITercero) => {
-        const telefonoTercero = terc.telefonoTercero ? Number(terc.telefonoTercero) : null;
+        const telefonoTercero = terc.telefonoTercero ? String(terc.telefonoTercero) : null;
         setFactura(prev => ({
             ...prev,
             terceroVenta: buildVentaTercero({
@@ -586,7 +610,7 @@ const RetailPOS = () => {
                     primerNombre: tercero.primerNombre ?? null,
                     primerApellido: tercero.primerApellido ?? null,
                     razonSocial: tercero.razonSocial ?? null,
-                    telefonoTercero: tercero.telefonoTercero ? Number(tercero.telefonoTercero) : null,
+                    telefonoTercero: tercero.telefonoTercero ? String(tercero.telefonoTercero) : null,
                     direccionTercero: tercero.direccionTercero ?? null,
                     idMunicipio: tercero.idMunicipio ?? 0,
                     emailTercero: tercero.emailTercero ?? null,
@@ -597,109 +621,180 @@ const RetailPOS = () => {
     };
 
     const handleSelectVenta = async (documento: IDocumentoLista) => {
-        const data = await VentaService.getById(documento.idVenta);
-        setSelectedFactura(data);
-        setFactura(prev => ({
-            ...prev,
-            idVenta: data?.idVenta ?? null,
-            idTipoDocumento: data?.idTipoDocumento ?? 0,
-            codigoDocumento: data?.codigoDocumento ?? '',
-            nombreDocumento: data?.nombreDocumento ?? null,
-            numeroVenta: data?.numeroVenta ?? null,
-            prefijoVenta: data?.prefijoVenta ?? '',
-            fechaVenta: data?.fechaVenta ?? '',
-            idMetodoDian: data?.idMetodoDian ?? 2,
-            idPuntoVenta: data?.idPuntoVenta ?? null,
-            idUsuario: data?.idUsuario ?? null,
-            totalRegistros: data?.totalRegistros ?? 0,
-            cantidadProductos: data?.cantidadProductos ?? 0,
-            totalPrecio: data?.totalPrecio ?? 0,
-            totalDescuento: data?.totalDescuento ?? 0,
-            totalBaseIva: data?.totalBaseIva ?? 0,
-            totalIva: data?.totalIva ?? 0,
-            totalVenta: data?.totalVenta ?? 0,
-            terceroVenta: data?.terceroVenta ? buildVentaTercero(data.terceroVenta) : buildVentaTercero(),
-            detalleVenta: data?.detalleVenta ?? [],
-            mediosPagoVenta: data?.mediosPagoVenta ?? [],
+            const data = await VentaService.getById(documento.idVenta);
+            setSelectedFactura(data);
+            setFactura(prev => ({
+                ...prev,
+                idVenta: data?.idVenta ?? null,
+                idTipoDocumento: data?.idTipoDocumento ?? 0,
+                codigoDocumento: data?.codigoDocumento ?? '',
+                nombreDocumento: data?.nombreDocumento ?? null,
+                numeroVenta: data?.numeroVenta ?? null,
+                prefijoVenta: data?.prefijoVenta ?? '',
+                fechaVenta: data?.fechaVenta ?? '',
+                idMetodoDian: data?.idMetodoDian ?? 2,
+                idPuntoVenta: data?.idPuntoVenta ?? null,
+                idUsuario: data?.idUsuario ?? null,
+                totalRegistros: data?.totalRegistros ?? 0,
+                cantidadProductos: data?.cantidadProductos ?? 0,
+                totalPrecio: data?.totalPrecio ?? 0,
+                totalDescuento: data?.totalDescuento ?? 0,
+                totalBaseIva: data?.totalBaseIva ?? 0,
+                totalIva: data?.totalIva ?? 0,
+                totalVenta: data?.totalVenta ?? 0,
+                terceroVenta: data?.terceroVenta ? buildVentaTercero(data.terceroVenta) : buildVentaTercero(),
+                detalleVenta: data?.detalleVenta ?? [],
+                mediosPagoVenta: data?.mediosPagoVenta ?? [],
 
-        }));
-        setOpenDialog(false);
-        setShowFacturaModal(true);
-        const dataPrint = await VentaService.printById(documento.idVenta);
-        setFacturaModalData(dataPrint);        
-    };
-
-    const handleSaveVenta = async (indBorrador: boolean) => {
-        const todayLocal = new Date();
-        const offsetMs = todayLocal.getTimezoneOffset() * 60 * 1000;
-        const localISODate = new Date(todayLocal.getTime() - offsetMs).toISOString().split('T')[0];
-        const updatedFactura = {
-            ...factura,
-            fechaVenta: localISODate,
-            esBorrador: indBorrador ? 1 : 0,
+            }));
+            setOpenDialog(false);
+            setShowFacturaModal(true);
+            const dataPrint = await VentaService.printById(documento.idVenta);
+            setFacturaModalData(dataPrint);        
         };
-        try {
-            if (updatedFactura.idVenta) {
-                // Actualizar factura existente
-                //await VentaService.update(factura);
-                console.log("Factura actualizada:", factura);
-                setSuccessMessage("Factura actualizada correctamente");
-                setShowSuccessDialog(true);
-            } else {
-                console.log("Factura a guardar:", updatedFactura);
-                const result = await VentaService.create(updatedFactura);
-                console.log("Factura guardada:", result);
-                setSuccessMessage(result.message +
-                    "\nNúmero Documento Dian: " + result.numeroDocumentoDian);
-                setShowSuccessDialog(true);
-                const data = await VentaService.getById(result.idFactura);
-                setSelectedFactura(data);
-                setFactura({
-                    ...factura,
-                    idVenta: data?.idVenta ?? null,
-                    idTipoDocumento: data?.idTipoDocumento ?? 0,
-                    codigoDocumento: data?.codigoDocumento ?? '',
-                    nombreDocumento: data?.nombreDocumento ?? null,
-                    numeroVenta: data?.numeroVenta ?? null,
-                    prefijoVenta: data?.prefijoVenta ?? '',
-                    fechaVenta: data?.fechaVenta ?? '',
-                    idPuntoVenta: data?.idPuntoVenta ?? null,
-                    idUsuario: data?.idUsuario ?? null,
-                    totalRegistros: data?.totalRegistros ?? 0,
-                    cantidadProductos: data?.cantidadProductos ?? 0,
-                    totalPrecio: data?.totalPrecio ?? 0,
-                    totalDescuento: data?.totalDescuento ?? 0,
-                    totalBaseIva: data?.totalBaseIva ?? 0,
-                    totalIva: data?.totalIva ?? 0,
-                    totalVenta: data?.totalVenta ?? 0,
-                    terceroVenta: data?.terceroVenta ?? {
-                        idTercero: null,
-                        idTipoDocumentoId: 0,
-                        digitoVerificacion: null,
-                        numeroIdentificacion: null,
-                        primerNombre: null,
-                        primerApellido: null,
-                        razonSocial: null,
-                        telefonoTercero: null,
-                        direccionTercero: null,
-                        idMunicipio: 0,
-                        emailTercero: null,
-                        idTipoPersona: null
-                    },
-                    detalleVenta: data?.detalleVenta ?? [],
-                    mediosPagoVenta: data?.mediosPagoVenta ?? [],
 
-                });
-                const dataPrint = await VentaService.printById(result.idFactura);
-                setFacturaModalData(dataPrint);
-                setShowFacturaModal(true);
+       const DEFAULT_TIPO_DOC_NIT = 7; // idTipoDocumentoId = 7 para NIT (código 31)
 
+        const handleSaveVenta = async (indBorrador: boolean) => {
+            const todayLocal = new Date();
+            const offsetMs = todayLocal.getTimezoneOffset() * 60 * 1000;
+            const localISODate = new Date(todayLocal.getTime() - offsetMs).toISOString().split('T')[0];
+
+            // 1. Normalizar cada ítem del detalle
+            const detalleNormalizado = (factura.detalleVenta ?? []).map(item => {
+                const totalItemCalculado = (item.totalVenta && item.totalVenta > 0)
+                    ? item.totalVenta
+                    : (item.precioUnitarioVenta || 0) * (item.cantidadVenta || 1);
+
+                // Si porcentajeIvaVenta es 0 o no hay ivaVenta, la baseIvaVenta debe ser 0
+                const tieneIva = (item.porcentajeIvaVenta && item.porcentajeIvaVenta > 0) || (item.ivaVenta && item.ivaVenta > 0);
+                const baseIvaCalculada = tieneIva 
+                    ? ((item.baseIvaVenta && item.baseIvaVenta > 0) ? item.baseIvaVenta : totalItemCalculado)
+                    : 0;
+
+                return {
+                    ...item,
+                    totalVenta: totalItemCalculado,
+                    baseIvaVenta: baseIvaCalculada
+                };
+            });
+
+            // 2. Calcular totales reales desde el detalle normalizado
+            const totalCantidadCalculada = detalleNormalizado.reduce((acc, item) => acc + (item.cantidadVenta || 0), 0);
+            const totalPrecioCalculado = total ?? detalleNormalizado.reduce((acc, item) => acc + (item.totalVenta || 0), 0);
+            const totalBaseIvaCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.baseIvaVenta || 0), 0);
+            const totalIvaCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.ivaVenta || 0), 0);
+            const totalDescuentoCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.descuentoVenta || 0), 0);
+
+            // 3. Normalizar medio de pago (Efectivo = 1)
+            const mediosPagoNormalizados = (factura.mediosPagoVenta && factura.mediosPagoVenta.length > 0)
+                ? factura.mediosPagoVenta
+                : [{
+                    idMedioPagoVenta: 0,
+                    idMedioPago: 1,
+                    valorMedioPago: totalPrecioCalculado
+                }];
+
+            // 4. Estructurar la factura final
+            const updatedFactura = {
+                ...factura,
+                fechaVenta: localISODate,
+                esBorrador: indBorrador,
+
+                // Detalle corregido
+                detalleVenta: detalleNormalizado,
+
+                // Totales y Cantidades
+                cantidadProductos: totalCantidadCalculada > 0 ? totalCantidadCalculada : factura.cantidadProductos,
+                totalRegistros: detalleNormalizado.length,
+                totalPrecio: totalPrecioCalculado > 0 ? totalPrecioCalculado : factura.totalPrecio,
+                totalVenta: totalPrecioCalculado > 0 ? totalPrecioCalculado : factura.totalVenta,
+                totalBaseIva: totalBaseIvaCalculado,
+                totalIva: totalIvaCalculado,
+                totalDescuento: totalDescuentoCalculado,
+
+                // Medios de pago
+                mediosPagoVenta: mediosPagoNormalizados,
+
+                // Tercero normalizado (Corregido idTipoPersona e idMunicipio)
+                terceroVenta: factura.terceroVenta ? {
+                    ...factura.terceroVenta,
+                    idTipoDocumentoId: (factura.terceroVenta.idTipoDocumentoId && factura.terceroVenta.idTipoDocumentoId !== 0)
+                        ? factura.terceroVenta.idTipoDocumentoId
+                        : DEFAULT_TIPO_DOC_NIT,
+                    // Si idTipoPersona viene null/undefined, asigna 1 (Persona Jurídica para NIT)
+                    idTipoPersona: factura.terceroVenta.idTipoPersona ?? 1,
+                    // Si idMunicipio viene en 0, se envia null o el ID correspondiente para evitar fallo de FK
+                    idMunicipio: (factura.terceroVenta.idMunicipio && factura.terceroVenta.idMunicipio !== 0)
+                        ? factura.terceroVenta.idMunicipio
+                        : null,
+                    terceroGeneral: factura.terceroVenta.terceroGeneral ?? false
+                } : null
+            };
+
+            try {
+                if (updatedFactura.idVenta) {
+                    console.log("Factura actualizada:", factura);
+                    setSuccessMessage("Factura actualizada correctamente");
+                    setShowSuccessDialog(true);
+                } else {
+                    console.log("Factura a guardar:", updatedFactura);
+                    const result = await VentaService.create(updatedFactura);
+                    console.log("Factura guardada:", result);
+                    setSuccessMessage(
+                        "Factura creada correctamente"
+                        //result.message ||   + "\nNúmero Documento Dian: " + result.numeroDocumentoDian
+                    );
+                    setShowSuccessDialog(true);
+
+                    const data = await VentaService.getById(result.idFactura);
+                    setSelectedFactura(data);
+                    setFactura({
+                        ...factura,
+                        idVenta: data?.idVenta ?? null,
+                        idTipoDocumento: data?.idTipoDocumento ?? 0,
+                        codigoDocumento: data?.codigoDocumento ?? '',
+                        nombreDocumento: data?.nombreDocumento ?? null,
+                        numeroVenta: data?.numeroVenta ?? null,
+                        prefijoVenta: data?.prefijoVenta ?? '',
+                        fechaVenta: data?.fechaVenta ?? '',
+                        esBorrador: data?.esBorrador ?? false,
+                        idPuntoVenta: data?.idPuntoVenta ?? null,
+                        idUsuario: data?.idUsuario ?? null,
+                        totalRegistros: data?.totalRegistros ?? 0,
+                        cantidadProductos: data?.cantidadProductos ?? 0,
+                        totalPrecio: data?.totalPrecio ?? 0,
+                        totalDescuento: data?.totalDescuento ?? 0,
+                        totalBaseIva: data?.totalBaseIva ?? 0,
+                        totalIva: data?.totalIva ?? 0,
+                        totalVenta: data?.totalVenta ?? 0,
+                        terceroVenta: data?.terceroVenta ?? {
+                            idTercero: null,
+                            idTipoDocumentoId: DEFAULT_TIPO_DOC_NIT,
+                            digitoVerificacion: null,
+                            numeroIdentificacion: null,
+                            primerNombre: null,
+                            primerApellido: null,
+                            razonSocial: null,
+                            telefonoTercero: null,
+                            direccionTercero: null,
+                            idMunicipio: null,
+                            emailTercero: null,
+                            idTipoPersona: 1,
+                            terceroGeneral: false
+                        },
+                        detalleVenta: data?.detalleVenta ?? [],
+                        mediosPagoVenta: data?.mediosPagoVenta ?? [],
+                    });
+
+                    const dataPrint = await VentaService.printById(result.idFactura);
+                    setFacturaModalData(dataPrint);
+                    setShowFacturaModal(true);
+                }
+            } catch (error) {
+                console.error('Error al guardar la factura:', error);
             }
-            //await fetchProducts();
-        } catch (error) {
-            console.error('Error al guardar la factura:', error);
-        }
-    };
+        };
 
     // Funciones del carrito
     const addToCart = (product: IProducto) => {
@@ -1591,10 +1686,19 @@ const RetailPOS = () => {
                                 placeholder="Buscar por nombre, código..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 w-full"
+                                className="pl-10 pr-10 w-full"
                             />
+                            {searchTerm && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
                         </div>
-
+                        
                     </div>
 
 
@@ -1620,9 +1724,10 @@ const RetailPOS = () => {
                     {/* Grid de Productos */}
                     <div className="flex-1 p-4 overflow-y-auto">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {filteredProducts.map(product => (
+                            {/* Agregamos index en los argumentos del map: (product, index) */}
+                            {filteredProducts.map((product, index) => (
                                 <Card
-                                    key={product.idProducto}
+                                    key={`${product.idProducto}-${index}`} 
                                     className={`cursor-pointer transition-all hover:shadow-lg ${(product.stockActualProducto ?? 0) <= 0 ? 'border-destructive/50' : ''
                                         }`}
                                     onClick={() => addToCart(product)}
@@ -1632,36 +1737,23 @@ const RetailPOS = () => {
                                             <Badge variant="secondary" className="text-xs">
                                                 {product.codigoProducto}
                                             </Badge>
-                                            {/* {product.stock <= product.minStock && (
-                                                <AlertTriangle className="h-4 w-4 text-destructive" />
-                                            )} */}
+
                                         </div>
                                     </CardHeader>
 
                                     <CardContent className="text-center space-y-2">
-                                        {/* <div className="text-4xl mb-2">{product.image}</div> */}
+
                                         <CardTitle className="text-sm leading-tight line-clamp-2">
                                             {product.nombreProducto}
                                         </CardTitle>
-                                        {/* <CardDescription className="text-xs">{product.brand}</CardDescription> */}
-                                        {/* {product.size && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Talla {product.size}
-                                            </Badge>
-                                        )} */}
+
                                     </CardContent>
 
                                     <CardFooter className="flex flex-col space-y-2 pt-2">
                                         <div className="text-lg font-bold text-primary">
                                             ${formatCurrency(product.precioPos)}
                                         </div>
-                                        {/* <Badge
-                                            variant={product.stock > product.minStock ? "secondary" :
-                                                product.stock > 0 ? "outline" : "destructive"}
-                                            className="text-xs"
-                                        >
-                                            Stock: {product.stock}
-                                        </Badge> */}
+
                                     </CardFooter>
                                 </Card>
                             ))}
