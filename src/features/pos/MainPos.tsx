@@ -110,10 +110,10 @@ const RetailPOS = () => {
     const navigate = useNavigate();
     const [factura, setFactura] = useState<IVenta>({
         idVenta: 0,
-        idTipoDocumento: 4,
+        idTipoDocumento: 1,
         codigoDocumento: '',
         nombreDocumento: null,
-        idMetodoDian: 2,
+        idMetodoDian: 1,
         idFormaPago: 1,
         numeroVenta: 0,
         prefijoVenta: '',
@@ -742,8 +742,7 @@ const RetailPOS = () => {
                     const result = await VentaService.create(updatedFactura);
                     console.log("Factura guardada:", result);
                     setSuccessMessage(
-                        "Factura creada correctamente"
-                        //result.message ||   + "\nNúmero Documento Dian: " + result.numeroDocumentoDian
+                        result.message ||   + "\nNúmero Documento Dian: " + result.numeroDocumentoDian
                     );
                     setShowSuccessDialog(true);
 

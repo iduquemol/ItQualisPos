@@ -162,7 +162,7 @@ export const VentaService = {
 
     async create(factura: IVenta): Promise<IResponseVenta> {
         try {
-            const payload = toVentaApiPayload(factura);
+            //const payload = toVentaApiPayload(factura);
             const response = await fetch(
                 API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.VENTA),
                 {
@@ -173,7 +173,7 @@ export const VentaService = {
                     },
                     mode: 'cors',
                     credentials: 'same-origin',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(factura)
                 }
             );
             if (!response.ok) {
