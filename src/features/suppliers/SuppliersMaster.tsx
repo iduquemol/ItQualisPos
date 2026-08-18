@@ -1352,43 +1352,23 @@ export default function SuppliersMaster() {
                                     )}
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-muted-foreground mb-1">Número de registro mercantil</label>
+                                    <label className="block text-xs text-muted-foreground mb-1">
+                                    Número de registro mercantil
+                                    </label>
                                     <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        pattern="[0-9]*[.,]?[0-9]*"
-                                        // MODIFICACIÓN: Si el valor en el estado es 0 y la referencia está vacía, mostramos texto vacío para poder borrarlo
-                                        value={tarifaIcaStrRef.current || (tercero.tarifaIca === 0 ? "" : (tercero.tarifaIca ?? "").toString())}
-                                        onChange={e => {
-                                            const rawValue = e.target.value;
-
-                                            if (/^[0-9]*[.,]?[0-9]*$/.test(rawValue)) {
-                                                tarifaIcaStrRef.current = rawValue;
-
-                                                // Si el usuario borró todo por completo
-                                                if (rawValue === "") {
-                                                    tarifaIcaStrRef.current = ""; // Limpiamos la referencia visual
-
-                                                    setTercero({
-                                                        ...tercero,
-                                                        tarifaIca: 0, // En el estado/base de datos se sigue guardando como un 0 numérico
-                                                    });
-                                                    return; // Cortamos la ejecución aquí
-                                                }
-
-                                                // Si hay texto, procedemos con la conversión normal
-                                                const normalized = rawValue.replace(',', '.');
-                                                const parsed = parseFloat(normalized);
-                                                const numericValue = Number.isNaN(parsed) ? 0 : parsed;
-
-                                                setTercero({
-                                                    ...tercero,
-                                                    tarifaIca: numericValue,
-                                                });
-                                            }
-                                        }}
-                                        placeholder="Tarifa Ica"
-                                        className="w-48"
+                                    value= {tercero.registroMercantil ?? ""}
+                                    onChange={(e) =>
+                                        setTercero({
+                                        ...tercero,
+                                        registroMercantil: e.target.value,
+                                        })
+                                    }
+                                    placeholder="Número de registro mercantil"
+                                    className={
+                                        !tercero.registroMercantil?.trim() && formError
+                                        ? "border border-red-500"
+                                        : ""
+                                    }
                                     />
                                 </div>
                             </div>
