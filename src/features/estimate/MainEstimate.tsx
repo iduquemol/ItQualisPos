@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,10 +15,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import Tesseract from 'tesseract.js';
-import { CategoryService } from '@/services/CategoryService';
+import { CategoriasService } from '@/services/CategoryService';
 import { ProductoService } from '@/services/ProductoService';
 import { TerceroService } from '@/services/TerceroService';
-import { ICategory } from '@/types/ICategorias';
+import { ICategorias } from '@/types/ICategorias';
 import { IProducto } from '@/types/IProducto';
 import { ITercero } from '@/types/ITercero';
 import { ITipoDocumento } from '@/types/ITipoDocumento';
@@ -38,6 +38,22 @@ import FacturaModal from '../reports/FacturaModal';
 import { ICotizacion } from '@/types/ICotizacion';
 import { IParametrosVentaDefault } from '@/types/IParametrosVentaDefault';
 import { CotizacionService } from '@/services/CotizacionService';
+import {Package, type LucideIcon } from "lucide-react";
+import { CATEGORY_ICONS, iconMap } from '@/types/ICategoryIcons';
+
+
+type PosCategory = ICategorias & { icon: LucideIcon };
+
+const resolveCategoryIcon = (iconId?: string | null): LucideIcon => {
+  if (!iconId) return Package;
+
+  const normalizedIconId = iconId.trim().toLowerCase();
+  const categoryIcon = CATEGORY_ICONS.find(
+    ({ id }) => id.toLowerCase() === normalizedIconId
+  );
+
+  return categoryIcon?.icon ?? iconMap[iconId.trim()] ?? Package;
+};
 
 const MainEstimate = () => {
     const navigate = useNavigate();
@@ -85,6 +101,7 @@ const MainEstimate = () => {
         numeroVenta: null,
         prefijoVenta: '',
         fechaVenta: '',
+        esBorrador: false,
         idPuntoVenta: null,
         idUsuario: null,
         totalRegistros: 0,
@@ -118,7 +135,7 @@ const MainEstimate = () => {
         primerApellido: "",
         segundoApellido: "",
         razonSocial: "",
-        telefonoTercero: 0,
+        telefonoTercero: "",
         direccionTercero: "",
         emailTercero: 'iduque2001@hotmail.com',
         idDepartamento: 0,
@@ -137,6 +154,8 @@ const MainEstimate = () => {
         retenedorIca: false,
         declaraRenta: false,
         tarifaIca: 0,
+        idCodigoPostal: null,
+        registroMercantil: null,
         responsabilidadesTerceros: [],
     });
     const [showCustomer, setShowCustomer] = useState(false);
@@ -144,7 +163,7 @@ const MainEstimate = () => {
     const [loyaltyPoints, setLoyaltyPoints] = useState(0);
     const [showScanner, setShowScanner] = useState(false);
     const [showOCR, setShowOCR] = useState(false);
-    const [categories, setCategories] = useState<ICategory[]>([]);
+    const [categories, setCategories] = useState<PosCategory[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
     const [categoryError, setCategoryError] = useState<string | null>(null);
     const [products, setProducts] = useState<IProducto[]>([]);
@@ -196,13 +215,17 @@ const MainEstimate = () => {
 
     const fetchCategories = async () => {
         try {
-            setCategoryError(null);
-            setIsLoadingCategories(true);
-            const data = await CategoryService.getAll();
-            setCategories([
-                { idCategoria: 0, codigoCategoria: 'all', nombreCategoria: 'Todo', iconCategoria: '🏪' },
-                ...data
-            ]);
+                    setCategoryError(null);
+                    setIsLoadingCategories(true);
+                    const data = await CategoriasService.getAll();
+                    const categoriesWithIcons = data.map((category) => ({
+                        ...category,
+                        icon: resolveCategoryIcon(category.iconoCategoria),
+                    }));
+                    setCategories([
+                        { idCategoria: 0, codigoCategoria: 'all', nombreCategoria: 'Todo', iconoCategoria: 'Package', icon: Package },
+                        ...categoriesWithIcons
+                    ]);
         } catch (error) {
             console.error('Error:', error);
             setCategoryError('Error al cargar las categorías');
@@ -317,7 +340,7 @@ const MainEstimate = () => {
                     primerApellido: data.terceroVenta[0].primerApellido,
                     razonSocial: data.terceroVenta[0].razonSocial,
                     emailTercero: data.terceroVenta[0].emailTercero,
-                    telefonoTercero: 0,
+                    telefonoTercero: "",
                     direccionTercero: "",
                     idMunicipio: 0,
                     idTipoPersona: null,
@@ -1379,17 +1402,22 @@ const MainEstimate = () => {
                     <div className="border-b p-2 h-[80px]">
                         <Tabs value={selectedCategory.toString()} onValueChange={setSelectedCategory} className="w-full">
                             <TabsList className="flex flex-wrap gap-1 h-full">
-                                {categories.map(category => (
-                                    <TabsTrigger
-                                        key={category.idCategoria}
-                                        value={category.idCategoria.toString()}
-                                        disabled={isLoadingCategories}
-                                        className="flex items-center space-x-1 px-2 py-1 flex-1 min-w-[calc(33.33%-4px)]"
-                                    >
-                                        <span>{category.iconCategoria}</span>
-                                        <span className="text-sm">{category.nombreCategoria}</span>
-                                    </TabsTrigger>
-                                ))}
+                                {categories.map((category, index) => {
+                                    // Garantizamos que la variable empiece por mayúscula para que React la trate como componente JSX
+                                    const RenderIcon = category.icon || resolveCategoryIcon(category.iconoCategoria) || Package;
+
+                                    return (
+                                        <TabsTrigger
+                                            key={category.idCategoria ?? index}
+                                            value={category.idCategoria?.toString() ?? ""}
+                                            disabled={isLoadingCategories}
+                                            className="flex items-center space-x-1 px-2 py-1 flex-1 min-w-[calc(33.33%-4px)]"
+                                        >
+                                            <RenderIcon className="h-4 w-4 shrink-0" />
+                                            <span className="text-sm">{category.nombreCategoria}</span>
+                                        </TabsTrigger>
+                                    );
+                                })}
                             </TabsList>
                         </Tabs>
                     </div>

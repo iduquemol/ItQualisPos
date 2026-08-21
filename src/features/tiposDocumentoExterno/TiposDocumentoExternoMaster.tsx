@@ -19,6 +19,7 @@ import {
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -41,6 +42,10 @@ import { ITipoDocumentoExterno } from "@/types/ITipoDocumentoExterno";
 import { TiposDocumentoExternoService } from "@/services/TiposDocumentoExternoService";
 import { ITipoDocumento } from "@/types/ITipoDocumento";
 import { TipoDocumentoService } from "@/services/TipoDocumentoService";
+import { IFormasPago } from "@/types/IFormasPago";
+import { IConsecutivos } from "@/types/IConsecutivos";
+import { FormasPagoService } from "@/services/FormasPagoService";
+import { ConsecutivosService } from "@/services/ConsecutivosService";
 
 export default function TiposDocumentoExternoMaster() {
   const navigate = useNavigate();
@@ -57,10 +62,15 @@ export default function TiposDocumentoExternoMaster() {
     notaFe3Externo: "",
     notaFe4Externo: "",
     notaFe5Externo: "",
+    idConsecutivo: null,
+    idFormaPago: null,
+    tipoDocumentoActivo: true,
     fechaGrabacionDocumentoExterno: null,
   });
 
   const [tiposDocumento, setTiposDocumento] = useState<ITipoDocumento[]>([]);
+  const [formasPago, setFormasPago] = useState<IFormasPago[]>([]);
+  const [consecutivos, setConsecutivos] = useState<IConsecutivos[]>([]);
 
   const [openDialog, setOpenDialog] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -85,7 +95,6 @@ export default function TiposDocumentoExternoMaster() {
     }
   };
 
-  // 3. NUEVA FUNCIÓN PARA OBTENER LOS TIPOS DE DOCUMENTO BASE
   const fetchTiposDocumento = async () => {
     try {
       const data = await TipoDocumentoService.getAll();
@@ -95,13 +104,42 @@ export default function TiposDocumentoExternoMaster() {
     }
   };
 
+  const fetchFormasPago = async () => {
+    try {
+      const data = await FormasPagoService.getAll();
+      setFormasPago(data);
+    } catch (error) {
+      console.error("Error al cargar formas de pago:", error);
+    }
+  };
+
+  const fetchConsecutivos = async () => {
+    try {
+      const data = await ConsecutivosService.getAll();
+      setConsecutivos(data);
+    } catch (error) {
+      console.error("Error al cargar consecutivos:", error);
+    }
+  };
+
   useEffect(() => {
-    fetchTiposDocumentoExterno();
-    fetchTiposDocumento();
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      await Promise.all([
+        fetchTiposDocumentoExterno(),
+        fetchTiposDocumento(),
+        fetchFormasPago(),
+        fetchConsecutivos(),
+      ]);
+      setIsLoading(false);
+    };
+
+    loadInitialData();
   }, []);
 
   const handleSelectTipoDoc = (doc: ITipoDocumentoExterno) => {
     setTipoDocExterno({ ...doc });
+    setFormError(null);
     setOpenDialog(false);
   };
 
@@ -116,13 +154,15 @@ export default function TiposDocumentoExternoMaster() {
       notaFe3Externo: "",
       notaFe4Externo: "",
       notaFe5Externo: "",
+      idConsecutivo: null,
+      idFormaPago: null,
+      tipoDocumentoActivo: true,
       fechaGrabacionDocumentoExterno: null,
     });
     setFormError(null);
   };
 
   const handleSave = async () => {
-    // Validación de campos obligatorios
     if (!tipoDocExterno.codigoTipoDocumentoExterno?.trim()) {
       setFormError("El código de documento externo es obligatorio.");
       return;
@@ -132,7 +172,7 @@ export default function TiposDocumentoExternoMaster() {
       return;
     }
     if (!tipoDocExterno.idTipoDocumento) {
-      setFormError("El ID Tipo Documento ERP es obligatorio.");
+      setFormError("El ID Tipo Documento es obligatorio.");
       return;
     }
 
@@ -140,16 +180,14 @@ export default function TiposDocumentoExternoMaster() {
 
     try {
       if (tipoDocExterno.idTipoDocumentoExterno) {
-        // Actualizar
         await TiposDocumentoExternoService.update(tipoDocExterno);
-        setSuccessMessage("Tipo de documento externo actualizado correctamente");
+        setSuccessMessage("Tipo de documento actualizado correctamente");
       } else {
-        // Crear
         await TiposDocumentoExternoService.create(tipoDocExterno);
-        setSuccessMessage("Tipo de documento externo guardado correctamente");
+        setSuccessMessage("Tipo de documento guardado correctamente");
       }
       setShowSuccessDialog(true);
-      fetchTiposDocumentoExterno();
+      await fetchTiposDocumentoExterno();
     } catch (error) {
       console.error("Error al guardar:", error);
       toast.error("Error al guardar el registro", { position: "top-center" });
@@ -158,7 +196,7 @@ export default function TiposDocumentoExternoMaster() {
 
   const handleDelete = () => {
     if (!tipoDocExterno.idTipoDocumentoExterno) {
-      toast.error("No hay un tipo de documento externo seleccionado para eliminar", {
+      toast.error("No hay un tipo de documento seleccionado para eliminar", {
         position: "top-center",
       });
       return;
@@ -175,12 +213,12 @@ export default function TiposDocumentoExternoMaster() {
       }
 
       await TiposDocumentoExternoService.delete(tipoDocExterno.idTipoDocumentoExterno);
-      toast.success("Tipo de documento externo eliminado correctamente", {
+      toast.success("Tipo de documento eliminado correctamente", {
         position: "top-center",
       });
 
       handleNew();
-      fetchTiposDocumentoExterno();
+      await fetchTiposDocumentoExterno();
       setShowDeleteDialog(false);
     } catch (error) {
       console.error("Error al eliminar:", error);
@@ -207,33 +245,32 @@ export default function TiposDocumentoExternoMaster() {
       {/* Header y Acciones */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Formulario Documentos Externos</h2>
+          {/* REQUERIMIENTO TAIGA: Cambiar el nombre a Tipos de Documento */}
+          <h2 className="text-2xl font-bold">Tipos de Documento</h2>
           <p className="text-muted-foreground text-sm">
-            Consulta y gestión de subtipos de documentos del ERP
+            Consulta y gestión de tipos de documento
           </p>
         </div>
         <div className="flex gap-2">
-          {/* Botón Nuevo */}
           <Button
             variant="default"
             size="icon"
-            title="Nuevo tipo de documento"
+            title="Nuevo documento"
             onClick={handleNew}
             className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
           >
             <Plus className="w-5 h-5" />
           </Button>
 
-          {/* Diálogo de Búsqueda */}
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="icon" title="Buscar tipo de documento externo">
+              <Button variant="outline" size="icon" title="Buscar documento">
                 <Search className="w-5 h-5" />
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Buscar Documento Externo</DialogTitle>
+                <DialogTitle>Buscar Tipo de Documento</DialogTitle>
               </DialogHeader>
               <Input
                 className="mb-4"
@@ -286,27 +323,24 @@ export default function TiposDocumentoExternoMaster() {
             </DialogContent>
           </Dialog>
 
-          {/* Botón Guardar */}
           <Button
             variant="default"
-            title="Guardar tipo de documento externo"
+            title="Guardar documento"
             onClick={handleSave}
           >
             <Save className="w-4 h-4 mr-2" />
             Guardar
           </Button>
 
-          {/* Botón Eliminar */}
           <Button
             variant="default"
-            title="Eliminar tipo de documento externo"
+            title="Eliminar documento"
             onClick={handleDelete}
           >
             <Trash className="w-4 h-4 mr-2" />
             Eliminar
           </Button>
 
-          {/* Botón Salir */}
           <Button
             variant="default"
             size="icon"
@@ -324,95 +358,143 @@ export default function TiposDocumentoExternoMaster() {
         <TabsContent value="general" className="mt-4">
           <Card className="mb-6 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            {/* 1. Código Documento Externo (Primero) */}
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">
-                Código Documento Externo (*)
-              </label>
-              <Input
-                value={tipoDocExterno.codigoTipoDocumentoExterno ?? ""}
-                onChange={(e) =>
-                  setTipoDocExterno({
-                    ...tipoDocExterno,
-                    codigoTipoDocumentoExterno: e.target.value,
-                  })
-                }
-                placeholder="Código"
-                className={
-                  !tipoDocExterno.codigoTipoDocumentoExterno?.trim() && formError
-                    ? "border border-red-500"
-                    : ""
-                }
-              />
-              {formError && !tipoDocExterno.codigoTipoDocumentoExterno?.trim() && (
-                <span className="text-xs text-red-500 block mt-1">
-                  El código es obligatorio.
-                </span>
-              )}
-            </div>
+              {/* Código Documento */}
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Código Documento (*)
+                </label>
+                <Input
+                  value={tipoDocExterno.codigoTipoDocumentoExterno ?? ""}
+                  onChange={(e) =>
+                    setTipoDocExterno({
+                      ...tipoDocExterno,
+                      codigoTipoDocumentoExterno: e.target.value,
+                    })
+                  }
+                  placeholder="Código"
+                  className={
+                    !tipoDocExterno.codigoTipoDocumentoExterno?.trim() && formError
+                      ? "border border-red-500"
+                      : ""
+                  }
+                />
+                {formError && !tipoDocExterno.codigoTipoDocumentoExterno?.trim() && (
+                  <span className="text-xs text-red-500 block mt-1">
+                    El código es obligatorio.
+                  </span>
+                )}
+              </div>
 
-            {/* 2. Nombre Documento Externo (Segundo) */}
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">
-                Nombre Documento Externo (*)
-              </label>
-              <Input
-                value={tipoDocExterno.nombreTipoDocumentoExterno ?? ""}
-                onChange={(e) =>
-                  setTipoDocExterno({
-                    ...tipoDocExterno,
-                    nombreTipoDocumentoExterno: e.target.value,
-                  })
-                }
-                placeholder="Nombre"
-                className={
-                  !tipoDocExterno.nombreTipoDocumentoExterno?.trim() && formError
-                    ? "border border-red-500"
-                    : ""
-                }
-              />
-              {formError && !tipoDocExterno.nombreTipoDocumentoExterno?.trim() && (
-                <span className="text-xs text-red-500 block mt-1">
-                  El nombre es obligatorio.
-                </span>
-              )}
-            </div>
+              {/* Nombre Documento */}
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Nombre Documento (*)
+                </label>
+                <Input
+                  value={tipoDocExterno.nombreTipoDocumentoExterno ?? ""}
+                  onChange={(e) =>
+                    setTipoDocExterno({
+                      ...tipoDocExterno,
+                      nombreTipoDocumentoExterno: e.target.value,
+                    })
+                  }
+                  placeholder="Nombre"
+                  className={
+                    !tipoDocExterno.nombreTipoDocumentoExterno?.trim() && formError
+                      ? "border border-red-500"
+                      : ""
+                  }
+                />
+                {formError && !tipoDocExterno.nombreTipoDocumentoExterno?.trim() && (
+                  <span className="text-xs text-red-500 block mt-1">
+                    El nombre es obligatorio.
+                  </span>
+                )}
+              </div>
 
-            {/* 3. ID Tipo Documento ERP (Tercero y SELECT enlazado a idTipoDocumento) */}
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">
-                Tipo Documento ERP (*)
-              </label>
-              <select
-                className={`w-full p-2 text-sm border rounded-md bg-background focus:ring-2 focus:ring-primary ${
-                  !tipoDocExterno.idTipoDocumento && formError
-                    ? "border-red-500"
-                    : "border-input"
-                }`}
-                value={tipoDocExterno.idTipoDocumento || ""}
-                onChange={(e) =>
-                  setTipoDocExterno({
-                    ...tipoDocExterno,
-                    idTipoDocumento: Number(e.target.value),
-                  })
-                }
-              >
-                <option value="">Seleccione un tipo de documento...</option>
-                {tiposDocumento?.map((doc: ITipoDocumento) => (
-                  <option key={doc.idTipoDocumento ?? `doc-${doc.codigoDocumento}`} value={doc.idTipoDocumento}>
-                    {doc.nombreDocumento || "Sin nombre"}
-                  </option>
-                ))}
-              </select>
-              {formError && !tipoDocExterno.idTipoDocumento && (
-                <span className="text-xs text-red-500 block mt-1">
-                  Tipo Documento es obligatorio.
-                </span>
-              )}
-            </div>
-          </div>
+              {/* Tipo Documento */}
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Tipo Documento (*)
+                </label>
+                <select
+                  className={`w-full p-2 text-sm border rounded-md bg-background focus:ring-2 focus:ring-primary ${
+                    !tipoDocExterno.idTipoDocumento && formError
+                      ? "border-red-500"
+                      : "border-input"
+                  }`}
+                  value={tipoDocExterno.idTipoDocumento || ""}
+                  onChange={(e) =>
+                    setTipoDocExterno({
+                      ...tipoDocExterno,
+                      idTipoDocumento: Number(e.target.value),
+                    })
+                  }
+                >
+                  <option value="">Seleccione un tipo de documento...</option>
+                  {tiposDocumento?.map((doc: ITipoDocumento) => (
+                    <option key={doc.idTipoDocumento ?? `doc-${doc.codigoDocumento}`} value={doc.idTipoDocumento}>
+                      {doc.nombreDocumento || "Sin nombre"}
+                    </option>
+                  ))}
+                </select>
+                {formError && !tipoDocExterno.idTipoDocumento && (
+                  <span className="text-xs text-red-500 block mt-1">
+                    Tipo Documento es obligatorio.
+                  </span>
+                )}
+              </div>
 
-            {/* Grid para las Notas FE (notaFe1Externo a notaFe5Externo) */}
+               {/* Forma de Pago */}
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Forma de Pago
+                </label>
+                <select
+                  className="w-full p-2 text-sm border border-input rounded-md bg-background focus:ring-2 focus:ring-primary"
+                  value={tipoDocExterno.idFormaPago ?? ""}
+                  onChange={(e) =>
+                    setTipoDocExterno({
+                      ...tipoDocExterno,
+                      idFormaPago: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">Seleccione una forma de pago</option>
+                  {formasPago?.map((fp: IFormasPago) => (
+                    <option key={fp.idFormaPago} value={fp.idFormaPago}>
+                      {fp.nombreFormaPago || fp.codigoFormaPago || `Forma ${fp.idFormaPago}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Consecutivo */}
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Consecutivo
+                </label>
+                <select
+                  className="w-full p-2 text-sm border border-input rounded-md bg-background focus:ring-2 focus:ring-primary"
+                  value={tipoDocExterno.idConsecutivo ?? ""}
+                  onChange={(e) =>
+                    setTipoDocExterno({
+                      ...tipoDocExterno,
+                      idConsecutivo: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">Seleccione un consecutivo</option>
+                  {consecutivos?.map((c: IConsecutivos) => (
+                    <option key={c.idConsecutivo} value={c.idConsecutivo}>
+                      {c.nombreConsecutivo || c.prefijoConsecutivo || `Consecutivo ${c.idConsecutivo}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>  
+
+            {/* Grid para las Notas FE */}
             <div className="border-t pt-4 mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
@@ -519,7 +601,7 @@ export default function TiposDocumentoExternoMaster() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar eliminación</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Está seguro que desea eliminar el tipo de documento externo "
+              ¿Está seguro que desea eliminar el tipo de documento "
               {tipoDocExterno.nombreTipoDocumentoExterno}"? Esta acción no se puede
               deshacer.
             </AlertDialogDescription>

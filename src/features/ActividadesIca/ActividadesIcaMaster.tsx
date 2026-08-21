@@ -192,7 +192,7 @@ export default function ActividadesIcaMaster() {
       {/* Barra de Acciones del Formulario */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Formulario Actividades ICA</h2>
+          <h2 className="text-2xl font-bold">Actividades ICA</h2>
           <p className="text-muted-foreground text-sm">
             Consulta y gestión de actividades económicas e impuesto de ICA
           </p>

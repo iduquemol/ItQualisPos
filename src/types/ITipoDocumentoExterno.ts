@@ -10,6 +10,10 @@ export interface ITipoDocumentoExterno {
   notaFe3Externo: string | null;
   notaFe4Externo: string | null;
   notaFe5Externo: string | null;
+
+  idConsecutivo  : number | null;
+  idFormaPago: number | null;
+  tipoDocumentoActivo: boolean | null;
   
   fechaGrabacionDocumentoExterno: string | null;
 }

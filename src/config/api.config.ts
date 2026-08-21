@@ -43,6 +43,10 @@ export const API_CONFIG = {
         RESOLUCIONES: '/resoluciones',
         TIPOS_DOCUMENTO_EXTERNO: '/tiposdocumentoexterno',
         ACTIVIDADES_ICA: '/actividadesIca',
+        RESOLUCIONES_SINCRONIZAR_EXTERNAS: '/sincronizar-resoluciones-externas',
+        FORMAS_PAGO: '/FormasPago/formasPago',
+        CONSECUTIVOS: '/Consecutivos/consecutivos',
+        
     },
     getUrl: (endpoint: string) => {
         const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);
