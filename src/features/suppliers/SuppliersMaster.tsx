@@ -48,11 +48,11 @@ export default function SuppliersMaster() {
         nombreDepartamento: null,
         idMunicipio: 0,
         nombreMunicipio: null,
-        terceroActivo: false,
+        terceroActivo: true,
         terceroCliente: false,
         terceroEmpleado: false,
         terceroProveedor: false,
-        terceroGeneral: false,
+        terceroGeneral: true,
         idTipoRegimen: 0,
         idListaPreciosTercero: 0,
         retenedorIva: false,
@@ -112,6 +112,12 @@ export default function SuppliersMaster() {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [isValidandoTercero, setIsValidandoTercero] = useState(false);
 
+    const handleSearchDialogChange = (isOpen: boolean) => {
+        setOpenDialog(isOpen);
+        if (!isOpen) {
+            setSearch("");
+        }
+    };
 
     const handleSelectTercero = (terc: ITercero) => {
         setSelectedTercero(terc);
@@ -148,6 +154,7 @@ export default function SuppliersMaster() {
             tarifaIca: terc.tarifaIca,
             responsabilidadesTerceros: terc.responsabilidadesTerceros || [],
         });
+        setSearch("");
         setOpenDialog(false);
     };
     // Editar responsabilidad
@@ -329,11 +336,11 @@ export default function SuppliersMaster() {
             nombreDepartamento: null,
             idMunicipio: 0,
             nombreMunicipio: null,
-            terceroActivo: false,
+            terceroActivo: true,
             terceroCliente: false,
             terceroProveedor: false,
             terceroEmpleado: false,
-            terceroGeneral: false,
+            terceroGeneral: true,
             idTipoRegimen: 0,
             idListaPreciosTercero: 0,
             retenedorIva: false,
@@ -708,8 +715,46 @@ export default function SuppliersMaster() {
         fetchResponsabilidadesFiscales();
         fetchTiposRegimen();
         fetchListaPrecios();
-        fetchSuppliers();
     }, []);
+
+    useEffect(() => {
+        let isCurrentSearch = true;
+
+        if (search.length === 0) {
+            fetchSuppliers();
+            return () => {
+                isCurrentSearch = false;
+            };
+        }
+
+        if (search.length < 5) return;
+
+        const timeoutId = window.setTimeout(async () => {
+            try {
+                setSupplierError(null);
+                setIsLoadingSuppliers(true);
+                const data = await TerceroService.search(search);
+
+                if (isCurrentSearch) {
+                    setSuppliers(data);
+                }
+            } catch (error) {
+                console.error('Error al buscar terceros:', error);
+                if (isCurrentSearch) {
+                    setSupplierError('Error al buscar los terceros');
+                }
+            } finally {
+                if (isCurrentSearch) {
+                    setIsLoadingSuppliers(false);
+                }
+            }
+        }, 400);
+
+        return () => {
+            isCurrentSearch = false;
+            window.clearTimeout(timeoutId);
+        };
+    }, [search]);
 
     useEffect(() => {
         if (!tercero.idMunicipio || tercero.idMunicipio === 0) {
@@ -751,7 +796,7 @@ export default function SuppliersMaster() {
 
 
                     {/* Dialog de búsqueda */}
-                    <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+                    <Dialog open={openDialog} onOpenChange={handleSearchDialogChange}>
                         <DialogTrigger asChild>
                             <Button variant="outline" size="icon" title="Buscar tercero">
                                 <Search className="w-5 h-5" />
@@ -779,15 +824,7 @@ export default function SuppliersMaster() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {suppliers
-                                            .filter(
-                                                supplier =>
-                                                    supplier.numeroIdentificacion?.toLowerCase().includes(search.toLowerCase()) ||
-                                                    supplier.razonSocial?.toLowerCase().includes(search.toLowerCase()) ||
-                                                    supplier.primerNombre?.toLowerCase().includes(search.toLowerCase()) ||
-                                                    supplier.primerApellido?.toLowerCase().includes(search.toLowerCase())
-                                            )
-                                            .map((supplier) => (
+                                        {suppliers.map((supplier) => (
                                                 <TableRow
                                                     key={supplier.idTercero}
                                                     className="cursor-pointer hover:bg-primary/10"
@@ -798,7 +835,7 @@ export default function SuppliersMaster() {
                                                     <TableCell>{supplier.primerApellido}</TableCell>
                                                     <TableCell>{supplier.razonSocial}</TableCell>
                                                 </TableRow>
-                                            ))}
+                                                ))}
                                     </TableBody>
                                 </Table>
                                 {isLoadingSuppliers && (
@@ -1145,103 +1182,6 @@ export default function SuppliersMaster() {
                                     )}
                                 </div>
                             </div>
-                            <div className="md:col-span-4 grid grid-cols-3 gap-4 mt-4">
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Iva</label>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={tercero.retenedorIva || false}
-                                            onChange={e => setTercero({ ...tercero, retenedorIva: e.target.checked })}
-                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                        />
-                                        <span className="text-sm text-muted-foreground">
-                                            {tercero.retenedorIva ? "Si" : "No"}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Renta</label>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={tercero.retenedorRenta || false}
-                                            onChange={e => setTercero({ ...tercero, retenedorRenta: e.target.checked })}
-                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                        />
-                                        <span className="text-sm text-muted-foreground">
-                                            {tercero.retenedorRenta ? "Si" : "No"}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Retenedor Ica</label>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={tercero.retenedorIca || false}
-                                            onChange={e => setTercero({ ...tercero, retenedorIca: e.target.checked })}
-                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                        />
-                                        <span className="text-sm text-muted-foreground">
-                                            {tercero.retenedorIca ? "Si" : "No"}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="md:col-span-4 grid grid-cols-3 gap-4 mt-2">
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Declara Renta</label>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={tercero.declaraRenta || false}
-                                            onChange={e => setTercero({ ...tercero, declaraRenta: e.target.checked })}
-                                            className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-                                        />
-                                        <span className="text-sm text-muted-foreground">
-                                            {tercero.declaraRenta ? "Si" : "No"}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <label className="text-xs text-muted-foreground min-w-32">Tarifa Ica</label>
-                                    <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        pattern="[0-9]*[.,]?[0-9]*"
-                                        value={tarifaIcaStrRef.current || (tercero.tarifaIca === 0 ? "" : (tercero.tarifaIca ?? "").toString())}
-                                        onChange={e => {
-                                            const rawValue = e.target.value;
-
-                                            if (/^[0-9]*[.,]?[0-9]*$/.test(rawValue)) {
-                                                tarifaIcaStrRef.current = rawValue;
-
-                                                if (rawValue === "") {
-                                                    tarifaIcaStrRef.current = "";
-                                                    setTercero({
-                                                        ...tercero,
-                                                        tarifaIca: 0,
-                                                    });
-                                                    return;
-                                                }
-
-                                                const normalized = rawValue.replace(',', '.');
-                                                const parsed = parseFloat(normalized);
-                                                const numericValue = Number.isNaN(parsed) ? 0 : parsed;
-
-                                                setTercero({
-                                                    ...tercero,
-                                                    tarifaIca: numericValue,
-                                                });
-                                            }
-                                        }}
-                                        placeholder="Tarifa Ica"
-                                        className="w-48"
-                                    />
-                                </div>
-                                <div />
-                            </div>
                             <div className="md:col-span-4 grid grid-cols-4 gap-4 mt-4">
                                 <div>
                                     <label className="block text-xs text-muted-foreground mb-1">Estado</label>
@@ -1363,19 +1303,112 @@ export default function SuppliersMaster() {
                                         registroMercantil: e.target.value,
                                         })
                                     }
-                                    placeholder="Número de registro mercantil"
-                                    className={
-                                        !tercero.registroMercantil?.trim() && formError
-                                        ? "border border-red-500"
-                                        : ""
-                                    }
+                                    placeholder="Número de registro mercantil"                                
                                     />
                                 </div>
                             </div>
                         </div>
                     </Card>
                 </div>
+                <Card className="mb-6 p-4">
+                    <div className="md:col-span-4 grid grid-cols-3 gap-4 mt-4">
+                        <div className="flex items-center gap-4">
+                            <label className="text-xs text-muted-foreground min-w-32">Retenedor Iva</label>
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={tercero.retenedorIva || false}
+                                    onChange={e => setTercero({ ...tercero, retenedorIva: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {tercero.retenedorIva ? "Si" : "No"}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <label className="text-xs text-muted-foreground min-w-32">Retenedor Renta</label>
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={tercero.retenedorRenta || false}
+                                    onChange={e => setTercero({ ...tercero, retenedorRenta: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {tercero.retenedorRenta ? "Si" : "No"}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <label className="text-xs text-muted-foreground min-w-32">Retenedor Ica</label>
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={tercero.retenedorIca || false}
+                                    onChange={e => setTercero({ ...tercero, retenedorIca: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {tercero.retenedorIca ? "Si" : "No"}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="md:col-span-4 grid grid-cols-3 gap-4 mt-2">
+                        <div className="flex items-center gap-4">
+                            <label className="text-xs text-muted-foreground min-w-32">Declara Renta</label>
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    checked={tercero.declaraRenta || false}
+                                    onChange={e => setTercero({ ...tercero, declaraRenta: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {tercero.declaraRenta ? "Si" : "No"}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <label className="text-xs text-muted-foreground min-w-32">Tarifa Ica</label>
+                            <Input
+                                type="text"
+                                inputMode="decimal"
+                                pattern="[0-9]*[.,]?[0-9]*"
+                                value={tarifaIcaStrRef.current || (tercero.tarifaIca === 0 ? "" : (tercero.tarifaIca ?? "").toString())}
+                                onChange={e => {
+                                    const rawValue = e.target.value;
 
+                                    if (/^[0-9]*[.,]?[0-9]*$/.test(rawValue)) {
+                                        tarifaIcaStrRef.current = rawValue;
+
+                                        if (rawValue === "") {
+                                            tarifaIcaStrRef.current = "";
+                                            setTercero({
+                                                ...tercero,
+                                                tarifaIca: 0,
+                                            });
+                                            return;
+                                        }
+
+                                        const normalized = rawValue.replace(',', '.');
+                                        const parsed = parseFloat(normalized);
+                                        const numericValue = Number.isNaN(parsed) ? 0 : parsed;
+
+                                        setTercero({
+                                            ...tercero,
+                                            tarifaIca: numericValue,
+                                        });
+                                    }
+                                }}
+                                placeholder="Tarifa Ica"
+                                className="w-48"
+                            />
+                        </div>
+                    </div>
+                </Card>
+                                    
             {/* Tabla de responsabilidades */}
             <Card className="overflow-x-auto border-2 border-border bg-muted/40 shadow-sm">
                 <table className="min-w-full text-sm">

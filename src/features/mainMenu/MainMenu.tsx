@@ -11,7 +11,7 @@ const menuItems = [
   { label: "Terceros", icon: "👥", color: "bg-blue-100", route: "/terceros" },
   { label: "Empresas", icon: "🏢", color: "bg-yellow-100", route: "/empresas" },
   { label: "Resoluciones", icon: "📜", color: "bg-purple-100", route: "/resoluciones" },
-  { label: "Documentos Externos", icon: "📄", color: "bg-pink-100", route: "/documentos-externos" },
+  { label: "Tipos de Documentos", icon: "📄", color: "bg-pink-100", route: "/documentos-externos" },
   { label: "Categorías", icon: "🏷️", color: "bg-pink-100", route: "/categories" },
   { label: "Parámetros de Venta", icon: "⚙️", color: "bg-gray-100", route: "/parametros-venta" },
   { label: "Actividades ICA", icon: "🏭", color: "bg-orange-100", route: "/actividades-ica" }

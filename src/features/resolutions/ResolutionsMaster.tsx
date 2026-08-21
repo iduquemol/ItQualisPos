@@ -16,29 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Check,
-  Pencil,
-  Search,
-  X,
-  CircleX,
-  Save,
-  Trash,
-  Plus,
-} from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Search, X, Package } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package } from "lucide-react";
 import { toast } from "sonner";
 import { IResoluciones } from "@/types/IResoluciones";
 import { ResolucionesService } from "@/services/ResolucionesService";
@@ -47,11 +28,11 @@ export default function ResolutionsMaster() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
 
-  // helper para normalizar fechas a YYYY-MM-DD (valor que acepta el <input type="date"/>)
+  // Helper para normalizar fechas a YYYY-MM-DD
   const formatDateInput = (date: string | Date | null | undefined): string =>
     date ? new Date(date).toISOString().split("T")[0] : "";
 
-  // Estado para los campos iniciales del Tipo de Documento Externo
+  // Estado de la resolución seleccionada
   const [resoluciones, setResoluciones] = useState<IResoluciones>({
     idResolucion: 0,
     numeroResolucion: "",
@@ -70,161 +51,51 @@ export default function ResolutionsMaster() {
   });
 
   const [openDialog, setOpenDialog] = useState(false);
-  const [selectedResoluciones, setSelectedResoluciones] =
-    useState<IResoluciones | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [resolutions, setResolutions] = useState<IResoluciones[]>([]);
   const [isLoadingResolutions, setIsLoadingResolutions] = useState(true);
   const [resolutionsError, setResolutionsError] = useState<string | null>(null);
 
   const handleSelectResoluciones = (resolucion: IResoluciones) => {
-    setSelectedResoluciones(resolucion);
-    setResoluciones({
-      ...resolucion,
-      idResolucion: resolucion.idResolucion,
-      numeroResolucion: resolucion.numeroResolucion,
-      nombreResolucion: resolucion.nombreResolucion,
-      claveTecnica: resolucion.claveTecnica,
-      fechaAutorizacion: resolucion.fechaAutorizacion,
-      vigenciaMeses: resolucion.vigenciaMeses,
-      fechaInicial: resolucion.fechaInicial,
-      fechaFinal: resolucion.fechaFinal,
-      prefijoResolucion: resolucion.prefijoResolucion,
-      numeroInicialResolucion: resolucion.numeroInicialResolucion,
-      numeroFinalResolucion: resolucion.numeroFinalResolucion,
-      numeroActual: resolucion.numeroActual,
-      resolucionActiva: resolucion.resolucionActiva,
-      idTipoDocumentoDian: resolucion.idTipoDocumentoDian,
-    });
+    setResoluciones({ ...resolucion });
     setOpenDialog(false);
   };
 
-  const handleSaveResoluciones = async () => {
-    // Validación de campos obligatorios
-    if (!resoluciones.numeroResolucion?.trim()) {
-      setFormError("El número de resolución es obligatorio.");
-      return;
-    }
-    setFormError(null);
-    try {
-      if (resoluciones.idResolucion) {
-        // Actualizar resolución existente
-        await ResolucionesService.update(resoluciones);
-        console.log("Resolución actualizada:", resoluciones);
-        setSuccessMessage("Resolución actualizada correctamente");
-        setShowSuccessDialog(true);
-      } else {
-        const result = await ResolucionesService.create(resoluciones);
-        console.log("Resolución guardada:", result);
-        setSuccessMessage("Resolución guardada correctamente");
-        setShowSuccessDialog(true);
-      }
-      fetchResolutions();
-    } catch (error) {
-      console.error("Error al guardar la resolución:", error);
-    }
-  };
-
-  const handleNew = async () => {
-    setResoluciones({
-      idResolucion: 0,
-      numeroResolucion: "",
-      nombreResolucion: "",
-      claveTecnica: "",
-      fechaAutorizacion: null,
-      vigenciaMeses: 0,
-      fechaInicial: null,
-      fechaFinal: null,
-      prefijoResolucion: "",
-      numeroInicialResolucion: 0,
-      numeroFinalResolucion: 0,
-      numeroActual: 0,
-      resolucionActiva: false,
-      idTipoDocumentoDian: 0,
-    });
-  };
-
-  const handleDeleteResoluciones = async () => {
-    // Verificar que hay un tipo de documento externo seleccionado para eliminar
-    if (!resoluciones.idResolucion) {
-      toast.error("No hay una resolución seleccionada para eliminar", {
-        position: "top-center",
-      });
-      return;
-    }
-
-    setShowDeleteDialog(true);
-  };
-
-  // Agregar esta nueva función para confirmar la eliminación
-  const confirmDeleteResoluciones = async () => {
-    try {
-      if (resoluciones.idResolucion === null) {
-        toast.error("No se puede eliminar: ID de resolución no válido", {
-          position: "top-center",
-        });
-        setShowDeleteDialog(false);
-        return;
-      }
-      await ResolucionesService.delete(resoluciones.idResolucion);
-      console.log("Resolución eliminada:", resoluciones.idResolucion);
-      toast.success("Resolución eliminada correctamente", {
-        position: "top-center",
-      });
-
-      // Limpiar el formulario después de eliminar
-      setResoluciones({
-        idResolucion: 0,
-        numeroResolucion: "",
-        nombreResolucion: "",
-        claveTecnica: "",
-        fechaAutorizacion: null,
-        vigenciaMeses: 0,
-        fechaInicial: null,
-        fechaFinal: null,
-        prefijoResolucion: "",
-        numeroInicialResolucion: 0,
-        numeroFinalResolucion: 0,
-        numeroActual: 0,
-        resolucionActiva: false,
-        idTipoDocumentoDian: 0,
-      });
-      setSelectedResoluciones(null);
-
-      // Recargar la lista de tipos de documentos externos
-      fetchResolutions();
-
-      // Cerrar el diálogo
-      setShowDeleteDialog(false);
-    } catch (error) {
-      console.error("Error al eliminar la resolución:", error);
-      toast.error("Error al eliminar la resolución", {
-        position: "top-center",
-      });
-      setShowDeleteDialog(false);
-    }
-  };
-
+  // Función para obtener la lista de resoluciones locales
   const fetchResolutions = async () => {
     try {
       setResolutionsError(null);
       setIsLoadingResolutions(true);
       const data = await ResolucionesService.getAll();
       setResolutions(data);
+
+      // Si hay datos, carga el primero por defecto en el formulario
+      if (data && data.length > 0) {
+        setResoluciones(data[0]);
+      }
     } catch (error) {
       console.error("Error:", error);
-      setResolutionsError("Error al cargar los tipos de documentos externos");
+      setResolutionsError("Error al cargar las resoluciones");
     } finally {
       setIsLoadingResolutions(false);
     }
   };
 
-  // Cargar data al iniciar el componente
+  // Sincronización automática de la API externa y posterior carga de datos
   useEffect(() => {
-    fetchResolutions();
+    const initializeMaster = async () => {
+      try {
+        setIsLoadingResolutions(true);
+        await ResolucionesService.sincronizarExternas();
+        toast.success("Sincronización con API externa completada");
+      } catch (error) {
+        console.error("Error al sincronizar con proveedor externo:", error);
+        toast.error("No se pudo sincronizar con el proveedor externo");
+      } finally {
+        await fetchResolutions();
+      }
+    };
+
+    initializeMaster();
   }, []);
 
   return (
@@ -247,20 +118,10 @@ export default function ResolutionsMaster() {
         <div>
           <h2 className="text-2xl font-bold">Maestro de Resoluciones</h2>
           <p className="text-muted-foreground text-sm">
-            Consulta y gestión de resoluciones
+            Consulta de resoluciones
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="default"
-            size="icon"
-            title="Nueva resolución"
-            onClick={() => handleNew()}
-            className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
-          >
-            <Plus className="w-5 h-5" />
-          </Button>
-
           {/* Dialog de búsqueda */}
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
             <DialogTrigger asChild>
@@ -272,7 +133,6 @@ export default function ResolutionsMaster() {
               <DialogHeader>
                 <DialogTitle>Buscar Resolución</DialogTitle>
               </DialogHeader>
-              {/* Input de búsqueda */}
               <Input
                 className="mb-4"
                 placeholder="Buscar por código o nombre..."
@@ -297,7 +157,7 @@ export default function ResolutionsMaster() {
                             .includes(search.toLowerCase()) ||
                           resolution.nombreResolucion
                             ?.toLowerCase()
-                            .includes(search.toLowerCase()),
+                            .includes(search.toLowerCase())
                       )
                       .map((resolution) => (
                         <TableRow
@@ -314,7 +174,7 @@ export default function ResolutionsMaster() {
                 </Table>
                 {isLoadingResolutions && (
                   <div className="text-center text-muted-foreground py-4">
-                    Cargando...
+                    Cargando resoluciones...
                   </div>
                 )}
                 {resolutionsError && (
@@ -328,27 +188,9 @@ export default function ResolutionsMaster() {
 
           <Button
             variant="default"
-            title="Guardar tipo de documento externo"
-            onClick={handleSaveResoluciones}
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Guardar
-          </Button>
-          <Button
-            variant="default"
-            title="Eliminar tipo de documento externo"
-            onClick={handleDeleteResoluciones}
-          >
-            <Trash className="w-4 h-4 mr-2" />
-            Eliminar
-          </Button>
-          <Button
-            variant="default"
             size="icon"
             title="Salir"
-            onClick={() => {
-              navigate("/main-menu");
-            }}
+            onClick={() => navigate("/main-menu")}
             className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
           >
             <X className="w-5 h-5" />
@@ -356,7 +198,7 @@ export default function ResolutionsMaster() {
         </div>
       </div>
 
-      {/* Formulario simplificado */}
+      {/* Formulario principal (Modo lectura) */}
       <Tabs defaultValue="general" className="w-full">
         <TabsContent value="general" className="mt-4">
           <Card className="mb-6 p-4">
@@ -367,25 +209,9 @@ export default function ResolutionsMaster() {
                 </label>
                 <Input
                   value={resoluciones.numeroResolucion ?? ""}
-                  onChange={(e) =>
-                    setResoluciones({
-                      ...resoluciones,
-                      numeroResolucion: e.target.value,
-                    })
-                  }
-                  placeholder="Número de Resolución"
-                  required
-                  className={
-                    !resoluciones.numeroResolucion?.trim() && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
-                {formError && !resoluciones.numeroResolucion?.trim() && (
-                  <span className="text-xs text-red-500">
-                    El número de resolución es obligatorio.
-                  </span>
-                )}
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
@@ -393,25 +219,9 @@ export default function ResolutionsMaster() {
                 </label>
                 <Input
                   value={resoluciones.nombreResolucion ?? ""}
-                  onChange={(e) =>
-                    setResoluciones({
-                      ...resoluciones,
-                      nombreResolucion: e.target.value,
-                    })
-                  }
-                  placeholder="Nombre"
-                  required
-                  className={
-                    !resoluciones.nombreResolucion?.trim() && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
-                {formError && !resoluciones.nombreResolucion?.trim() && (
-                  <span className="text-xs text-red-500">
-                    El nombre es obligatorio.
-                  </span>
-                )}
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
@@ -419,45 +229,19 @@ export default function ResolutionsMaster() {
                 </label>
                 <Input
                   value={resoluciones.claveTecnica ?? ""}
-                  onChange={(e) =>
-                    setResoluciones({
-                      ...resoluciones,
-                      claveTecnica: e.target.value,
-                    })
-                  }
-                  placeholder="Clave Técnica"
-                  required
-                  className={
-                    !resoluciones.claveTecnica?.trim() && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
-                {formError && !resoluciones.claveTecnica?.trim() && (
-                  <span className="text-xs text-red-500">
-                    La clave técnica es obligatoria.
-                  </span>
-                )}
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Vigencia
+                  Vigencia (meses)
                 </label>
                 <Input
                   type="number"
                   value={resoluciones.vigenciaMeses || ""}
-                  onChange={(e) =>
-                    setResoluciones({
-                      ...resoluciones,
-                      vigenciaMeses: Number(e.target.value),
-                    })
-                  }
-                  placeholder="Vigencia en meses"
-                  className={
-                    !resoluciones.vigenciaMeses && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
               <div>
@@ -466,13 +250,8 @@ export default function ResolutionsMaster() {
                 </label>
                 <Input
                   value={resoluciones.prefijoResolucion ?? ""}
-                  onChange={(e) =>
-                    setResoluciones({
-                      ...resoluciones,
-                      prefijoResolucion: e.target.value,
-                    })
-                  }
-                  placeholder="Prefijo"
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
               <div>
@@ -482,18 +261,8 @@ export default function ResolutionsMaster() {
                 <Input
                   type="number"
                   value={resoluciones.numeroInicialResolucion || ""}
-                  onChange={(e) =>
-                    setResoluciones({
-                      ...resoluciones,
-                      numeroInicialResolucion: Number(e.target.value),
-                    })
-                  }
-                  placeholder="Número Inicial"
-                  className={
-                    !resoluciones.numeroInicialResolucion && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
               <div>
@@ -503,18 +272,8 @@ export default function ResolutionsMaster() {
                 <Input
                   type="number"
                   value={resoluciones.numeroFinalResolucion || ""}
-                  onChange={(e) =>
-                    setResoluciones({
-                      ...resoluciones,
-                      numeroFinalResolucion: Number(e.target.value),
-                    })
-                  }
-                  placeholder="Número Final"
-                  className={
-                    !resoluciones.numeroFinalResolucion && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
               <div>
@@ -524,18 +283,8 @@ export default function ResolutionsMaster() {
                 <Input
                   type="number"
                   value={resoluciones.numeroActual || ""}
-                  onChange={(e) =>
-                    setResoluciones({
-                      ...resoluciones,
-                      numeroActual: Number(e.target.value),
-                    })
-                  }
-                  placeholder="Número Actual"
-                  className={
-                    !resoluciones.numeroActual && formError
-                      ? "border border-red-500"
-                      : ""
-                  }
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
               <div className="flex items-center gap-4">
@@ -546,16 +295,11 @@ export default function ResolutionsMaster() {
                   <input
                     type="checkbox"
                     checked={resoluciones.resolucionActiva || false}
-                    onChange={(e) =>
-                      setResoluciones({
-                        ...resoluciones,
-                        resolucionActiva: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                    disabled
+                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded cursor-not-allowed"
                   />
                   <span className="text-sm text-muted-foreground">
-                    {resoluciones.resolucionActiva ? "Si" : "No"}
+                    {resoluciones.resolucionActiva ? "Sí" : "No"}
                   </span>
                 </div>
               </div>
@@ -567,27 +311,9 @@ export default function ResolutionsMaster() {
                   <Input
                     type="date"
                     value={formatDateInput(resoluciones.fechaAutorizacion)}
-                    onChange={(e) =>
-                      setResoluciones({
-                        ...resoluciones,
-                        fechaAutorizacion: e.target.value,
-                      })
-                    }
-                    placeholder="Fecha de autorización"
-                    required
-                    className={
-                      !formatDateInput(resoluciones.fechaAutorizacion) &&
-                      formError
-                        ? "border border-red-500"
-                        : ""
-                    }
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
                   />
-                  {formError &&
-                    !formatDateInput(resoluciones.fechaAutorizacion) && (
-                      <span className="text-xs text-red-500">
-                        La fecha de autorización es obligatoria.
-                      </span>
-                    )}
                 </div>
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">
@@ -596,13 +322,8 @@ export default function ResolutionsMaster() {
                   <Input
                     type="date"
                     value={formatDateInput(resoluciones.fechaInicial)}
-                    onChange={(e) =>
-                      setResoluciones({
-                        ...resoluciones,
-                        fechaInicial: e.target.value,
-                      })
-                    }
-                    placeholder="Fecha inicial"
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -612,13 +333,8 @@ export default function ResolutionsMaster() {
                   <Input
                     type="date"
                     value={formatDateInput(resoluciones.fechaFinal)}
-                    onChange={(e) =>
-                      setResoluciones({
-                        ...resoluciones,
-                        fechaFinal: e.target.value,
-                      })
-                    }
-                    placeholder="Fecha final"
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -626,46 +342,6 @@ export default function ResolutionsMaster() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* AlertDialog de éxito */}
-      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¡Todo ha salido bien!</AlertDialogTitle>
-            <AlertDialogDescription>{successMessage}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
-              Aceptar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* AlertDialog de eliminación */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar eliminación</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Está seguro que desea eliminar el tipo de documento externo "
-              {resoluciones.nombreResolucion}"? Esta acción no se puede
-              deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-            >
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={confirmDeleteResoluciones}>
-              Eliminar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

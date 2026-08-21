@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Check, Pencil, Search, X, CircleX, Trash, Save, Plus } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -15,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { IProducto } from '@/types/IProducto';
 import { ICategorias } from '@/types/ICategorias';
 import { Package } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { iconMap } from '@/types/ICategoryIcons';
 import { CategoriasService } from '@/services/CategoryService';
 import { IUnidadDeMedida } from '@/types/IUnidadDeMedida';
 import { UnidadDeMedidaService } from '@/services/UnidadDeMedidaService';
@@ -32,6 +35,7 @@ import { ITarifasPorTributo } from "@/types/ITarifasPorTributo";
 import { TerceroService } from "@/services/TerceroService";
 import { ITerceroProveedor } from "@/types/ITerceroProveedor";
 
+type ItemCategory = ICategorias & { icon: LucideIcon };
 
 export default function ItemsMaster() {
     const navigate = useNavigate();
@@ -72,7 +76,10 @@ export default function ItemsMaster() {
         tributosProducto: [],
         preciosProducto: [],
     });
-    const [categories, setCategories] = useState<ICategorias[]>([]);
+    const [categories, setCategories] = useState<ItemCategory[]>([]);
+    const selectedCategory = categories.find(
+        category => category.idCategoria === producto.idCategoria
+    );
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
     const [categoryError, setCategoryError] = useState<string | null>(null);
     const [unidadesDeMedida, setUnidadesDeMedida] = useState<IUnidadDeMedida[]>([]);
@@ -511,16 +518,20 @@ export default function ItemsMaster() {
             setCategoryError(null);
             setIsLoadingCategories(true);
             const data = await CategoriasService.getAll();
+            const categoriesWithIcons = data.map((category) => ({
+                ...category,
+                icon: iconMap[category.iconoCategoria ?? ''] ?? Package,
+            }));
             setCategories([
-                { idCategoria: 0, nombreCategoria: "Seleccione una categoría", iconoCategoria: "🏪", codigoCategoria: "0" }, // Categoría por defecto
-                ...data
+                { idCategoria: 0, nombreCategoria: "Seleccione una categoría", iconoCategoria: "Package", codigoCategoria: "0", icon: Package },
+                ...categoriesWithIcons
             ]);
         } catch (error) {
             console.error('Error:', error);
             setCategoryError('Error al cargar las categorías');
             // Categorías por defecto en caso de error
             setCategories([
-                { idCategoria: 0, nombreCategoria: "Seleccione una categoría", iconoCategoria: "🏪", codigoCategoria: "0" },
+                { idCategoria: 0, nombreCategoria: "Seleccione una categoría", iconoCategoria: "Package", codigoCategoria: "0", icon: Package },
             ]);
         } finally {
             setIsLoadingCategories(false);
@@ -868,22 +879,38 @@ export default function ItemsMaster() {
                         </div>
                         <div>
                             <label className="block text-xs text-muted-foreground mb-1">Categoría</label>
-                            <select
-                                className={
-                                    (!producto.idCategoria || producto.idCategoria === 0) && formError
-                                        ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
-                                        : "w-full rounded border px-3 py-2 text-sm bg-background"
-                                }
-                                value={producto.idCategoria}
-                                onChange={e => setProducto({ ...producto, idCategoria: Number(e.target.value) })}
-                                required
+                            <Select
+                                value={producto.idCategoria?.toString() ?? "0"}
+                                onValueChange={value => setProducto({ ...producto, idCategoria: Number(value) })}
                             >
-                                {categories.map(cat => (
-                                    <option key={cat.idCategoria ?? 0} value={cat.idCategoria ?? 0}>
-                                        {cat.iconoCategoria} {cat.nombreCategoria}
-                                    </option>
-                                ))}
-                            </select>
+                                <SelectTrigger
+                                    className={
+                                        (!producto.idCategoria || producto.idCategoria === 0) && formError
+                                            ? "w-full border-red-500"
+                                            : "w-full"
+                                    }
+                                >
+                                    <SelectValue placeholder="Seleccione una categoría" />
+                                    
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {categories.map(category => {
+                                        const CategoryIcon = category.icon;
+
+                                        return (
+                                            <SelectItem
+                                                key={category.idCategoria ?? 0}
+                                                value={(category.idCategoria ?? 0).toString()}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <CategoryIcon className="h-4 w-4" />
+                                                    <span>{category.nombreCategoria}</span>
+                                                </div>
+                                            </SelectItem>
+                                        );
+                                    })}
+                                </SelectContent>
+                            </Select>
                             {formError && (!producto.idCategoria || producto.idCategoria === 0) && (
                                 <span className="text-xs text-red-500">La categoría es obligatoria.</span>
                             )}

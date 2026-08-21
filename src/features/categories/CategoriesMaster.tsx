@@ -31,6 +31,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ICategorias } from "@/types/ICategorias";
+import { CATEGORY_ICONS } from "@/types/ICategoryIcons";
 import { CategoriasService } from "@/services/CategoryService";
 import { TributoService } from '@/services/TributoService';
 import { ITarifasPorTributo } from '@/types/ITarifasPorTributo';
@@ -47,6 +48,10 @@ export default function CategoriesMaster() {
     iconoCategoria: "",
     idTarifaTributo: null,
   });
+  const selectedCategoryIcon = CATEGORY_ICONS.find(
+    (categoryIcon) => categoryIcon.id === categoria.iconoCategoria
+  );
+  const SelectedCategoryIcon = selectedCategoryIcon?.icon;
 
   const [openDialog, setOpenDialog] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -256,7 +261,6 @@ export default function CategoriesMaster() {
         <TabsContent value="general" className="mt-4">
           <Card className="mb-6 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* 1. Código */}
                 <div>
                 <label className="block text-xs text-muted-foreground mb-1">
                     Código Categoría (*)
@@ -269,8 +273,7 @@ export default function CategoriesMaster() {
                     placeholder="Código de la categoría"
                 />
                 </div>
-
-                {/* 2. Nombre */}
+             
                 <div>
                 <label className="block text-xs text-muted-foreground mb-1">
                     Nombre Categoría (*)
@@ -283,22 +286,35 @@ export default function CategoriesMaster() {
                     placeholder="Nombre de la categoría"
                 />
                 </div>
-
-                {/* 3. Ícono */}
+                
                 <div>
                 <label className="block text-xs text-muted-foreground mb-1">
                     Ícono Categoría
                 </label>
-                <Input
+                <Select
                     value={categoria.iconoCategoria ?? ""}
-                    onChange={(e) =>
-                    setCategoria({ ...categoria, iconoCategoria: e.target.value })
-                    }
-                    placeholder="Nombre de ícono o clase"
-                />
+                  onValueChange={(value) =>
+                  setCategoria({ ...categoria, iconoCategoria: value })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                                     
+                    <SelectValue placeholder="Seleccione un ícono" />
+                  
+                  </SelectTrigger>
+                  <SelectContent>
+                  {CATEGORY_ICONS.map(({ id, label, icon: CategoryIcon }) => (
+                    <SelectItem key={id} value={id}>
+                    <div className="flex items-center gap-2">
+                      <CategoryIcon className="h-4 w-4" />
+                      <span>{label}</span>
+                    </div>
+                    </SelectItem>
+                  ))}
+                  </SelectContent>
+                </Select>
                 </div>
-
-                {/* 4. Impuesto por Defecto (NUEVO) */}
+                
                 <div>
                 <label className="block text-xs text-muted-foreground mb-1">
                     Impuesto por Defecto
