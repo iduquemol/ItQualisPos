@@ -25,8 +25,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Search, X, Save, Trash, Plus, Package } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Check, CircleX, Pencil, Search, X, Save, Trash, Plus, Package } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -35,6 +35,8 @@ import { CATEGORY_ICONS } from "@/types/ICategoryIcons";
 import { CategoriasService } from "@/services/CategoryService";
 import { TributoService } from '@/services/TributoService';
 import { ITarifasPorTributo } from '@/types/ITarifasPorTributo';
+import { ITributo } from '@/types/ITributo';
+import { ITributoCategoria } from '@/types/ITributoCategoria';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CategoriesMaster() {
@@ -46,7 +48,8 @@ export default function CategoriesMaster() {
     codigoCategoria: "",
     nombreCategoria: "",
     iconoCategoria: "",
-    idTarifaTributo: null,
+    categoriaActiva: true,
+    tributosCategoria: [],
   });
   const selectedCategoryIcon = CATEGORY_ICONS.find(
     (categoryIcon) => categoryIcon.id === categoria.iconoCategoria
@@ -88,7 +91,8 @@ export default function CategoriesMaster() {
       codigoCategoria: "",
       nombreCategoria: "",
       iconoCategoria: "",
-      idTarifaTributo: null,
+      categoriaActiva: true,
+      tributosCategoria: [],
     });
     setFormError(null);
   };
@@ -143,7 +147,94 @@ export default function CategoriesMaster() {
     }
   };
 
+  const [tributos, setTributos] = useState<ITributo[]>([]);
   const [tarifas, setTarifas] = useState<ITarifasPorTributo[]>([]);
+  const [editImpuestoIdx, setEditImpuestoIdx] = useState<number | null>(null);
+  const [editImpuesto, setEditImpuesto] = useState<ITributoCategoria | null>(null);
+  const [addImpuestoMode, setAddImpuestoMode] = useState(false);
+  const impuestoInicial = (): ITributoCategoria => ({
+    idTributoCategoria: null, idCategoria: categoria.idCategoria || null,
+    idTributo: 0, idTarifaTributo: 0,
+  });
+  const [nuevoImpuesto, setNuevoImpuesto] = useState<ITributoCategoria>(impuestoInicial());
+
+  const getImpuestosDisponibles = (excludeIdx?: number, currentId?: number) => {
+    const usados = (categoria.tributosCategoria || [])
+      .filter((_, index) => index !== excludeIdx)
+      .map((item) => item.idTributo);
+    return tributos.filter((tributo) =>
+      tributo.idTributo !== 0 && (tributo.idTributo === currentId || !usados.includes(tributo.idTributo))
+    );
+  };
+
+  const seleccionarImpuesto = (value: string, impuesto: ITributoCategoria) => {
+    const numericValue = Number(value);
+    const tributo = tributos.find((item) => item.idTributo === numericValue);
+    
+    return {
+      ...impuesto, 
+      idTributo: tributo ? tributo.idTributo : 0, 
+      idTarifaTributo: 0, // Reiniciamos la tarifa al cambiar de tributo
+    };
+  };
+
+  const seleccionarTarifa = (value: string, impuesto: ITributoCategoria) => {
+    const numericValue = Number(value);
+    const tarifaGroup = tarifas.find((item) => item.idTributo === impuesto.idTributo);
+    const tarifa = tarifaGroup?.tarifasTributo.find((item) => item.idTarifaTributo === numericValue);
+
+    return {
+      ...impuesto, 
+      idTarifaTributo: tarifa ? tarifa.idTarifaTributo : 0,
+    };
+  };
+
+  // Al seleccionar o agregar el impuesto al array
+  const handleAddImpuesto = () => {
+    if (!nuevoImpuesto.idTributo || !nuevoImpuesto.idTarifaTributo) {
+      toast.error("Seleccione un impuesto y una tarifa");
+      return;
+    }
+
+    // Buscar el objeto tributo real para obtener su idTributo numérico
+    const tributoEncontrado = tributos.find(
+      (t) => t.idTributo === Number(nuevoImpuesto.idTributo) || t.codigoTributo === String(nuevoImpuesto.idTributo)
+    );
+
+    const tributoAInsertar = {
+      idTributoCategoria: null,
+      idCategoria: categoria.idCategoria || null,
+      idTributo: tributoEncontrado ? Number(tributoEncontrado.idTributo) : Number(nuevoImpuesto.idTributo),
+      idTarifaTributo: Number(nuevoImpuesto.idTarifaTributo),
+      // Opcionales para renderizar en la tabla
+      codigoTributo: tributoEncontrado?.codigoTributo || "",
+      nombreTributo: tributoEncontrado?.nombreTributo || "",
+    };
+
+    setCategoria((prev) => ({
+      ...prev,
+      tributosCategoria: [...(prev.tributosCategoria || []), tributoAInsertar],
+    }));
+
+    setNuevoImpuesto(impuestoInicial());
+    setAddImpuestoMode(false);
+  };
+
+  const handleSaveImpuesto = () => {
+    if (editImpuestoIdx === null || !editImpuesto || !editImpuesto.idTarifaTributo) {
+      toast.error("Seleccione una tarifa");
+      return;
+    }
+    const tributosCategoria = [...(categoria.tributosCategoria || [])];
+    tributosCategoria[editImpuestoIdx] = editImpuesto;
+    setCategoria({ ...categoria, tributosCategoria });
+    setEditImpuestoIdx(null);
+    setEditImpuesto(null);
+  };
+
+  const handleDeleteImpuesto = (idx: number) => {
+    setCategoria({ ...categoria, tributosCategoria: (categoria.tributosCategoria || []).filter((_, index) => index !== idx) });
+  };
 
     const fetchTarifas = async () => {
     try {
@@ -157,6 +248,7 @@ export default function CategoriesMaster() {
     useEffect(() => {
     fetchCategorias();
     fetchTarifas();
+    TributoService.getAll().then(setTributos).catch(() => toast.error("Error al cargar impuestos"));
     }, []);
 
   return (
@@ -207,7 +299,7 @@ export default function CategoriesMaster() {
                     <TableRow>
                       <TableHead>Código</TableHead>
                       <TableHead>Nombre</TableHead>
-                      <TableHead>Tarifa Impuesto</TableHead>
+                      <TableHead>Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -225,7 +317,7 @@ export default function CategoriesMaster() {
                         >
                           <TableCell>{c.codigoCategoria}</TableCell>
                           <TableCell>{c.nombreCategoria}</TableCell>
-                          <TableCell>{c.nombreTarifa ?? "N/A"}</TableCell>
+                          <TableCell>{c.categoriaActiva ? "Activa" : "Inactiva"}</TableCell>
                         </TableRow>
                       ))}
                   </TableBody>
@@ -256,96 +348,211 @@ export default function CategoriesMaster() {
         </div>
       </div>
 
-      {/* Formulario principal */}
-      <Tabs defaultValue="general" className="w-full">
-        <TabsContent value="general" className="mt-4">
-          <Card className="mb-6 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                <label className="block text-xs text-muted-foreground mb-1">
-                    Código Categoría (*)
-                </label>
-                <Input
-                    value={categoria.codigoCategoria ?? ""}
-                    onChange={(e) =>
-                    setCategoria({ ...categoria, codigoCategoria: e.target.value })
-                    }
-                    placeholder="Código de la categoría"
-                />
-                </div>
-             
-                <div>
-                <label className="block text-xs text-muted-foreground mb-1">
-                    Nombre Categoría (*)
-                </label>
-                <Input
-                    value={categoria.nombreCategoria ?? ""}
-                    onChange={(e) =>
-                    setCategoria({ ...categoria, nombreCategoria: e.target.value })
-                    }
-                    placeholder="Nombre de la categoría"
-                />
-                </div>
-                
-                <div>
-                <label className="block text-xs text-muted-foreground mb-1">
-                    Ícono Categoría
-                </label>
-                <Select
-                    value={categoria.iconoCategoria ?? ""}
-                  onValueChange={(value) =>
-                  setCategoria({ ...categoria, iconoCategoria: value })
+      {/* Formulario principal */}    
+        <Card className="mb-6 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+              <label className="block text-xs text-muted-foreground mb-1">
+                  Código Categoría (*)
+              </label>
+              <Input
+                  value={categoria.codigoCategoria ?? ""}
+                  onChange={(e) =>
+                  setCategoria({ ...categoria, codigoCategoria: e.target.value })
                   }
-                >
-                  <SelectTrigger className="w-full">
-                                     
-                    <SelectValue placeholder="Seleccione un ícono" />
-                  
-                  </SelectTrigger>
-                  <SelectContent>
-                  {CATEGORY_ICONS.map(({ id, label, icon: CategoryIcon }) => (
-                    <SelectItem key={id} value={id}>
-                    <div className="flex items-center gap-2">
-                      <CategoryIcon className="h-4 w-4" />
-                      <span>{label}</span>
-                    </div>
-                    </SelectItem>
-                  ))}
-                  </SelectContent>
-                </Select>
-                </div>
+                  placeholder="Código de la categoría"
+              />
+              </div>
+            
+              <div>
+              <label className="block text-xs text-muted-foreground mb-1">
+                  Nombre Categoría (*)
+              </label>
+              <Input
+                  value={categoria.nombreCategoria ?? ""}
+                  onChange={(e) =>
+                  setCategoria({ ...categoria, nombreCategoria: e.target.value })
+                  }
+                  placeholder="Nombre de la categoría"
+              />
+              </div>
+              
+              <div>
+              <label className="block text-xs text-muted-foreground mb-1">
+                  Ícono Categoría
+              </label>
+              <Select
+                  value={categoria.iconoCategoria ?? ""}
+                onValueChange={(value) =>
+                setCategoria({ ...categoria, iconoCategoria: value })
+                }
+              >
+                <SelectTrigger className="w-full">
+                                    
+                  <SelectValue placeholder="Seleccione un ícono" />
                 
-                <div>
-                <label className="block text-xs text-muted-foreground mb-1">
-                    Impuesto por Defecto
-                </label>
-                <Select
-                    value={categoria.idTarifaTributo?.toString() ?? ""}
-                    onValueChange={(val) =>
-                    setCategoria({ ...categoria, idTarifaTributo: val ? Number(val) : null })
+                </SelectTrigger>
+                <SelectContent>
+                {CATEGORY_ICONS.map(({ id, label, icon: CategoryIcon }) => (
+                  <SelectItem key={id} value={id}>
+                  <div className="flex items-center gap-2">
+                    <CategoryIcon className="h-4 w-4" />
+                    <span>{label}</span>
+                  </div>
+                  </SelectItem>
+                ))}
+                </SelectContent>
+              </Select>
+              </div>
+              
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Estado Categoría</label>
+                <div className="flex items-center space-x-2 mt-2">
+                  <input
+                    type="checkbox"
+                    checked={categoria.categoriaActiva || false}
+                    onChange={(e) =>
+                      setCategoria({ ...categoria, categoriaActiva: e.target.checked })
                     }
-                >
-                    <SelectTrigger>
-                    <SelectValue placeholder="Seleccione un impuesto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    {tarifas.flatMap((tributo) =>
-                      (tributo.tarifasTributo ?? []).map((t) => (
-                        <SelectItem
-                          key={`${tributo.idTributo}-${t.idTarifaTributo}`}
-                          value={t.idTarifaTributo.toString()}
-                        >
-                          {tributo.nombreTributo} / {t.nombreTarifa} ({t.tarifaTributo}%)
-                        </SelectItem>
-                      ))
-                    )}
-                    </SelectContent>
-                </Select>
+                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {categoria.categoriaActiva ? "Categoría activa" : "Categoría inactiva"}
+                  </span>
                 </div>
-            </div>
-            </Card>
-        </TabsContent>
-      </Tabs>
+              </div>
+          </div>
+        </Card>
+        
+        <Card className="overflow-x-auto border-2 border-border bg-muted/40 shadow-sm">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-muted">
+                <th className="px-2 py-2 text-left font-semibold w-64">Código Impuesto</th>
+                <th className="px-4 py-2 text-left font-semibold w-96">Nombre Impuesto</th>
+                <th className="px-4 py-2 text-left font-semibold w-96">Tarifa</th>
+                <th className="px-4 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {(categoria.tributosCategoria || []).map((item, idx) => {
+                const tributo = tributos.find((value) => value.idTributo === item.idTributo);
+                const tarifa = tarifas
+                  .find((value) => value.idTributo === item.idTributo)
+                  ?.tarifasTributo.find((value) => value.idTarifaTributo === item.idTarifaTributo);
+                const editing = editImpuestoIdx === idx && editImpuesto;
+                return (
+                  <tr key={item.idTributoCategoria ?? `${item.idTributo}-${idx}`} className="border-b">
+                    {editing ? (
+                      <>
+                        <td className="px-4 py-2">
+                          <select
+                            className="w-full rounded border px-2 py-1"
+                            value={String(editImpuesto.idTributo)}
+                            onChange={(event) => setEditImpuesto(seleccionarImpuesto(event.target.value, editImpuesto))}
+                          >
+                            <option value="0">Seleccione el impuesto...</option>
+                            {getImpuestosDisponibles(idx, editImpuesto.idTributo).map((value) => (
+                              <option key={value.idTributo} value={value.idTributo}>{value.codigoTributo}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            className="w-full rounded border px-2 py-1 bg-background"
+                            value={tributos.find((value) => value.idTributo === editImpuesto.idTributo)?.nombreTributo || ""}
+                            placeholder="Nombre"
+                            disabled
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <select
+                            className="w-full rounded border px-2 py-1"
+                            value={String(editImpuesto.idTarifaTributo || "")}
+                            onChange={(event) => setEditImpuesto(seleccionarTarifa(event.target.value, editImpuesto))}
+                          >
+                            <option value="">Seleccione una tarifa...</option>
+                            {tarifas.find((value) => value.idTributo === editImpuesto.idTributo)?.tarifasTributo.map((value) => (
+                              <option key={value.idTarifaTributo} value={value.idTarifaTributo}>{value.nombreTarifa}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="flex gap-2 px-4 py-2">
+                          <button title="Guardar" onClick={handleSaveImpuesto}><Check className="h-5 w-5 text-green-600" /></button>
+                          <button title="Cancelar" onClick={() => { setEditImpuestoIdx(null); setEditImpuesto(null); }}><CircleX className="h-5 w-5 text-red-600" /></button>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-2">{tributo?.codigoTributo || item.idTributo}</td>
+                        <td className="px-4 py-2">{tributo?.nombreTributo || ""}</td>
+                        <td className="px-4 py-2">{tarifa?.nombreTarifa || item.idTarifaTributo}</td>
+                        <td className="flex gap-2 px-4 py-2">
+                          <button title="Editar" onClick={() => { setEditImpuestoIdx(idx); setEditImpuesto({ ...item }); }}><Pencil className="h-4 w-4 text-blue-600" /></button>
+                          <button title="Eliminar" onClick={() => handleDeleteImpuesto(idx)}><Trash className="h-4 w-4 text-red-600" /></button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
+              {addImpuestoMode && (
+                <tr className="border-b bg-accent/40">
+                  <td className="px-4 py-2">
+                    <select
+                      className="w-full rounded border px-2 py-1"
+                      value={String(nuevoImpuesto.idTributo)}
+                      onChange={(event) => setNuevoImpuesto(seleccionarImpuesto(event.target.value, nuevoImpuesto))}
+                    >
+                      <option value="0">Seleccione el impuesto...</option>
+                      {getImpuestosDisponibles().map((value) => (
+                        <option key={value.idTributo} value={value.idTributo}>{value.codigoTributo}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      className="w-full rounded border px-2 py-1 bg-background"
+                      value={tributos.find((value) => value.idTributo === nuevoImpuesto.idTributo)?.nombreTributo || ""}
+                      placeholder="Nombre"
+                      disabled
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <select
+                      className="w-full rounded border px-2 py-1"
+                      value={String(nuevoImpuesto.idTarifaTributo || "")}
+                      onChange={(event) => setNuevoImpuesto(seleccionarTarifa(event.target.value, nuevoImpuesto))}
+                    >
+                      <option value="">Seleccione una tarifa...</option>
+                      {tarifas.find((value) => value.idTributo === nuevoImpuesto.idTributo)?.tarifasTributo.map((value) => (
+                        <option key={value.idTarifaTributo} value={value.idTarifaTributo}>{value.nombreTarifa}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="flex gap-2 px-4 py-2">
+                    <button title="Guardar" onClick={handleAddImpuesto}><Check className="h-5 w-5 text-green-600" /></button>
+                    <button title="Cancelar" onClick={() => { setAddImpuestoMode(false); setNuevoImpuesto(impuestoInicial()); }}><CircleX className="h-5 w-5 text-red-600" /></button>
+                  </td>
+                </tr>
+              )}
+                {!addImpuestoMode && (
+                  <tr>
+                    <td colSpan={4} className="px-0 py-2">
+                      <button
+                        className="bg-black text-white font-semibold px-4 py-2 rounded text-left"
+                        onClick={() => setAddImpuestoMode(true)}
+                      >
+                        + Agregar impuesto
+                      </button>
+                    </td>
+                  </tr>
+                )}
+            </tbody>
+          </table>
+        </Card>
+        
+      
 
       {/* AlertDialog Éxito */}
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>

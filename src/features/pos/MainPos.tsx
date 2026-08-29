@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, FileText, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,9 +31,11 @@ import { IVentaDetalle } from '@/types/IVentaDetalle';
 import { IVentaTercero } from '@/types/IVentaTercero';
 import { IDocumentoLista } from '@/types/IDocumentoLista';
 import { DocumentoListaService } from '@/services/DocumentoListaService';
+import { FormasPagoService } from '@/services/FormasPagoService';
 import { VentaService } from '@/services/VentaService';
 import { toast } from "sonner";
 import { ITerceroDefault } from '@/types/ITerceroDefault';
+import { IFormasPago } from '@/types/IFormasPago';
 import { IVentaMedioPago } from '@/types/IVentaMedioPago';
 import FacturaModal from '../reports/FacturaModal';
 import { IParametrosVentaDefault } from '@/types/IParametrosVentaDefault';
@@ -124,7 +126,11 @@ const buildVentaTercero = (values: Partial<IVentaTercero> = {}): IVentaTercero =
 
 const RetailPOS = () => {
     const navigate = useNavigate();
-    const [factura, setFactura] = useState<IVenta>({
+    const location = useLocation();
+    const facturaDesdeTerceros = location.state?.from === 'terceros'
+        ? location.state.factura as IVenta
+        : null;
+    const [factura, setFactura] = useState<IVenta>(facturaDesdeTerceros ?? {
         idVenta: 0,
         idTipoDocumento: 1,
         codigoDocumento: '',
@@ -214,6 +220,7 @@ const RetailPOS = () => {
     const [documentosLista, setDocumentoLista] = useState<IDocumentoLista[]>([]);
     const [isLoadingDocumentoLista, setIsLoadingDocumentoLista] = useState(true);
     const [documentoListaError, setDocumentoListaError] = useState<string | null>(null);
+    const [formasPago, setFormasPago] = useState<IFormasPago[]>([]);
     const [parametrosVentaDefault, setParametrosVentaDefault] = useState<IParametrosVentaDefault | null>(null);
     const [isLoadingTerceroDefault, setIsLoadingTerceroDefault] = useState(true);
     const [terceroDefaultError, setTerceroDefaultError] = useState<string | null>(null);
@@ -247,7 +254,7 @@ const RetailPOS = () => {
         { id: 2, nombre: "Vendedor 1" },
         { id: 3, nombre: "Vendedor 2" },
     ]);
-
+    
     const fetchCategories = async () => {
         try {
             setCategoryError(null);
@@ -363,31 +370,43 @@ const RetailPOS = () => {
         }
     };
 
+    const fetchFormasPago = async () => {
+        try {
+            const data = await FormasPagoService.getAll();
+            setFormasPago(data);
+        } catch (error) {
+            console.error('Error al cargar formas de pago:', error);
+            setFormasPago([]);
+        }
+    };
+
     const fetchParametrosVentaDefault = async () => {
         try {
             setParametrosVentaDefault(null);
             setIsLoadingTerceroDefault(true);
             const data = await VentaService.getParametrosVentaDefault();
             setParametrosVentaDefault(data);
-            setFactura({
-                ...factura,
-                idTipoDocumento: data.documentoVenta[0].idTipoDocumento,
-                idMetodoDian: data.documentoVenta[0].idMetodoDian,
-                terceroVenta: {
-                    idTercero: data.terceroVenta[0].idTercero,
-                    idTipoDocumentoId: data.terceroVenta[0].idTipoDocumentoId,
-                    numeroIdentificacion: data.terceroVenta[0].numeroIdentificacion,
-                    primerNombre: data.terceroVenta[0].primerNombre,
-                    primerApellido: data.terceroVenta[0].primerApellido,
-                    razonSocial: data.terceroVenta[0].razonSocial,
-                    emailTercero: data.terceroVenta[0].emailTercero,
-                    telefonoTercero: null,
-                    direccionTercero: "",
-                    idMunicipio: 0,
-                    idTipoPersona: null,
-                    digitoVerificacion: null,
-                }
-            });
+            if (!facturaDesdeTerceros) {
+                setFactura({
+                    ...factura,
+                    idTipoDocumento: data.documentoVenta[0].idTipoDocumento,
+                    idMetodoDian: data.documentoVenta[0].idMetodoDian,
+                    terceroVenta: {
+                        idTercero: data.terceroVenta[0].idTercero,
+                        idTipoDocumentoId: data.terceroVenta[0].idTipoDocumentoId,
+                        numeroIdentificacion: data.terceroVenta[0].numeroIdentificacion,
+                        primerNombre: data.terceroVenta[0].primerNombre,
+                        primerApellido: data.terceroVenta[0].primerApellido,
+                        razonSocial: data.terceroVenta[0].razonSocial,
+                        emailTercero: data.terceroVenta[0].emailTercero,
+                        telefonoTercero: null,
+                        direccionTercero: "",
+                        idMunicipio: 0,
+                        idTipoPersona: null,
+                        digitoVerificacion: null,
+                    }
+                });
+            }
         } catch (error) {
             console.error('Error:', error);
             setTerceroDefaultError('Error al cargar los parametros de venta por defecto');
@@ -459,6 +478,7 @@ const RetailPOS = () => {
             fetchParametrosVentaDefault(),
             fetchTiposDocumento(),
             fetchDocumentoLista(),
+            fetchFormasPago(),
             fetchProducts(),
             fetchTerceros()
         ]);
@@ -565,15 +585,26 @@ const RetailPOS = () => {
     };
 
     const handleNew = async () => {
-        await initializeComponent();
+        let parametros = parametrosVentaDefault;
+
+        try {
+            parametros = await VentaService.getParametrosVentaDefault();
+            setParametrosVentaDefault(parametros);
+        } catch (error) {
+            console.error('Error al cargar los parametros por defecto para la nueva factura:', error);
+        }
+
+        const documentoDefault = parametros?.documentoVenta?.[0];
+        const terceroDefault = parametros?.terceroVenta?.[0];
+
         setFactura(prev => ({
             ...prev,
             idVenta: 0,
-            idTipoDocumento: 4,
+            idTipoDocumento: documentoDefault?.idTipoDocumento ?? 4,
             codigoDocumento: '',
             nombreDocumento: null,
-            idMetodoDian: 2,
-            idFormaPago: 1,
+            idMetodoDian: documentoDefault?.idMetodoDian ?? 2,
+            idFormaPago: documentoDefault?.idFormaPago ?? 1,
             numeroVenta: 0,
             prefijoVenta: '',
             fechaVenta: '',
@@ -587,22 +618,24 @@ const RetailPOS = () => {
             totalIva: 0,
             totalVenta: 0,
             terceroVenta: buildVentaTercero({
-                idTercero: prev.terceroVenta?.idTercero ?? null,
-                idTipoDocumentoId: prev.terceroVenta?.idTipoDocumentoId ?? 0,
-                digitoVerificacion: prev.terceroVenta?.digitoVerificacion ?? null,
-                numeroIdentificacion: prev.terceroVenta?.numeroIdentificacion ?? null,
-                primerNombre: prev.terceroVenta?.primerNombre ?? null,
-                primerApellido: prev.terceroVenta?.primerApellido ?? null,
-                razonSocial: prev.terceroVenta?.razonSocial ?? null,
-                telefonoTercero: prev.terceroVenta?.telefonoTercero ?? null,
-                direccionTercero: prev.terceroVenta?.direccionTercero ?? null,
-                idMunicipio: prev.terceroVenta?.idMunicipio ?? 0,
-                emailTercero: prev.terceroVenta?.emailTercero ?? null,
-                idTipoPersona: prev.terceroVenta?.idTipoPersona ?? null
+                idTercero: terceroDefault?.idTercero ?? null,
+                idTipoDocumentoId: terceroDefault?.idTipoDocumentoId ?? 0,
+                numeroIdentificacion: terceroDefault?.numeroIdentificacion ?? null,
+                primerNombre: terceroDefault?.primerNombre ?? null,
+                primerApellido: terceroDefault?.primerApellido ?? null,
+                razonSocial: terceroDefault?.razonSocial ?? null,
+                emailTercero: terceroDefault?.emailTercero ?? null,
+                idTipoPersona: null
             }),
+            observaciones: null,
+            ordenReferencia: null,
+            fechaOrdenReferencia: null,
             detalleVenta: [],
             mediosPagoVenta: [],
         }));
+        setSelectedFactura(null);
+        setShowFacturaModal(false);
+        setFacturaModalData(null);
         setActivePaymentMethod('');
     };
 
@@ -905,6 +938,7 @@ const RetailPOS = () => {
     };
 
     // Cálculos
+    const [montoIngresado, setMontoIngresado] = useState<number>(0);
     const subtotal = factura.detalleVenta?.reduce((sum, item) => sum + (item.precioUnitarioVenta * item.cantidadVenta), 0);
     const discount = factura.detalleVenta?.reduce((descuento, item) => descuento + item.descuentoVenta, 0);
     const tax = factura.detalleVenta?.reduce((iva, item) => iva + item.ivaVenta, 0);
@@ -912,6 +946,8 @@ const RetailPOS = () => {
     const totalReteRenta = factura.detalleVenta?.reduce((reteRenta, item) => reteRenta + (item.reteRentaVenta || 0), 0);
     const totalReteIca = factura.detalleVenta?.reduce((reteIca, item) => reteIca + (item.reteIcaVenta || 0), 0);
     const total = (subtotal || 0) - (discount || 0) + (tax || 0) - (totalReteIva || 0) - (totalReteRenta || 0) - (totalReteIca || 0);
+    const totalPagado = factura.mediosPagoVenta?.reduce((acc, curr) => acc + (curr.valorMedioPago || 0), 0) || 0;
+    const saldoPendiente = total - totalPagado;
     const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + item.cantidadVenta, 0);
     const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
 
@@ -1088,7 +1124,7 @@ const RetailPOS = () => {
                             <div className="flex items-center gap-4">
                                 <h2 className="text-sm font-normal">Tipo de documento</h2>
                                 <select
-                                    className="rounded border px-3 py-2 text-sm bg-background w-48"
+                                    className="rounded border px-3 py-2 text-sm bg-background w-72 font-bold"
                                     value={factura.idTipoDocumento}
                                     onChange={(e) => {
                                         const selectedId = parseInt(e.target.value);
@@ -1295,6 +1331,20 @@ const RetailPOS = () => {
                                     </div>
                                 </DialogContent>
                             </Dialog>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                title="Diligenciar información ampliada del tercero"
+                                onClick={() => navigate('/terceros', {
+                                    state: {
+                                        from: 'pos',
+                                        factura,
+                                        crearTercero: factura.terceroVenta?.idTercero === parametrosVentaDefault?.terceroVenta?.[0]?.idTercero
+                                    }
+                                })}
+                            >
+                                <FileText className="w-5 h-5" />
+                            </Button>
                         </div>
 
                     </div>
@@ -1789,87 +1839,157 @@ const RetailPOS = () => {
                 <Dialog open={showPayment} onOpenChange={setShowPayment}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader className="text-center">
-                            <DialogTitle className="text-xl mb-4">Seleccionar método de pago</DialogTitle>
+                            <DialogTitle className="text-xl mb-4">Seleccionar métodos y forma de pago</DialogTitle>
                         </DialogHeader>
 
-                        {/* Métodos de Pago */}
-                        <div className="mb-6">
-                            <Label className="mb-2 block text-sm font-medium">Método de pago</Label>
-                            <Select value={activePaymentMethod}
+                        <div className="mb-4">
+                            <Label className="mb-2 block text-sm font-medium">Forma de pago</Label>
+                            <Select 
+                                value={factura.idFormaPago?.toString() || ""} 
                                 onValueChange={(value) => {
-                                    setActivePaymentMethod(value);
-
-                                    // Crear un nuevo medio de pago
-                                    const nuevoMedioPago: IVentaMedioPago = {
-                                        idMedioPagoVenta: 0,
-                                        idMedioPago: parseInt(value),
-                                        valorMedioPago: total
-                                    };
-
+                                    const idForma = parseInt(value);
                                     setFactura(prev => ({
                                         ...prev,
-                                        //idFormaPago: nuevoMedioPago.idMedioPago,
-                                        mediosPagoVenta: [nuevoMedioPago], // reemplaza o haz append si es necesario
+                                        idFormaPago: idForma
                                     }));
-                                }}>
+                                }}
+                            >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Selecciona un método de pago" />
+                                    <SelectValue placeholder="Selecciona forma de pago" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {paymentMethods.map(method => (
-                                        <SelectItem key={method.id} value={method.id}>
-                                            {method.name}
+                                    {formasPago.map(forma => (
+                                        <SelectItem key={forma.idFormaPago} value={forma.idFormaPago.toString()}>
+                                            {forma.nombreFormaPago}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
 
+                        {/* Sección para agregar medios de pago */}
+                        <div className="space-y-4 mb-4">
+                            <div className="grid grid-cols-12 gap-2 items-end">
+                                <div className="col-span-6">
+                                    <Label className="mb-2 block text-xs font-medium">Método de pago</Label>
+                                    <Select value={activePaymentMethod} onValueChange={setActivePaymentMethod}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Seleccionar..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {paymentMethods.map(method => (
+                                                <SelectItem key={method.id} value={method.id.toString()}>
+                                                    {method.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="col-span-4">
+                                    <Label className="mb-2 block text-xs font-medium">Monto</Label>
+                                    <Input 
+                                        type="number"
+                                        placeholder="0"
+                                        value={montoIngresado || ''}
+                                        onChange={(e) => setMontoIngresado(Number(e.target.value))}
+                                    />
+                                </div>
+
+                                <div className="col-span-2">
+                                    <Button 
+                                        disabled={!activePaymentMethod || montoIngresado <= 0 || montoIngresado > saldoPendiente}
+                                        onClick={() => {
+                                            const nuevoMedioPago: IVentaMedioPago = {
+                                                idMedioPagoVenta: 0,
+                                                idMedioPago: parseInt(activePaymentMethod),
+                                                valorMedioPago: montoIngresado
+                                            };
+
+                                            setFactura(prev => ({
+                                                ...prev,
+                                                mediosPagoVenta: [...(prev.mediosPagoVenta || []), nuevoMedioPago]
+                                            }));
+
+                                            setActivePaymentMethod("");
+                                            setMontoIngresado(0);
+                                        }}
+                                        className="w-full"
+                                    >
+                                        +
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Lista de medios de pago ingresados */}
+                        {factura.mediosPagoVenta && factura.mediosPagoVenta.length > 0 && (
+                            <div className="border rounded-md p-3 mb-4 space-y-2 max-h-32 overflow-y-auto">
+                                <span className="text-xs text-muted-foreground font-medium block">Pagos agregados:</span>
+                                {factura.mediosPagoVenta.map((item, index) => (
+                                    <div key={index} className="flex justify-between items-center text-sm border-b pb-1">
+                                        <span>{paymentMethods.find(m => m.id === item.idMedioPago.toString())?.name || 'Método'}</span>
+                                        <div className="flex items-center space-x-2">
+                                            <span className="font-semibold">${formatCurrency(item.valorMedioPago)}</span>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-6 w-6 p-0 text-red-500"
+                                                onClick={() => {
+                                                    setFactura(prev => ({
+                                                        ...prev,
+                                                        mediosPagoVenta: prev.mediosPagoVenta ? prev.mediosPagoVenta.filter((_, i) => i !== index) : []
+                                                    }));
+                                                }}
+                                            >
+                                                ✕
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
                         {/* Información del Cliente */}
                         {factura.terceroVenta?.primerApellido && (
-                            <Alert className="mb-6">
+                            <Alert className="mb-4">
                                 <User className="h-4 w-4" />
                                 <AlertDescription className="flex flex-col space-y-1">
                                     <span className="text-xs text-muted-foreground">Nombre Cliente</span>
                                     <div className="flex items-center justify-between">
                                         <span>{`${factura.terceroVenta.primerNombre} ${factura.terceroVenta.primerApellido}`}</span>
-                                        {/* {factura.terceroVenta.loyalty && (
-                                            <Badge variant="secondary" className="ml-2">
-                                                <Star className="h-3 w-3 mr-1 fill-current" />
-                                                VIP
-                                            </Badge>
-                                        )} */}
                                     </div>
                                 </AlertDescription>
                             </Alert>
                         )}
 
+                        {/* Cómputo de Totales */}
                         <Card className="p-4 mb-6">
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                     <span className="text-muted-foreground">Total a Pagar</span>
-                                    <span className="text-2xl font-bold text-primary">${formatCurrency(total)}</span>
+                                    <span className="text-xl font-bold">${formatCurrency(total)}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Artículos</span>
-                                    <span className="font-medium">{totalItems}</span>
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-muted-foreground">Total Cubierto</span>
+                                    <span className="font-medium text-green-600">${formatCurrency(totalPagado)}</span>
                                 </div>
-                                {/* {customerInfo.loyalty && pointsEarned > 0 && (
-                                    <div className="flex justify-between items-center text-amber-600">
-                                        <span>Puntos a Ganar</span>
-                                        <span className="font-medium">{pointsEarned} pts</span>
-                                    </div>
-                                )} */}
+                                <div className="flex justify-between items-center text-sm border-t pt-1">
+                                    <span className="text-muted-foreground">Saldo Restante</span>
+                                    <span className={`font-bold ${saldoPendiente === 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                        ${formatCurrency(saldoPendiente)}
+                                    </span>
+                                </div>
                             </div>
                         </Card>
 
+                        {/* Botones de acción */}
                         <DialogFooter className="flex space-x-2">
                             <Button
+                                disabled={saldoPendiente !== 0} // Habilita la acción solo si la suma cubre exacto el total
                                 onClick={() => {
-                                    // Mostrar confirmación de pago
                                     setShowPayment(false);
                                     handleSaveVenta(false);
-                                    // Aquí podrías mostrar otro modal de confirmación
                                 }}
                                 className="flex-1"
                             >
@@ -1878,7 +1998,6 @@ const RetailPOS = () => {
                             <Button
                                 variant="outline"
                                 onClick={() => setShowPayment(false)}
-
                             >
                                 Cancelar
                             </Button>
