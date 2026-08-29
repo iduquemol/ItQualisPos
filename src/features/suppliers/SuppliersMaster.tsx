@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Check, Pencil, Search, X, CircleX, Save, Trash, Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Package } from "lucide-react";
 import { toast } from "sonner"
 import { ITercero } from "@/types/ITercero";
@@ -28,25 +28,29 @@ import { ICodigoPostal } from "../../types/ICodigoPostal";
 
 export default function SuppliersMaster() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const vieneDesdePos = location.state?.from === "pos";
+    const terceroDesdePos = location.state?.factura?.terceroVenta;
+    const crearTerceroDesdePos = location.state?.crearTercero === true;
     const [search, setSearch] = useState("");
     // Estado para los campos iniciales del tercero
     const [tercero, setTercero] = useState<ITercero>({
-        idTercero: null,
-        idTipoDocumentoId: 0,
+        idTercero: crearTerceroDesdePos ? null : terceroDesdePos?.idTercero ?? null,
+        idTipoDocumentoId: terceroDesdePos?.idTipoDocumentoId ?? 0,
         nombreTipoDocumentoId: "",
-        digitoVerificacion: "",
-        numeroIdentificacion: "",
-        primerNombre: "",
+        digitoVerificacion: terceroDesdePos?.digitoVerificacion ?? "",
+        numeroIdentificacion: terceroDesdePos?.numeroIdentificacion ?? "",
+        primerNombre: terceroDesdePos?.primerNombre ?? "",
         segundoNombre: "",
-        primerApellido: "",
+        primerApellido: terceroDesdePos?.primerApellido ?? "",
         segundoApellido: "",
-        razonSocial: "",
-        telefonoTercero: null,
-        direccionTercero: "",
-        emailTercero: "",
+        razonSocial: terceroDesdePos?.razonSocial ?? "",
+        telefonoTercero: terceroDesdePos?.telefonoTercero ?? null,
+        direccionTercero: terceroDesdePos?.direccionTercero ?? "",
+        emailTercero: terceroDesdePos?.emailTercero ?? "",
         idDepartamento: 0,
         nombreDepartamento: null,
-        idMunicipio: 0,
+        idMunicipio: terceroDesdePos?.idMunicipio ?? 0,
         nombreMunicipio: null,
         terceroActivo: true,
         terceroCliente: false,
@@ -867,6 +871,12 @@ export default function SuppliersMaster() {
                         size="icon"
                         title="Salir"
                         onClick={() => {
+                            if (vieneDesdePos) {
+                                navigate('/pos', {
+                                    state: { from: 'terceros', factura: location.state.factura }
+                                });
+                                return;
+                            }
                             navigate('/main-menu');
                         }}
                         className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
