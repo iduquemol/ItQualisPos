@@ -14,7 +14,10 @@ const menuItems = [
   { label: "Tipos de Documentos", icon: "📄", color: "bg-pink-100", route: "/documentos-externos" },
   { label: "Categorías", icon: "🏷️", color: "bg-pink-100", route: "/categories" },
   { label: "Parámetros de Venta", icon: "⚙️", color: "bg-gray-100", route: "/parametros-venta" },
-  { label: "Actividades ICA", icon: "🏭", color: "bg-orange-100", route: "/actividades-ica" }
+  { label: "Actividades ICA", icon: "🏭", color: "bg-orange-100", route: "/actividades-ica" },
+  { label: "Sucursales", icon: "🏬", color: "bg-teal-100", route: "/sucursales" },
+  { label: "Vendedores", icon: "🧑‍💼", color: "bg-indigo-100", route: "/vendedores" },
+  { label: "Usuarios", icon: "👤", color: "bg-cyan-100", route: "/usuarios" },
   // { label: "Reporte", icon: "📊", color: "bg-red-100", route: "/reporte" }
 ];
 

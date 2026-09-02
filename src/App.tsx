@@ -16,6 +16,9 @@ import DocumentosExternosPage from './pages/documentosExternosPage';
 import CategoriesPage from './pages/categoriasPage';
 import ParametrosVentasPage from './pages/parametrosVentasPage';
 import ActividadesIcaPage from './pages/ActividadesIcaPage';
+import SucursalesPage from './pages/SucursalesPage';
+import SellersPage from './pages/VendedoresPage';
+import UsersPage from './pages/UsersPage';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -104,6 +107,24 @@ function App() {
                     path="/actividades-ica"
                     element={
                         isAuthenticated ? <ActividadesIcaPage /> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/sucursales"
+                    element={
+                        isAuthenticated ? <SucursalesPage /> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/vendedores"
+                    element={
+                        isAuthenticated ? <SellersPage /> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/usuarios"
+                    element={
+                        isAuthenticated ? <UsersPage /> : <Navigate to="/login" />
                     }
                 />
                 <Route
