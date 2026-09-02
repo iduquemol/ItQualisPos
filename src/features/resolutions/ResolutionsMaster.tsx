@@ -22,7 +22,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { IResoluciones } from "@/types/IResoluciones";
+import { ITipoDocumentoDian } from "@/types/ITipoDocumentoDian";
 import { ResolucionesService } from "@/services/ResolucionesService";
+import TipoDocumentoDianService from "@/services/TipoDocumentoDianService";
 
 export default function ResolutionsMaster() {
   const navigate = useNavigate();
@@ -52,12 +54,24 @@ export default function ResolutionsMaster() {
 
   const [openDialog, setOpenDialog] = useState(false);
   const [resolutions, setResolutions] = useState<IResoluciones[]>([]);
+  const [tiposDocumentoDian, setTiposDocumentoDian] = useState<ITipoDocumentoDian[]>([]);
   const [isLoadingResolutions, setIsLoadingResolutions] = useState(true);
   const [resolutionsError, setResolutionsError] = useState<string | null>(null);
 
   const handleSelectResoluciones = (resolucion: IResoluciones) => {
     setResoluciones({ ...resolucion });
     setOpenDialog(false);
+  };
+
+  // Función para obtener la lista de tipos de documento DIAN
+  const fetchTiposDocumentoDian = async () => {
+    try {
+      const data = await TipoDocumentoDianService.getAll();
+      setTiposDocumentoDian(data);
+    } catch (error) {
+      console.error("Error al cargar tipos de documento DIAN:", error);
+      toast.error("Error al cargar lista de tipos de documento DIAN");
+    }
   };
 
   // Función para obtener la lista de resoluciones locales
@@ -85,6 +99,7 @@ export default function ResolutionsMaster() {
     const initializeMaster = async () => {
       try {
         setIsLoadingResolutions(true);
+        await fetchTiposDocumentoDian();
         await ResolucionesService.sincronizarExternas();
         toast.success("Sincronización con API externa completada");
       } catch (error) {
@@ -222,6 +237,23 @@ export default function ResolutionsMaster() {
                   readOnly
                   className="bg-muted cursor-not-allowed"
                 />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Tipo Documento DIAN
+                </label>
+                <select
+                  value={resoluciones.idTipoDocumentoDian || ""}
+                  disabled
+                  className="flex h-9 w-full rounded-md border border-input bg-muted px-3 py-1 text-sm shadow-sm transition-colors cursor-not-allowed opacity-100"
+                >
+                  <option value="">-- Seleccione un tipo --</option>
+                  {tiposDocumentoDian.map((tipo) => (
+                    <option key={tipo.idTipoDocumentoE} value={tipo.idTipoDocumentoE}>
+                       {tipo.nombreDocumentoE}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
