@@ -36,6 +36,8 @@ import { IDepartamento } from "@/types/IDepartamento";
 import { IMunicipiosPorDepartamento } from "@/types/IMunicipio";
 import { DepartamentoService } from "@/services/DepartamentoService";
 import { MunicipioService } from "@/services/MunicipioService";
+import { TerceroService } from "@/services/TerceroService";
+import { ITercero } from "@/types/ITercero";
 
 export default function SucursalesMaster() {
   const navigate = useNavigate();
@@ -47,6 +49,10 @@ export default function SucursalesMaster() {
     nombreSucursal: "",
     idDepartamentoSucursal: null,
     idMunicipioSucursal: null,
+    direccionSucursal: "",
+    telefonoSucursal: "",
+    idTerceroResponsableSucursal: null,
+    notaFeSucursal: "",
     fechaGrabacionSucursal: null,
   });
         
@@ -60,6 +66,12 @@ export default function SucursalesMaster() {
   const [departamentos, setDepartamentos] = useState<IDepartamento[]>([]);
   const [tipoError, setTipoError] = useState<string | null>(null);
   const [municipiosPorDepartamento, setMunicipiosPorDepartamento] = useState<IMunicipiosPorDepartamento[]>([]);
+  const [openTerceroDialog, setOpenTerceroDialog] = useState(false);
+  const [searchTercero, setSearchTercero] = useState("");
+  const [terceros, setTerceros] = useState<ITercero[]>([]);
+  const [isLoadingTerceros, setIsLoadingTerceros] = useState(false);
+  const [terceroError, setTerceroError] = useState<string | null>(null);
+  const [nombreTerceroResponsable, setNombreTerceroResponsable] = useState("");
 
   const fetchSucursales = async () => {
     try {
@@ -99,6 +111,7 @@ export default function SucursalesMaster() {
 
   const handleSelectSucursal = (cat: ISucursales) => {
     setSucursal(cat);
+    setNombreTerceroResponsable("");
     setOpenDialog(false);
   };
 
@@ -109,10 +122,47 @@ export default function SucursalesMaster() {
       nombreSucursal: "",
       idDepartamentoSucursal: null,
       idMunicipioSucursal: null,
+      direccionSucursal: "",
+      telefonoSucursal: "",
+      idTerceroResponsableSucursal: null,
+      notaFeSucursal: "",
       fechaGrabacionSucursal: null,
     });
+    setNombreTerceroResponsable("");
     setFormError(null);
   };
+
+  const loadTerceros = async (query = "") => {
+    setIsLoadingTerceros(true);
+    setTerceroError(null);
+
+    try {
+      setTerceros(await TerceroService.search(query.trim()));
+    } catch (error) {
+      setTerceroError("Error al buscar terceros");
+      setTerceros([]);
+    } finally {
+      setIsLoadingTerceros(false);
+    }
+  };
+
+  const handleSelectTercero = (tercero: ITercero) => {
+    setSucursal((prev) => ({
+      ...prev,
+      idTerceroResponsableSucursal: tercero.idTercero ?? null,
+    }));
+    setNombreTerceroResponsable(getNombreTercero(tercero));
+    setOpenTerceroDialog(false);
+    setSearchTercero("");
+    setTerceros([]);
+  };
+
+  const getNombreTercero = (tercero: ITercero) =>
+    tercero.razonSocial?.trim() ||
+    [tercero.primerNombre, tercero.segundoNombre, tercero.primerApellido, tercero.segundoApellido]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
 
    const handleMunicipioChange = (idMunicipioSeleccionado: number) => {
         setSucursal((prev) => ({
@@ -137,6 +187,10 @@ export default function SucursalesMaster() {
     }
     if (!sucursal.idMunicipioSucursal || sucursal.idMunicipioSucursal === 0) {
       setFormError("El municipio es obligatorio.");
+      return;
+    }
+    if (!sucursal.telefonoSucursal?.trim()) {
+      setFormError("El teléfono es obligatorio.");
       return;
     }
 
@@ -367,6 +421,114 @@ export default function SucursalesMaster() {
                         <span className="text-xs text-red-500">{tipoError}</span>
                     )}
                 </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Dirección</label>
+                    <Input
+                      value={sucursal.direccionSucursal ?? ""}
+                      onChange={e => setSucursal({ ...sucursal, direccionSucursal: e.target.value })}
+                      placeholder="Dirección de la sucursal"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
+                    <Input
+                      type="text"
+                      value={sucursal.telefonoSucursal ?? ""}
+                      onChange={e => {
+                        const digitos = e.target.value.replace(/\D/g, "");
+                        const digitosLimitados = digitos.slice(0, 10);
+                        let formatoTelefono = digitosLimitados;
+                        if (digitosLimitados.length > 3 && digitosLimitados.length <= 6) {
+                          formatoTelefono = `${digitosLimitados.slice(0, 3)} ${digitosLimitados.slice(3)}`;
+                        } else if (digitosLimitados.length > 6) {
+                          formatoTelefono = `${digitosLimitados.slice(0, 3)} ${digitosLimitados.slice(3, 6)} ${digitosLimitados.slice(6)}`;
+                        }
+                        setSucursal({ ...sucursal, telefonoSucursal: formatoTelefono });
+                        setFormError(null);
+                      }}
+                      placeholder="Ej: 300 123 4567"
+                      required
+                      className={!sucursal.telefonoSucursal?.trim() && formError ? "border border-red-500" : ""}
+                    />
+                    {formError && !sucursal.telefonoSucursal?.trim() && (
+                      <span className="text-xs text-red-500">El teléfono es obligatorio.</span>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Tercero responsable</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={nombreTerceroResponsable}
+                        placeholder="Seleccione un tercero responsable"
+                        readOnly
+                      />
+                      <Dialog open={openTerceroDialog} onOpenChange={(isOpen) => {
+                        setOpenTerceroDialog(isOpen);
+                        if (isOpen) {
+                          setSearchTercero("");
+                          void loadTerceros("");
+                        }
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="icon" title="Buscar tercero responsable" type="button">
+                            <Search className="w-4 h-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl">
+                          <DialogHeader>
+                            <DialogTitle>Buscar Tercero Responsable</DialogTitle>
+                          </DialogHeader>
+                          <Input
+                            className="mb-4"
+                            placeholder="Buscar por identificación o nombre..."
+                            value={searchTercero}
+                            onChange={e => {
+                              const value = e.target.value;
+                              setSearchTercero(value);
+                              void loadTerceros(value);
+                            }}
+                          />
+                          <div className="overflow-x-auto max-h-[400px]">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Identificación</TableHead>
+                                  <TableHead>Nombre</TableHead>
+                                  <TableHead>Razón Social</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {terceros.map(tercero => (
+                                  <TableRow
+                                    key={tercero.idTercero ?? tercero.numeroIdentificacion}
+                                    className="cursor-pointer hover:bg-primary/10"
+                                    onClick={() => handleSelectTercero(tercero)}
+                                  >
+                                    <TableCell>{tercero.numeroIdentificacion}</TableCell>
+                                    <TableCell>{[tercero.primerNombre, tercero.primerApellido].filter(Boolean).join(" ")}</TableCell>
+                                    <TableCell>{tercero.razonSocial}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                            {isLoadingTerceros && <div className="text-center py-4">Cargando...</div>}
+                            {!isLoadingTerceros && terceros.length === 0 && !terceroError && (
+                              <div className="text-center py-4 text-muted-foreground">No se encontraron terceros.</div>
+                            )}
+                            {terceroError && <div className="text-center text-red-500 py-4">{terceroError}</div>}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs text-muted-foreground mb-1">Nota FE</label>
+                    <Input
+                      value={sucursal.notaFeSucursal ?? ""}
+                      onChange={e => setSucursal({ ...sucursal, notaFeSucursal: e.target.value })}
+                      placeholder="Nota de facturación electrónica"
+                    />
+                  </div>
             </div>
         </Card>
                              
