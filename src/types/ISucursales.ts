@@ -4,5 +4,9 @@ export interface ISucursales {
     nombreSucursal?: string | null;
     idDepartamentoSucursal?: number | null;
     idMunicipioSucursal?: number | null;
+    direccionSucursal?: string | null;
+    telefonoSucursal?: string | null;
+    idTerceroResponsableSucursal?: number | null;
+    notaFeSucursal?: string | null;
     fechaGrabacionSucursal?: Date | null;
 }
