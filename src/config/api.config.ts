@@ -40,6 +40,7 @@ export const API_CONFIG = {
         EMPRESAS: '/empresas',
         TIPO_PERSONA: '/tipospersona',
         MEDIOS_PAGO: '/mediospago',
+        MEDIOS_PAGO_DIAN: '/mediospagodian',
         RESOLUCIONES: '/resoluciones',
         TIPOS_DOCUMENTO_EXTERNO: '/tiposdocumentoexterno',
         ACTIVIDADES_ICA: '/actividadesIca',

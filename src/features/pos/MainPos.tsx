@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, FileText, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -649,6 +649,72 @@ const RetailPOS = () => {
         }
     }
 
+    const ultimaConsultaExternaRef = useRef<string | null>(null);
+
+    const handleConsultarDatosExternos = async (
+        numeroIdentificacion: string,
+        idTipoDocumentoId: number
+    ) => {
+        const tipoDocumento = tiposDocumentoIdentidad.find(
+            tipo => tipo.idTipoDocumentoId === idTipoDocumentoId
+        );
+        const numeroNormalizado = numeroIdentificacion.trim();
+        const codigoTipoDocumentoId = tipoDocumento?.codigoTipoDocumentoId;
+
+        if (!numeroNormalizado || !codigoTipoDocumentoId || codigoTipoDocumentoId === '0') {
+            return;
+        }
+
+        const claveConsulta = `${codigoTipoDocumentoId}|${numeroNormalizado}`;
+        if (ultimaConsultaExternaRef.current === claveConsulta) {
+            return;
+        }
+        ultimaConsultaExternaRef.current = claveConsulta;
+
+        setFactura(prev => {
+            if (prev.terceroVenta?.numeroIdentificacion?.trim() !== numeroNormalizado) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                terceroVenta: buildVentaTercero({
+                    ...(prev.terceroVenta ?? buildVentaTercero()),
+                    primerNombre: null,
+                    primerApellido: null,
+                })
+            };
+        });
+
+        try {
+            const resultado = await TerceroService.consultarDatosExternos(
+                codigoTipoDocumentoId,
+                numeroNormalizado
+            );
+
+            setFactura(prev => {
+                if (prev.terceroVenta?.numeroIdentificacion?.trim() !== numeroNormalizado) {
+                    return prev;
+                }
+
+                return {
+                    ...prev,
+                    terceroVenta: buildVentaTercero({
+                        ...(prev.terceroVenta ?? buildVentaTercero()),
+                        razonSocial: resultado.name ?? prev.terceroVenta?.razonSocial ?? null,
+                        emailTercero: resultado.email ?? prev.terceroVenta?.emailTercero ?? null,
+                    })
+                };
+            });
+
+            if (resultado.message) {
+                toast(resultado.message, { position: 'top-center' });
+            }
+        } catch (error) {
+            console.error('Error al consultar datos externos del cliente:', error);
+        }
+    };
+
     // Manejo de eventos para buscar tercero por número de identificación
     const handleSearchTercero = (numeroIdentificacion: string) => {
         const tercero = terceros.find(t => t.numeroIdentificacion === numeroIdentificacion);
@@ -670,6 +736,23 @@ const RetailPOS = () => {
                     idTipoPersona: 1,
                 })
             }));
+        }
+        return tercero;
+    };
+
+    const handleValidarTercero = async () => {
+        const terceroVenta = factura.terceroVenta;
+        const numeroIdentificacion = terceroVenta?.numeroIdentificacion?.trim();
+        if (!numeroIdentificacion) {
+            return;
+        }
+
+        const terceroLocal = handleSearchTercero(numeroIdentificacion);
+        if (!terceroLocal) {
+            await handleConsultarDatosExternos(
+                numeroIdentificacion,
+                terceroVenta?.idTipoDocumentoId ?? 0
+            );
         }
     };
 
@@ -1123,25 +1206,30 @@ const RetailPOS = () => {
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-4">
                                 <h2 className="text-sm font-normal">Tipo de documento</h2>
-                                <select
-                                    className="rounded border px-3 py-2 text-sm bg-background w-72 font-bold"
-                                    value={factura.idTipoDocumento}
+                               <select
+                                    className="rounded border px-3 py-2 text-sm bg-background w-80 font-bold"
+                                    value={factura.idTipoDocumentoExterno?.toString() || ''}
                                     onChange={(e) => {
-                                        const selectedId = parseInt(e.target.value);
-                                        console.log(selectedId);
-                                        const selectedTipoDocumento = tiposDocumento.find(td => td.idTipoDocumento === selectedId);
-                                        setFactura({
-                                            ...factura,
-                                            idTipoDocumento: selectedId,
-                                            idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
-                                            idFormaPago: selectedTipoDocumento?.idFormaPago || 0,
-                                        });
+                                        const selectedId = Number(e.target.value);
+                                        if (!selectedId) return;
+
+                                        const selectedTipoDocumento = tiposDocumento.find(
+                                        (td) => Number(td.idTipoDocumentoExterno) === selectedId
+                                        );
+
+                                        setFactura((prev) => ({
+                                        ...prev,
+                                        idTipoDocumentoExterno: selectedId,
+                                        idTipoDocumento: selectedTipoDocumento?.idTipoDocumento || 0,
+                                        idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
+                                        idFormaPago: selectedTipoDocumento?.idFormaPago || 0,
+                                        }));
                                     }}
                                     required
                                 >
-                                    {tiposDocumento.map(td => (
-                                        <option key={td.idTipoDocumento} value={td.idTipoDocumento}>
-                                            {td.nombreDocumento} ({td.codigoDocumento})
+                                    {tiposDocumento.map((td) => (
+                                        <option key={td.idTipoDocumentoExterno} value={td.idTipoDocumentoExterno}>
+                                        {`${td.nombreTipoDocumentoExterno || ''} - ${td.codigoTipoDocumentoExterno || ''}`}
                                         </option>
                                     ))}
                                 </select>
@@ -1189,7 +1277,7 @@ const RetailPOS = () => {
                     <div className="border-b bg-muted/50">
                         <div className="flex items-center gap-2 ml-3 mt-2 mb-2 mr-2">
                             <h2 className="text-sm font-normal">Cliente</h2>
-                            <div className="grid grid-cols-5 gap-1">
+                            <div className="grid grid-cols-6 gap-1">
                                 <select
                                     className="w-full rounded border px-2 py-2 text-sm bg-background w-42"
                                     value={factura.terceroVenta?.idTipoDocumentoId ?? 0}
@@ -1218,6 +1306,9 @@ const RetailPOS = () => {
                                             ...prev,
                                             terceroVenta: buildVentaTercero({
                                                 ...(prev.terceroVenta ?? buildVentaTercero()),
+                                                idTercero: value === prev.terceroVenta?.numeroIdentificacion
+                                                    ? prev.terceroVenta?.idTercero ?? null
+                                                    : null,
                                                 numeroIdentificacion: value
                                             })
                                         }));
@@ -1228,10 +1319,7 @@ const RetailPOS = () => {
                                     }}
                                     onFocus={(e) => e.target.select()}
                                     onBlur={(e) => {
-                                        // Búsqueda al perder el foco
-                                        if (e.target.value) {
-                                            handleSearchTercero(e.target.value);
-                                        }
+                                        void handleValidarTercero();
                                     }}
                                 />
                                 <Input
@@ -1268,6 +1356,18 @@ const RetailPOS = () => {
                                         terceroVenta: buildVentaTercero({
                                             ...(prev.terceroVenta ?? buildVentaTercero()),
                                             emailTercero: e.target.value
+                                        })
+                                    }))}
+                                />
+                                <Input
+                                    placeholder="Razón Social"
+                                    className="rounded border px-2 py-2 text-sm bg-background w-26"
+                                    value={factura.terceroVenta?.razonSocial ?? ''}
+                                    onChange={(e) => setFactura(prev => ({
+                                        ...prev,
+                                        terceroVenta: buildVentaTercero({
+                                            ...(prev.terceroVenta ?? buildVentaTercero()),
+                                            razonSocial: e.target.value
                                         })
                                     }))}
                                 />

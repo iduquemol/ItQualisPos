@@ -432,15 +432,18 @@ export default function CompaniesMaster() {
 
   const fetchMunicipios = async () => {
     try {
+      setMunicipioError(null);
       const data = await MunicipioService.getAll();
       setMunicipiosPorDepartamento(data);
     } catch (error) {
       console.error("Error:", error);
+      setMunicipioError("Error al cargar los municipios");
     }
   };
 
   const fetchDepartamentos = async () => {
     try {
+      setDepartamentoError(null);
       const data = await DepartamentoService.getAll();
       setDepartamentos([
         {
@@ -452,6 +455,7 @@ export default function CompaniesMaster() {
       ]);
     } catch (error) {
       console.error("Error:", error);
+      setDepartamentoError("Error al cargar los departamentos");
     }
   };
 

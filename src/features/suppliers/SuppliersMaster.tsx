@@ -1069,8 +1069,8 @@ export default function SuppliersMaster() {
                                     {formError && (!tercero.idDepartamento || tercero.idDepartamento === 0) && (
                                         <span className="text-xs text-red-500">El departamento es obligatorio.</span>
                                     )}
-                                    {tipoError && (
-                                        <span className="text-xs text-red-500">{tipoError}</span>
+                                    {departamentoError && (
+                                        <span className="text-xs text-red-500">{departamentoError}</span>
                                     )}
                                 </div>
                                 <div>
@@ -1097,8 +1097,8 @@ export default function SuppliersMaster() {
                                     {formError && (!tercero.idMunicipio || tercero.idMunicipio === 0) && (
                                         <span className="text-xs text-red-500">El municipio es obligatorio.</span>
                                     )}
-                                    {tipoError && (
-                                        <span className="text-xs text-red-500">{tipoError}</span>
+                                    {municipioError && (
+                                        <span className="text-xs text-red-500">{municipioError}</span>
                                     )}
                                 </div>
                                 <div>
@@ -1272,8 +1272,8 @@ export default function SuppliersMaster() {
                                     {formError && (!tercero.idTipoRegimen || tercero.idTipoRegimen === 0) && (
                                         <span className="text-xs text-red-500">El tipo de régimen es obligatorio.</span>
                                     )}
-                                    {tipoError && (
-                                        <span className="text-xs text-red-500">{tipoError}</span>
+                                    {tipoRegimenError && (
+                                        <span className="text-xs text-red-500">{tipoRegimenError}</span>
                                     )}
                                 </div>
                                 <div>
@@ -1297,8 +1297,8 @@ export default function SuppliersMaster() {
                                     {formError && (!tercero.idListaPreciosTercero || tercero.idListaPreciosTercero === 0) && (
                                         <span className="text-xs text-red-500">La lista de precios es obligatoria.</span>
                                     )}
-                                    {tipoError && (
-                                        <span className="text-xs text-red-500">{tipoError}</span>
+                                    {listaPreciosError && (
+                                        <span className="text-xs text-red-500">{listaPreciosError}</span>
                                     )}
                                 </div>
                                 <div>

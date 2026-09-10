@@ -64,8 +64,9 @@ export default function SucursalesMaster() {
   const [sucursalesList, setSucursalesList] = useState<ISucursales[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [departamentos, setDepartamentos] = useState<IDepartamento[]>([]);
-  const [tipoError, setTipoError] = useState<string | null>(null);
+  const [departamentoError, setDepartamentoError] = useState<string | null>(null);
   const [municipiosPorDepartamento, setMunicipiosPorDepartamento] = useState<IMunicipiosPorDepartamento[]>([]);
+  const [municipioError, setMunicipioError] = useState<string | null>(null);
   const [openTerceroDialog, setOpenTerceroDialog] = useState(false);
   const [searchTercero, setSearchTercero] = useState("");
   const [terceros, setTerceros] = useState<ITercero[]>([]);
@@ -99,9 +100,11 @@ export default function SucursalesMaster() {
 
         setDepartamentos(departamentosData);
         setMunicipiosPorDepartamento(municipiosData);
-        setTipoError(null);
+        setDepartamentoError(null);
+        setMunicipioError(null);
       } catch (error) {
-        setTipoError("Error al cargar los departamentos o municipios.");
+        setDepartamentoError("Error al cargar los departamentos");
+        setMunicipioError("Error al cargar los municipios");
         toast.error("Error al cargar la información de ubicación");
       }
     };
@@ -389,8 +392,8 @@ export default function SucursalesMaster() {
                     {formError && (!sucursal.idDepartamentoSucursal || sucursal.idDepartamentoSucursal === 0) && (
                         <span className="text-xs text-red-500">El departamento es obligatorio.</span>
                     )}
-                    {tipoError && (
-                        <span className="text-xs text-red-500">{tipoError}</span>
+                    {departamentoError && (
+                        <span className="text-xs text-red-500">{departamentoError}</span>
                     )}
                 </div>
                 <div>
@@ -417,8 +420,8 @@ export default function SucursalesMaster() {
                     {formError && (!sucursal.idMunicipioSucursal || sucursal.idMunicipioSucursal === 0) && (
                         <span className="text-xs text-red-500">El municipio es obligatorio.</span>
                     )}
-                    {tipoError && (
-                        <span className="text-xs text-red-500">{tipoError}</span>
+                    {municipioError && (
+                        <span className="text-xs text-red-500">{municipioError}</span>
                     )}
                 </div>
                   <div>

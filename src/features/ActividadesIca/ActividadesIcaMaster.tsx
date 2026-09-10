@@ -33,13 +33,16 @@ import { toast } from "sonner";
 import { IActividadesIca } from "@/types/IActividadesIca";
 import { ActividadesIcaService } from "@/services/ActividadesIcaService";
 
+type ActividadIcaForm = Omit<IActividadesIca, "idActividadIca" | "tarifaActividad"> & {
+  idActividadIca?: number;
+  tarifaActividad: string;
+};
+
 export default function ActividadesIcaMaster() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
 
-  // Estado del formulario alineado con IActividadesIca
-  const [actividadIca, setActividadIca] = useState<IActividadesIca>({
-    idActividadIca: undefined,
+  const [actividadIca, setActividadIca] = useState<ActividadIcaForm>({
     codigoActividadIca: "",
     descripcionActividadIca: "",
     tarifaActividad: "",
@@ -75,13 +78,15 @@ export default function ActividadesIcaMaster() {
   }, []);
 
   const handleSelectActividad = (act: IActividadesIca) => {
-    setActividadIca({ ...act });
+    setActividadIca({
+      ...act,
+      tarifaActividad: act.tarifaActividad?.toString() ?? "",
+    });
     setOpenDialog(false);
   };
 
   const handleNew = () => {
     setActividadIca({
-      idActividadIca: undefined,
       codigoActividadIca: "",
       descripcionActividadIca: "",
       tarifaActividad: "",
@@ -116,10 +121,10 @@ export default function ActividadesIcaMaster() {
 
     setFormError(null);
 
-    // Mapeo seguro casteando valores según tu modelo (number | string)
+    // Convert input-only values to the API contract.
     const payload: IActividadesIca = {
       ...actividadIca,
-      codigoActividadIca: Number(actividadIca.codigoActividadIca),
+      idActividadIca: actividadIca.idActividadIca ?? 0,
       tarifaActividad: Number(actividadIca.tarifaActividad),
     };
 

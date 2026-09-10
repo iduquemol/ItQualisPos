@@ -43,13 +43,14 @@ export default function ResolutionsMaster() {
     fechaAutorizacion: null,
     vigenciaMeses: 0,
     fechaInicial: null,
-    fechaFinal: null,
+    fechaVencimiento: null,
     prefijoResolucion: "",
     numeroInicialResolucion: 0,
     numeroFinalResolucion: 0,
     numeroActual: 0,
     resolucionActiva: false,
     idTipoDocumentoDian: 0,
+    nombreDocumentoE: undefined,
   });
 
   const [openDialog, setOpenDialog] = useState(false);
@@ -360,11 +361,11 @@ export default function ResolutionsMaster() {
                 </div>
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">
-                    Fecha Final
+                    Fecha de Vencimiento
                   </label>
                   <Input
                     type="date"
-                    value={formatDateInput(resoluciones.fechaFinal)}
+                    value={formatDateInput(resoluciones.fechaVencimiento)}
                     readOnly
                     className="bg-muted cursor-not-allowed"
                   />
