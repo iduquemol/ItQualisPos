@@ -5,6 +5,7 @@ import { IVentaTercero } from "./IVentaTercero";
 export interface IVenta {
     idVenta: number | null;
     idTipoDocumento: number;
+    idTipoDocumentoExterno?: number | null;
     codigoDocumento: string;
     nombreDocumento: string | null;
     idMetodoDian: number | null;

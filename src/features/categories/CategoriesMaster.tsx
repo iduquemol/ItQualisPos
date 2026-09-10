@@ -505,9 +505,13 @@ export default function CategoriesMaster() {
                       onChange={(event) => setNuevoImpuesto(seleccionarImpuesto(event.target.value, nuevoImpuesto))}
                     >
                       <option value="0">Seleccione el impuesto...</option>
-                      {getImpuestosDisponibles().map((value) => (
-                        <option key={value.idTributo} value={value.idTributo}>{value.codigoTributo}</option>
-                      ))}
+                      {getImpuestosDisponibles()
+                        .filter(t => t.idTributo !== 0)
+                        .map(t => (
+                            <option key={t.codigoTributo} value={t.codigoTributo}>
+                                {t.nombreTributo} ({t.codigoTributo})
+                            </option>
+                        ))}
                     </select>
                   </td>
                   <td className="px-4 py-2">

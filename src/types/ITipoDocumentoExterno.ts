@@ -14,6 +14,9 @@ export interface ITipoDocumentoExterno {
   idConsecutivo  : number | null;
   idFormaPago: number | null;
   tipoDocumentoActivo: boolean | null;
+
+  idTipoAsignacionConsecutivo?: number | null;
+  nombreTipoAsignacion?: string | null;
   
   fechaGrabacionDocumentoExterno: string | null;
 }
