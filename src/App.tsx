@@ -19,6 +19,8 @@ import ActividadesIcaPage from './pages/ActividadesIcaPage';
 import SucursalesPage from './pages/SucursalesPage';
 import SellersPage from './pages/VendedoresPage';
 import UsersPage from './pages/UsersPage';
+import UnidadesDeMedidaPage from './pages/UnidadesDeMedidaPage';
+import ListasPreciosPage from './pages/listasPreciosPage';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -125,6 +127,18 @@ function App() {
                     path="/usuarios"
                     element={
                         isAuthenticated ? <UsersPage /> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/unidades-medida"
+                    element={
+                        isAuthenticated ? <UnidadesDeMedidaPage /> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/listas-precios"
+                    element={
+                        isAuthenticated ? <ListasPreciosPage /> : <Navigate to="/login" />
                     }
                 />
                 <Route

@@ -144,7 +144,7 @@ const MainEstimate = () => {
         nombreMunicipio: 'Bogota',
         terceroActivo: true,
         terceroCliente: true,
-        terceroEmpleado: true,
+        tercerosEmpleado: true,
         terceroProveedor: true,
         terceroGeneral: true,
         idTipoRegimen: 0,
@@ -492,15 +492,15 @@ const MainEstimate = () => {
             terceroVenta: {
                 idTercero: terc.idTercero,
                 idTipoDocumentoId: terc.idTipoDocumentoId,
-                digitoVerificacion: terc.digitoVerificacion,
+                digitoVerificacion: terc.digitoVerificacion ?? null,
                 numeroIdentificacion: terc.numeroIdentificacion,
-                primerNombre: terc.primerNombre,
-                primerApellido: terc.primerApellido,
-                razonSocial: terc.razonSocial,
-                telefonoTercero: terc.telefonoTercero,
-                direccionTercero: terc.direccionTercero,
+                primerNombre: terc.primerNombre ?? null,
+                primerApellido: terc.primerApellido ?? null,
+                razonSocial: terc.razonSocial ?? null,
+                telefonoTercero: terc.telefonoTercero ?? null,
+                direccionTercero: terc.direccionTercero ?? null,
                 idMunicipio: terc.idMunicipio,
-                emailTercero: terc.emailTercero,
+                emailTercero: terc.emailTercero ?? null,
                 idTipoPersona: 1
             }
         });

@@ -18,7 +18,7 @@ export const ActividadesIcaService = {
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error('Error en ActividadIcaService.getAll:', error);
+            console.error('Error en ActividadesIcaService.getAll:', error);
             throw error;
         }
     },
@@ -44,7 +44,7 @@ export const ActividadesIcaService = {
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error('Error en ActividadIcaService.create:', error);
+            console.error('Error en ActividadesIcaService.create:', error);
             throw error;
         }
     },
@@ -70,7 +70,7 @@ export const ActividadesIcaService = {
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error('Error en ActividadIcaService.update:', error);
+            console.error('Error en ActividadesIcaService.update:', error);
             throw error;
         }
     },
@@ -90,7 +90,7 @@ export const ActividadesIcaService = {
                 throw new Error('Error al eliminar actividad ICA');
             }
         } catch (error) {
-            console.error('Error en ActividadIcaService.delete:', error);
+            console.error('Error en ActividadesIcaService.delete:', error);
             throw error;
         }
     }

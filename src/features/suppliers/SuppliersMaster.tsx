@@ -54,7 +54,7 @@ export default function SuppliersMaster() {
         nombreMunicipio: null,
         terceroActivo: true,
         terceroCliente: false,
-        terceroEmpleado: false,
+        tercerosEmpleado: false,
         terceroProveedor: false,
         terceroGeneral: true,
         idTipoRegimen: 0,
@@ -147,7 +147,7 @@ export default function SuppliersMaster() {
             terceroActivo: terc.terceroActivo,
             terceroCliente: terc.terceroCliente,
             terceroProveedor: terc.terceroProveedor,
-            terceroEmpleado: terc.terceroEmpleado,
+            tercerosEmpleado: terc.tercerosEmpleado,
             terceroGeneral: terc.terceroGeneral,
             idTipoRegimen: terc.idTipoRegimen,
             idListaPreciosTercero: terc.idListaPreciosTercero,
@@ -323,7 +323,7 @@ export default function SuppliersMaster() {
 
     const handleNew = async () => {
         setTercero({
-            idTercero: null,
+            idTercero: 0,
             idTipoDocumentoId: 0,
             nombreTipoDocumentoId: "",
             digitoVerificacion: "",
@@ -333,7 +333,7 @@ export default function SuppliersMaster() {
             primerApellido: "",
             segundoApellido: "",
             razonSocial: "",
-            telefonoTercero: null,
+            telefonoTercero: "",
             direccionTercero: "",
             emailTercero: "",
             idDepartamento: 0,
@@ -343,7 +343,7 @@ export default function SuppliersMaster() {
             terceroActivo: true,
             terceroCliente: false,
             terceroProveedor: false,
-            terceroEmpleado: false,
+            tercerosEmpleado: false,
             terceroGeneral: true,
             idTipoRegimen: 0,
             idListaPreciosTercero: 0,
@@ -424,7 +424,7 @@ export default function SuppliersMaster() {
                     // no corresponde a ese tercero: vuelve a modo creación.
                     setSelectedTercero(null);
                     setTercero({
-                        idTercero: null,
+                        idTercero: 0,
                         idTipoDocumentoId: 0,
                         nombreTipoDocumentoId: "",
                         digitoVerificacion: "",
@@ -434,7 +434,7 @@ export default function SuppliersMaster() {
                         primerApellido: "",
                         segundoApellido: "",
                         razonSocial: "",
-                        telefonoTercero: null,
+                        telefonoTercero: "",
                         direccionTercero: "",
                         emailTercero: "",
                         idDepartamento: 0,
@@ -444,7 +444,7 @@ export default function SuppliersMaster() {
                         terceroActivo: false,
                         terceroCliente: false,
                         terceroProveedor: false,
-                        terceroEmpleado: false,
+                        tercerosEmpleado: false,
                         terceroGeneral: false,
                         idTipoRegimen: 0,
                         idListaPreciosTercero: 0,
@@ -502,7 +502,7 @@ export default function SuppliersMaster() {
 
             // Limpiar el formulario después de eliminar
             setTercero({
-                idTercero: null,
+                idTercero: 0,
                 idTipoDocumentoId: 0,
                 nombreTipoDocumentoId: "",
                 digitoVerificacion: "",
@@ -512,7 +512,7 @@ export default function SuppliersMaster() {
                 primerApellido: "",
                 segundoApellido: "",
                 razonSocial: "",
-                telefonoTercero: null,
+                telefonoTercero: "",
                 direccionTercero: "",
                 emailTercero: "",
                 idDepartamento: 0,
@@ -522,7 +522,7 @@ export default function SuppliersMaster() {
                 terceroActivo: false,
                 terceroCliente: false,
                 terceroProveedor: false,
-                terceroEmpleado: false,
+                tercerosEmpleado: false,
                 terceroGeneral: false,
                 idTipoRegimen: 0,
                 idListaPreciosTercero: 0,

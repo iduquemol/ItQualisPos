@@ -18,6 +18,8 @@ const menuItems = [
   { label: "Sucursales", icon: "🏬", color: "bg-teal-100", route: "/sucursales" },
   { label: "Vendedores", icon: "🧑‍💼", color: "bg-indigo-100", route: "/vendedores" },
   { label: "Usuarios", icon: "👤", color: "bg-cyan-100", route: "/usuarios" },
+  { label: "Unidades de Medida", icon: "📏", color: "bg-lime-100", route: "/unidades-medida" },
+  { label: "Listas de Precios", icon: "💲", color: "bg-rose-100", route: "/listas-precios" },
   // { label: "Reporte", icon: "📊", color: "bg-red-100", route: "/reporte" }
 ];
 

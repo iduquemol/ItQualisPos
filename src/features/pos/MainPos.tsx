@@ -181,7 +181,7 @@ const RetailPOS = () => {
         emailTercero: 'iduque2001@hotmail.com',
         terceroActivo: true,
         terceroCliente: true,
-        terceroEmpleado: true,
+        tercerosEmpleado: true,
         terceroProveedor: true,
         terceroGeneral: true,
         idTipoRegimen: 0,

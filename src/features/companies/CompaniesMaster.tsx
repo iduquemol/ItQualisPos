@@ -129,7 +129,9 @@ export default function CompaniesMaster() {
   const [tipoError, setTipoError] = useState<string | null>(null);
 
   const [municipiosPorDepartamento, setMunicipiosPorDepartamento] = useState<IMunicipiosPorDepartamento[]>([]);
+  const [municipioError, setMunicipioError] = useState<string | null>(null);
   const [departamentos, setDepartamentos] = useState<IDepartamento[]>([]);
+  const [departamentoError, setDepartamentoError] = useState<string | null>(null);
 
   const [tiposPersona, setTiposPersona] = useState<ITipoPersona[]>([]);
 
@@ -147,7 +149,7 @@ export default function CompaniesMaster() {
 
 
   const [tercero, setTercero] = useState<ITercero>({
-    idTercero: null,
+    idTercero: 0,
     idTipoDocumentoId: 0,
     nombreTipoDocumentoId: "",
     digitoVerificacion: "",
@@ -166,7 +168,7 @@ export default function CompaniesMaster() {
     nombreMunicipio: null,
     terceroActivo: false,
     terceroCliente: false,
-    terceroEmpleado: false,
+    tercerosEmpleado: false,
     terceroProveedor: false,
     terceroGeneral: false,
     idTipoRegimen: 0,
@@ -769,9 +771,7 @@ export default function CompaniesMaster() {
                         setEmpresa({
                           ...empresa,
                           idTipoPersona: id,
-                          nombreTipoPersona: found
-                            ? found.nombreTipoPersona
-                            : null,
+                          nombreTipoPersona: found?.nombreTipoPersona ?? null,
                         });
                       }}
                       required
@@ -965,6 +965,9 @@ export default function CompaniesMaster() {
                           El departamento es obligatorio.
                         </span>
                       )}
+                    {departamentoError && (
+                      <span className="text-xs text-red-500">{departamentoError}</span>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">
@@ -1004,6 +1007,9 @@ export default function CompaniesMaster() {
                           El municipio es obligatorio.
                         </span>
                       )}
+                    {municipioError && (
+                      <span className="text-xs text-red-500">{municipioError}</span>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">

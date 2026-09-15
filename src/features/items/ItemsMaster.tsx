@@ -1148,8 +1148,8 @@ export default function ItemsMaster() {
                                                             setEditImpuesto({
                                                                 ...editImpuesto,
                                                                 idTributo: selectedTributo ? selectedTributo.idTributo.toString() : "0",
-                                                                codigoTributo: selectedTributo ? selectedTributo.codigoTributo : "",
-                                                                nombreTributo: selectedTributo ? selectedTributo.nombreTributo : "",
+                                                                codigoTributo: selectedTributo?.codigoTributo ?? "",
+                                                                nombreTributo: selectedTributo?.nombreTributo ?? "",
                                                             });
                                                         }}
                                                     >
@@ -1157,8 +1157,8 @@ export default function ItemsMaster() {
                                                         {getImpuestosDisponibles(idx, editImpuesto.idTributo)
                                                             .filter(t => t.idTributo !== 0)
                                                             .map(t => (
-                                                                <option key={t.idTributo} value={t.codigoTributo}>
-                                                                    {t.nombreTributo} ({t.codigoTributo})
+                                                                <option key={t.idTributo} value={t.codigoTributo ?? ""}>
+                                                                    {t.nombreTributo ?? ""} ({t.codigoTributo ?? ""})
                                                                 </option>
                                                             ))}
                                                     </select>
@@ -1182,8 +1182,8 @@ export default function ItemsMaster() {
                                                             setEditImpuesto({
                                                                 ...editImpuesto,
                                                                 idTarifaProducto: selectedTarifa ? selectedTarifa.idTarifaTributo : 0,
-                                                                tarifa: selectedTarifa ? selectedTarifa.tarifaTributo : 0,
-                                                                nombreTarifa: selectedTarifa ? selectedTarifa.nombreTarifa : "",
+                                                                tarifa: selectedTarifa?.tarifaTributo ?? 0,
+                                                                nombreTarifa: selectedTarifa?.nombreTarifa ?? "",
                                                             });
                                                         }}
                                                     >
@@ -1191,8 +1191,8 @@ export default function ItemsMaster() {
                                                         {tarifasTributo
                                                             .find(t => String(t.idTributo) === editImpuesto.idTributo)
                                                             ?.tarifasTributo?.map((tarifa, idx) => (
-                                                                <option key={idx} value={tarifa.nombreTarifa}>
-                                                                    {tarifa.nombreTarifa}
+                                                                    <option key={idx} value={tarifa.nombreTarifa ?? ""}>
+                                                                    {tarifa.nombreTarifa ?? ""}
                                                                 </option>
                                                             )) || []}
                                                     </select>
@@ -1252,8 +1252,8 @@ export default function ItemsMaster() {
                                                     setNuevoImpuesto({
                                                         ...nuevoImpuesto,
                                                         idTributo: selectedTributo ? selectedTributo.idTributo.toString() : "0",
-                                                        nombreTributo: selectedTributo ? selectedTributo.nombreTributo : "",
-                                                        codigoTributo: selectedTributo ? selectedTributo.codigoTributo : "",
+                                                        nombreTributo: selectedTributo?.nombreTributo ?? "",
+                                                        codigoTributo: selectedTributo?.codigoTributo ?? "",
                                                     });
                                                 }}
                                             >
@@ -1261,8 +1261,8 @@ export default function ItemsMaster() {
                                                 {getImpuestosDisponibles()
                                                     .filter(t => t.idTributo !== 0)
                                                     .map(t => (
-                                                        <option key={t.codigoTributo} value={t.codigoTributo}>
-                                                            {t.nombreTributo} ({t.codigoTributo})
+                                                        <option key={t.idTributo} value={t.codigoTributo ?? ""}>
+                                                            {t.nombreTributo ?? ""} ({t.codigoTributo ?? ""})
                                                         </option>
                                                     ))}
                                             </select>
@@ -1287,8 +1287,8 @@ export default function ItemsMaster() {
                                                     setNuevoImpuesto({
                                                         ...nuevoImpuesto,
                                                         idTarifaProducto: selectedTarifa ? selectedTarifa.idTarifaTributo : 0,
-                                                        tarifa: selectedTarifa ? selectedTarifa.tarifaTributo : 0,
-                                                        nombreTarifa: selectedTarifa ? selectedTarifa.nombreTarifa : "",
+                                                        tarifa: selectedTarifa?.tarifaTributo ?? 0,
+                                                        nombreTarifa: selectedTarifa?.nombreTarifa ?? "",
                                                     });
                                                 }}
                                             >
@@ -1296,8 +1296,8 @@ export default function ItemsMaster() {
                                                 {tarifasTributo
                                                     .find(t => String(t.idTributo) === nuevoImpuesto.idTributo)
                                                     ?.tarifasTributo?.map((tarifa, idx) => (
-                                                        <option key={idx} value={tarifa.nombreTarifa}>
-                                                            {tarifa.nombreTarifa}
+                                                            <option key={idx} value={tarifa.nombreTarifa ?? ""}>
+                                                            {tarifa.nombreTarifa ?? ""}
                                                         </option>
                                                     )) || []}
                                             </select>
@@ -1372,9 +1372,9 @@ export default function ItemsMaster() {
                                                             const selectedPrecio = listaPrecios.find(t => String(t.codigoListaPrecio) === selectedId);
                                                             setEditPrecio({
                                                                 ...editPrecio,
-                                                                idListaPrecio: selectedPrecio ? selectedPrecio.idListaPrecio : 0,
-                                                                codigoListaPrecio: selectedPrecio ? selectedPrecio.codigoListaPrecio : "",
-                                                                nombreListaPrecio: selectedPrecio ? selectedPrecio.nombreListaPrecio : "",
+                                                                idListaPrecio: selectedPrecio?.idListaPrecio ?? 0,
+                                                                codigoListaPrecio: selectedPrecio?.codigoListaPrecio ?? "",
+                                                                nombreListaPrecio: selectedPrecio?.nombreListaPrecio ?? "",
                                                             });
                                                         }}
                                                     >
@@ -1382,8 +1382,8 @@ export default function ItemsMaster() {
                                                         {getPreciosDisponibles(idx, editPrecio.idListaPrecio)
                                                             .filter(t => t.idListaPrecio !== 0)
                                                             .map(t => (
-                                                                <option key={t.idListaPrecio} value={t.idListaPrecio}>
-                                                                    {t.nombreListaPrecio} ({t.codigoListaPrecio})
+                                                                <option key={t.idListaPrecio} value={t.codigoListaPrecio ?? ""}>
+                                                                    {t.nombreListaPrecio ?? ""} ({t.codigoListaPrecio ?? ""})
                                                                 </option>
                                                             ))}
                                                     </select>
@@ -1459,9 +1459,9 @@ export default function ItemsMaster() {
                                                     const selectedPrecio = listaPrecios.find(t => String(t.codigoListaPrecio) === selectedId);
                                                     setNuevoPrecio({
                                                         ...nuevoPrecio,
-                                                        idListaPrecio: selectedPrecio ? selectedPrecio.idListaPrecio : 0,
-                                                        nombreListaPrecio: selectedPrecio ? selectedPrecio.nombreListaPrecio : "",
-                                                        codigoListaPrecio: selectedPrecio ? selectedPrecio.codigoListaPrecio : "",
+                                                        idListaPrecio: selectedPrecio?.idListaPrecio ?? 0,
+                                                        nombreListaPrecio: selectedPrecio?.nombreListaPrecio ?? "",
+                                                        codigoListaPrecio: selectedPrecio?.codigoListaPrecio ?? "",
                                                     });
                                                 }}
                                             >
@@ -1469,8 +1469,8 @@ export default function ItemsMaster() {
                                                 {getPreciosDisponibles()
                                                     .filter(t => t.idListaPrecio !== 0)
                                                     .map(t => (
-                                                        <option key={t.codigoListaPrecio} value={t.idListaPrecio}>
-                                                            {t.nombreListaPrecio} ({t.codigoListaPrecio})
+                                                        <option key={t.idListaPrecio} value={t.codigoListaPrecio ?? ""}>
+                                                            {t.nombreListaPrecio ?? ""} ({t.codigoListaPrecio ?? ""})
                                                         </option>
                                                     ))}
                                             </select>
