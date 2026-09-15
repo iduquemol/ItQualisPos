@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, Router } from 'react-router-dom';
+import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/loginPage';
 import POSPage from './pages/pos';
 import MainMenuPage from './pages/mainMenuPage';
@@ -50,83 +51,82 @@ function App() {
             <Routes>
                 <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
                 <Route path="/main-menu" element={
-                    isAuthenticated ? <MainMenuPage /> : <Navigate to="/login" />
+                    isAuthenticated ? <AppLayout><MainMenuPage /></AppLayout> : <Navigate to="/login" />
                 } />
                 <Route path="/items" element={
-                    isAuthenticated ? <ItemsPage /> : <Navigate to="/login" />
+                    isAuthenticated ? <AppLayout><ItemsPage /></AppLayout> : <Navigate to="/login" />
                 } />
                 <Route path="/terceros" element={
-                    isAuthenticated ? <TercerosPage /> : <Navigate to="/login" />
+                    isAuthenticated ? <AppLayout><TercerosPage /></AppLayout> : <Navigate to="/login" />
                 } />
                 <Route path="/reporte" element={
                     // isAuthenticated ? <FacturaReportPage /> : <Navigate to="/login" />
                     <FacturaReportPage />
                 } />
                 <Route path="/empresas" element={
-                    isAuthenticated ? <EmpresasPage /> : <Navigate to="/login" />
+                    isAuthenticated ? <AppLayout><EmpresasPage /></AppLayout> : <Navigate to="/login" />
                 } />
                 <Route path="/resoluciones" element={
-                    isAuthenticated ? <ResolutionsPage /> : <Navigate to="/login" />
+                    isAuthenticated ? <AppLayout><ResolutionsPage /></AppLayout> : <Navigate to="/login" />
                 } />
                 <Route
                     path="/pos"
                     element={
-                        isAuthenticated ? <POSPage /> : <Navigate to="/login" />
-                        // <POSPage />
+                        isAuthenticated ? <AppLayout><POSPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/parametros-venta"
                     element={
-                        isAuthenticated ? <ParametrosVentasPage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><ParametrosVentasPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/documentos-externos"
                     element={
-                        isAuthenticated ? <DocumentosExternosPage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><DocumentosExternosPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/categories"
                     element={
-                        isAuthenticated ? <CategoriesPage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><CategoriesPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/credit-notes"
                     element={
-                        isAuthenticated ? <CreditNotePage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><CreditNotePage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/estimates"
                     element={
-                        isAuthenticated ? <EstimatePage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><EstimatePage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/actividades-ica"
                     element={
-                        isAuthenticated ? <ActividadesIcaPage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><ActividadesIcaPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/sucursales"
                     element={
-                        isAuthenticated ? <SucursalesPage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><SucursalesPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/vendedores"
                     element={
-                        isAuthenticated ? <SellersPage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><SellersPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/usuarios"
                     element={
-                        isAuthenticated ? <UsersPage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><UsersPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
@@ -145,7 +145,7 @@ function App() {
                     path="/"
                     element={
                         isAuthenticated ? (
-                            <POSPage />
+                            <AppLayout><POSPage /></AppLayout>
                         ) : (
                             <LoginPage onLogin={handleLogin} />
                         )
