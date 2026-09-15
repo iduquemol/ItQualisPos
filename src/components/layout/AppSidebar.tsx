@@ -43,7 +43,9 @@ const menuGroups = [
     icon: Package,
     children: [
       { label: "Items", icon: Package, path: "/items" },
-      { label: "Categorías", icon: FolderTree, path: "/categories" },     
+      { label: "Categorías", icon: FolderTree, path: "/categories" },   
+      { label: "Unidades de Medida", icon: FolderTree, path: "/unidades-medida" },  
+      { label: "Listas de Precios", icon: FolderTree, path: "/listas-precios" },  
     ],
   },
   {
@@ -58,8 +60,8 @@ const menuGroups = [
     icon: Building2,
     children: [
       { label: "Empresas", icon: Building2, path: "/empresas" },
+      { label: "Resoluciones", icon: FileCheck2, path: "/resoluciones" },      
       { label: "Actividades ICA", icon: Landmark, path: "/actividades-ica" },
-      { label: "Resoluciones", icon: FileCheck2, path: "/resoluciones" },
       { label: "Sucursales", icon: GitBranch, path: "/sucursales" },
       { label: "Vendedores", icon: BadgeDollarSign, path: "/vendedores" },
       { label: "Usuarios", icon: UserCog, path: "/usuarios" },
