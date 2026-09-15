@@ -12,51 +12,112 @@ const normalizeUsuario = (usuario: Partial<IUsuarios> & Record<string, any>): IU
   fechaGrabacionUsuario: usuario.fechaGrabacionUsuario ?? null,
 });
 
-const usuarioServiceBase = {
-  getAll: async (): Promise<IUsuarios[]> => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.USUARIOS}`);
-    if (!response.ok) throw new Error('Error al obtener usuarios');
+export const UsuarioService = {
+  async getAll(): Promise<IUsuarios[]> {
+    try {
+      const response = await fetch(
+        API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.USUARIOS),
+        {
+          headers: API_CONFIG.OPTIONS.headers,
+          mode: 'cors',
+          credentials: 'same-origin'
+        }
+      );
 
-    const data = await response.json();
-    if (!Array.isArray(data) || data.length === 0) return [];
+      if (!response.ok) {
+        throw new Error('Error al obtener usuarios');
+      }
 
-    // Si el backend responde con un string JSON dentro de la propiedad 'usuarios'
-    let rawUsuarios = data;
-    if (data[0] && typeof data[0].usuarios === 'string') {
-      rawUsuarios = JSON.parse(data[0].usuarios);
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) return [];
+
+      let rawUsuarios = data;
+      if (data[0] && typeof data[0].usuarios === 'string') {
+        rawUsuarios = JSON.parse(data[0].usuarios);
+      }
+
+      return rawUsuarios.map(normalizeUsuario);
+    } catch (error) {
+      console.error('Error en UsuarioService.getAll:', error);
+      throw error;
     }
-
-    return rawUsuarios.map(normalizeUsuario);
   },
 
-  create: async (usuario: IUsuarios) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.USUARIOS}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(normalizeUsuario(usuario)),
-    });
-    if (!response.ok) throw new Error('Error al crear usuario');
-    return await response.json();
+  async create(usuario: IUsuarios): Promise<{ message: string; idUsuario: number }> {
+    try {
+      const response = await fetch(
+        API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.USUARIOS),
+        {
+          method: 'POST',
+          headers: {
+            ...API_CONFIG.OPTIONS.headers,
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors',
+          credentials: 'same-origin',
+          body: JSON.stringify(normalizeUsuario(usuario))
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al crear usuario');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error en UsuarioService.create:', error);
+      throw error;
+    }
   },
 
-  update: async (usuario: IUsuarios) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.USUARIOS}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(normalizeUsuario(usuario)),
-    });
-    if (!response.ok) throw new Error('Error al actualizar usuario');
-    return await response.json();
+  async update(usuario: IUsuarios): Promise<{ message: string; idUsuario: number }> {
+    try {
+      const response = await fetch(
+        API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.USUARIOS),
+        {
+          method: 'PUT',
+          headers: {
+            ...API_CONFIG.OPTIONS.headers,
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors',
+          credentials: 'same-origin',
+          body: JSON.stringify(normalizeUsuario(usuario))
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al actualizar usuario');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error en UsuarioService.update:', error);
+      throw error;
+    }
   },
 
-  delete: async (idUsuario: number) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.USUARIOS}/${idUsuario}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Error al eliminar usuario');
-    return await response.json();
-  },
+  async delete(idUsuario: number): Promise<void> {
+    try {
+      const response = await fetch(
+        `${API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.USUARIOS)}/${idUsuario}`,
+        {
+          method: 'DELETE',
+          headers: API_CONFIG.OPTIONS.headers,
+          mode: 'cors',
+          credentials: 'same-origin'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar usuario');
+      }
+    } catch (error) {
+      console.error('Error en UsuarioService.delete:', error);
+      throw error;
+    }
+  }
 };
 
-export const UsuariosService = usuarioServiceBase;
-export const UsuarioService = usuarioServiceBase;

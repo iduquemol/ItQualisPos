@@ -10,6 +10,7 @@ export const API_CONFIG = {
         SALES: '/venta',
         SUPPLIERS: '/terceros',
         UNIDADES_DE_MEDIDA: '/unidadesdemedida',
+        UNIDADES_MEDIDA_DIAN: '/unidadesmedidadian',
         TRIBUTOS: '/tributos',
         TIPO_DOCUMENTO_IDENTIDAD: '/tiposdocumentoidentidad',
         MUNICIPIOS: '/municipios',

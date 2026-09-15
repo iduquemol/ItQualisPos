@@ -16,10 +16,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import Tesseract from 'tesseract.js';
-import { CategoryService } from '@/services/CategoryService';
+import { CategoriasService } from '@/services/CategoryService';
 import { ProductoService } from '@/services/ProductoService';
 import { TerceroService } from '@/services/TerceroService';
-import { ICategory } from '@/types/ICategorias';
+import { ICategorias } from '@/types/ICategorias';
 import { IProducto } from '@/types/IProducto';
 import { ITercero } from '@/types/ITercero';
 import { ITipoDocumento } from '@/types/ITipoDocumento';
@@ -78,7 +78,7 @@ const MainCreditNote = () => {
     const [loyaltyPoints, setLoyaltyPoints] = useState(0);
     const [showScanner, setShowScanner] = useState(false);
     const [showOCR, setShowOCR] = useState(false);
-    const [categories, setCategories] = useState<ICategory[]>([]);
+    const [categories, setCategories] = useState<ICategorias[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
     const [categoryError, setCategoryError] = useState<string | null>(null);
     const [products, setProducts] = useState<IProducto[]>([]);
@@ -479,9 +479,9 @@ const MainCreditNote = () => {
     };
 
     // Cálculos
-    const subtotal = notaCredito.detalleNotaCredito?.reduce((sum, item) => sum + (item.precioUnitarioNotaCredito * item.cantidadNotaCredito), 0);
-    const discount = notaCredito.detalleNotaCredito?.reduce((descuento, item) => descuento + item.descuentoNotaCredito, 0);
-    const tax = notaCredito.detalleNotaCredito?.reduce((iva, item) => iva + item.ivaNotaCredito, 0);
+    const subtotal = notaCredito.detalleNotaCredito?.reduce((sum, item) => sum + (item.precioUnitarioNotaCredito * item.cantidadNotaCredito), 0) ?? 0;
+    const discount = notaCredito.detalleNotaCredito?.reduce((descuento, item) => descuento + item.descuentoNotaCredito, 0) ?? 0;
+    const tax = notaCredito.detalleNotaCredito?.reduce((iva, item) => iva + item.ivaNotaCredito, 0) ?? 0;
     // const loyaltyDiscount = customerInfo.loyalty ? subtotal * 0.05 : 0; // 5% descuento por lealtad
     const total = subtotal - discount + tax;
     const totalItems = notaCredito.detalleNotaCredito?.reduce((sum, item) => sum + item.cantidadNotaCredito, 0);
@@ -519,10 +519,11 @@ const MainCreditNote = () => {
                     <div className="flex items-center space-x-4 mb-2">
                         {showFacturaModal && (
                             <FacturaModal
+                                idVenta={facturaModalData?.idVenta ?? selectedFactura?.idVenta ?? 0}
                                 facturaData={facturaModalData}
                                 triggerText="Imprimir Factura"
                                 triggerVariant="secondary"
-                                idMetodoDian={factura?.idMetodoDian || 0}
+                                idMetodoDian={facturaModalData?.idMetodoDian ?? selectedFactura?.idMetodoDian ?? 0}
                             />
                         )}
                         <Button

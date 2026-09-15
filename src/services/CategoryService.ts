@@ -1,43 +1,112 @@
 import { API_CONFIG } from '@/config/api.config';
 import { ICategorias } from '@/types/ICategorias';
 
-const categoryServiceBase = {
-  getAll: async (): Promise<ICategorias[]> => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CATEGORIES}`);
-    if (!response.ok) throw new Error('Error al obtener categorías');
-    return await response.json();
+export const CategoriasService = {
+  async getAll(): Promise<ICategorias[]> {
+    try {
+      const response = await fetch(
+        API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CATEGORIES),
+        {
+          headers: API_CONFIG.OPTIONS.headers,
+          mode: 'cors',
+          credentials: 'same-origin'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener categorías');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error en CategoriasService.getAll:', error);
+      throw error;
+    }
   },
 
-  create: async (categoria: ICategorias) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CATEGORIES}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(categoria),
-    });
-    if (!response.ok) throw new Error('Error al crear categoría');
-    return await response.json();
+  async create(categoria: ICategorias): Promise<{ message: string; idCategoria: number }> {
+    try {
+      const response = await fetch(
+        API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CATEGORIES),
+        {
+          method: 'POST',
+          headers: {
+            ...API_CONFIG.OPTIONS.headers,
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors',
+          credentials: 'same-origin',
+          body: JSON.stringify(categoria)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al crear categoría');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error en CategoriasService.create:', error);
+      throw error;
+    }
   },
 
-  update: async (categoria: ICategorias) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CATEGORIES}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(categoria),
-    });
-    if (!response.ok) throw new Error('Error al actualizar categoría');
-    return await response.json();
+  async update(categoria: ICategorias): Promise<{ message: string; idCategoria: number }> {
+    try {
+      const response = await fetch(
+        API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CATEGORIES),
+        {
+          method: 'PUT',
+          headers: {
+            ...API_CONFIG.OPTIONS.headers,
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors',
+          credentials: 'same-origin',
+          body: JSON.stringify(categoria)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al actualizar categoría');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error en CategoriasService.update:', error);
+      throw error;
+    }
   },
 
-  delete: async (idCategoria: number) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CATEGORIES}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idCategoria }),
-    });
-    if (!response.ok) throw new Error('Error al eliminar categoría');
-    return await response.json();
-  },
+  async delete(idCategoria: number): Promise<{ message: string }> {
+    try {
+      const response = await fetch(
+        API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CATEGORIES),
+        {
+          method: 'DELETE',
+          headers: {
+            ...API_CONFIG.OPTIONS.headers,
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors',
+          credentials: 'same-origin',
+          body: JSON.stringify({ idCategoria })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar categoría');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error en CategoriasService.delete:', error);
+      throw error;
+    }
+  }
 };
 
-export const CategoriasService = categoryServiceBase;
-export const CategoryService = categoryServiceBase;

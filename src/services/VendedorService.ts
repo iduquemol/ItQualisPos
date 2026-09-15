@@ -1,42 +1,98 @@
 import { API_CONFIG } from '@/config/api.config';
-import { IVendedores} from '@/types/IVendedores';
+import { IVendedores } from '@/types/IVendedores';
 
-const vendedorServiceBase = {
-  getAll: async (): Promise<IVendedores[]> => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VENDEDORES}`);
-    if (!response.ok) throw new Error('Error al obtener vendedores');
-    return await response.json();
-  },
-
-  create: async (vendedor: IVendedores) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VENDEDORES}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(vendedor),
-    });
-    if (!response.ok) throw new Error('Error al crear vendedor');
-    return await response.json();
-  },
-
-  update: async (vendedor: IVendedores) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VENDEDORES}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(vendedor),
-    });
-    if (!response.ok) throw new Error('Error al actualizar vendedor');
-    return await response.json();
-  },
-
-  delete: async (idVendedor: number) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VENDEDORES}/${idVendedor}`, {
-        method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Error al eliminar vendedor');
-    return await response.json();
+export const VendedorService = {
+    async getAll(): Promise<IVendedores[]> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.VENDEDORES),
+                {
+                    headers: API_CONFIG.OPTIONS.headers,
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al obtener vendedores');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error en VendedorService.getAll:', error);
+            throw error;
+        }
     },
 
+    async create(vendedor: IVendedores): Promise<{ message: string; idVendedor: number }> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.VENDEDORES),
+                {
+                    method: 'POST',
+                    headers: {
+                        ...API_CONFIG.OPTIONS.headers,
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin',
+                    body: JSON.stringify(vendedor)
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al crear vendedor');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error en VendedorService.create:', error);
+            throw error;
+        }
+    },
+
+    async update(vendedor: IVendedores): Promise<{ message: string; idVendedor: number }> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.VENDEDORES),
+                {
+                    method: 'PUT',
+                    headers: {
+                        ...API_CONFIG.OPTIONS.headers,
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin',
+                    body: JSON.stringify(vendedor)
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al actualizar vendedor');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error en VendedorService.update:', error);
+            throw error;
+        }
+    },
+
+    async delete(idVendedor: number): Promise<void> {
+        try {
+            const response = await fetch(
+                `${API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.VENDEDORES)}/${idVendedor}`,
+                {
+                    method: 'DELETE',
+                    headers: API_CONFIG.OPTIONS.headers,
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al eliminar vendedor');
+            }
+        } catch (error) {
+            console.error('Error en VendedorService.delete:', error);
+            throw error;
+        }
+    }
 };
 
-export const VendedoresService = vendedorServiceBase;
-export const VendedorService = vendedorServiceBase;

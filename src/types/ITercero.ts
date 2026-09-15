@@ -1,18 +1,18 @@
 import { IResponsabilidadTercero } from "./IResponsabilidadTercero";
 
 export interface ITercero {
-    idTercero: number | null;
+    idTercero: number;
     idTipoDocumentoId: number;
     nombreTipoDocumentoId: string | null;
-    digitoVerificacion: string | null;
-    numeroIdentificacion: string | null;
-    primerNombre: string | null;
-    segundoNombre: string | null;
-    primerApellido: string | null;
-    segundoApellido: string | null;
-    razonSocial: string | null;
-    telefonoTercero: string | null;
-    direccionTercero: string | null;
+    digitoVerificacion?: string | null;
+    numeroIdentificacion: string;
+    primerNombre?: string | null;
+    segundoNombre?: string | null;
+    primerApellido?: string | null;
+    segundoApellido?: string | null;
+    razonSocial?: string | null;
+    telefonoTercero: string;
+    direccionTercero: string;
     idDepartamento: number;
     nombreDepartamento: string | null;
     idMunicipio: number;
@@ -21,7 +21,7 @@ export interface ITercero {
     terceroActivo: boolean;
     terceroCliente: boolean;
     terceroProveedor: boolean;
-    terceroEmpleado: boolean;
+    tercerosEmpleado: boolean;
     terceroGeneral: boolean;
     idTipoRegimen: number;
     idListaPreciosTercero: number;

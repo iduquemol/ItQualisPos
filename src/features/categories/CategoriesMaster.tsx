@@ -361,6 +361,7 @@ export default function CategoriesMaster() {
                   setCategoria({ ...categoria, codigoCategoria: e.target.value })
                   }
                   placeholder="Código de la categoría"
+                  required
               />
               </div>
             
@@ -374,6 +375,7 @@ export default function CategoriesMaster() {
                   setCategoria({ ...categoria, nombreCategoria: e.target.value })
                   }
                   placeholder="Nombre de la categoría"
+                  required
               />
               </div>
               
@@ -508,7 +510,7 @@ export default function CategoriesMaster() {
                       {getImpuestosDisponibles()
                         .filter(t => t.idTributo !== 0)
                         .map(t => (
-                            <option key={t.codigoTributo} value={t.codigoTributo}>
+                          <option key={t.idTributo} value={t.idTributo}>
                                 {t.nombreTributo} ({t.codigoTributo})
                             </option>
                         ))}

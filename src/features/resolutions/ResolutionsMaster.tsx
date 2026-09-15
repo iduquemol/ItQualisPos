@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { IResoluciones } from "@/types/IResoluciones";
 import { ITipoDocumentoDian } from "@/types/ITipoDocumentoDian";
 import { ResolucionesService } from "@/services/ResolucionesService";
-import TipoDocumentoDianService from "@/services/TipoDocumentoDianService";
+import { TipoDocumentoDianService } from "@/services/TipoDocumentoDianService";
 
 export default function ResolutionsMaster() {
   const navigate = useNavigate();
