@@ -1123,8 +1123,12 @@ export default function ItemsMaster() {
                 </TabsList>
 
                 <TabsContent value="impuestos" className="mt-4">
-                    <Card className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
+                    <fieldset
+                        disabled={!producto.codigoProducto.trim()}
+                        className={!producto.codigoProducto.trim() ? "opacity-50" : ""}
+                    >
+                        <Card className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
                             <thead>
                                 <tr className="bg-muted">
                                     <th className="px-2 py-2 text-left font-semibold w-64">Código Impuesto</th>
@@ -1344,13 +1348,18 @@ export default function ItemsMaster() {
                                     </tr>
                                 )}
                             </tbody>
-                        </table>
-                    </Card>
+                            </table>
+                        </Card>
+                    </fieldset>
                 </TabsContent>
 
                 <TabsContent value="precios" className="mt-4">
-                    <Card className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
+                    <fieldset
+                        disabled={!producto.codigoProducto.trim()}
+                        className={!producto.codigoProducto.trim() ? "opacity-50" : ""}
+                    >
+                        <Card className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
                             <thead>
                                 <tr className="bg-muted">
                                     <th className="px-2 py-2 text-left font-semibold w-64">Código Lista de Precios</th>
@@ -1531,8 +1540,9 @@ export default function ItemsMaster() {
                                     </tr>
                                 )}
                             </tbody>
-                        </table>
-                    </Card>
+                            </table>
+                        </Card>
+                    </fieldset>
                 </TabsContent>
             </Tabs>
             {/* AlertDialog de éxito */}

@@ -37,10 +37,12 @@ import { toast } from "sonner";
 import { ITerceroDefault } from '@/types/ITerceroDefault';
 import { IFormasPago } from '@/types/IFormasPago';
 import { IVentaMedioPago } from '@/types/IVentaMedioPago';
+import { IConsecutivos } from '@/types/IConsecutivos';
 import FacturaModal from '../reports/FacturaModal';
 import { IParametrosVentaDefault } from '@/types/IParametrosVentaDefault';
 import { Package, type LucideIcon } from "lucide-react";
 import { CATEGORY_ICONS, iconMap } from '@/types/ICategoryIcons';
+import { ConsecutivosService } from '@/services/ConsecutivosService';
 
 
 type PosCategory = ICategorias & { icon: LucideIcon };
@@ -221,6 +223,7 @@ const RetailPOS = () => {
     const [isLoadingDocumentoLista, setIsLoadingDocumentoLista] = useState(true);
     const [documentoListaError, setDocumentoListaError] = useState<string | null>(null);
     const [formasPago, setFormasPago] = useState<IFormasPago[]>([]);
+    const [consecutivos, setConsecutivos] = useState<IConsecutivos[]>([]);
     const [parametrosVentaDefault, setParametrosVentaDefault] = useState<IParametrosVentaDefault | null>(null);
     const [isLoadingTerceroDefault, setIsLoadingTerceroDefault] = useState(true);
     const [terceroDefaultError, setTerceroDefaultError] = useState<string | null>(null);
@@ -380,6 +383,16 @@ const RetailPOS = () => {
         }
     };
 
+    const fetchConsecutivos = async () => {
+        try {
+            const data = await ConsecutivosService.getAll();
+            setConsecutivos(data);
+        } catch (error) {
+            console.error('Error al cargar consecutivos:', error);
+            setConsecutivos([]);
+        }
+    };
+
     const fetchParametrosVentaDefault = async () => {
         try {
             setParametrosVentaDefault(null);
@@ -479,6 +492,7 @@ const RetailPOS = () => {
             fetchTiposDocumento(),
             fetchDocumentoLista(),
             fetchFormasPago(),
+            fetchConsecutivos(),
             fetchProducts(),
             fetchTerceros()
         ]);
@@ -1216,6 +1230,11 @@ const RetailPOS = () => {
                                         const selectedTipoDocumento = tiposDocumento.find(
                                         (td) => Number(td.idTipoDocumentoExterno) === selectedId
                                         );
+                                        const consecutivo = consecutivos.find(
+                                            (item) => item.idTipoDocumento === selectedTipoDocumento?.idTipoDocumento
+                                        ) ?? consecutivos.find(
+                                            (item) => item.idConsecutivo === selectedTipoDocumento?.idConsecutivoHabilitacion
+                                        );
 
                                         setFactura((prev) => ({
                                         ...prev,
@@ -1223,6 +1242,7 @@ const RetailPOS = () => {
                                         idTipoDocumento: selectedTipoDocumento?.idTipoDocumento || 0,
                                         idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
                                         idFormaPago: selectedTipoDocumento?.idFormaPago || 0,
+                                        prefijoVenta: consecutivo?.prefijoConsecutivo || '',
                                         }));
                                     }}
                                     required

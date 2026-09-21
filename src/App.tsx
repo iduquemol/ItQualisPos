@@ -132,13 +132,13 @@ function App() {
                 <Route
                     path="/unidades-medida"
                     element={
-                        isAuthenticated ? <UnidadesDeMedidaPage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><UnidadesDeMedidaPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/listas-precios"
                     element={
-                        isAuthenticated ? <ListasPreciosPage /> : <Navigate to="/login" />
+                        isAuthenticated ? <AppLayout><ListasPreciosPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route

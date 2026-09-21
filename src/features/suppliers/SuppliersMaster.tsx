@@ -123,43 +123,64 @@ export default function SuppliersMaster() {
         }
     };
 
-    const handleSelectTercero = (terc: ITercero) => {
+    const handleSelectTercero = async (terc: ITercero) => {
+        if (!terc.idTercero) return;
+
         setSelectedTercero(terc);
-        setTercero({
+        setTercero(prev => ({
+            ...prev,
             ...terc,
-            idTercero: terc.idTercero,
-            idTipoDocumentoId: terc.idTipoDocumentoId,
-            nombreTipoDocumentoId: terc.nombreTipoDocumentoId,
-            digitoVerificacion: terc.digitoVerificacion,
-            numeroIdentificacion: terc.numeroIdentificacion,
-            primerNombre: terc.primerNombre,
-            segundoNombre: terc.segundoNombre,
-            primerApellido: terc.primerApellido,
-            segundoApellido: terc.segundoApellido,
-            razonSocial: terc.razonSocial,
-            emailTercero: terc.emailTercero,
-            telefonoTercero: terc.telefonoTercero,
-            direccionTercero: terc.direccionTercero,
-            idMunicipio: terc.idMunicipio,
-            nombreMunicipio: terc.nombreMunicipio,
-            idDepartamento: terc.idDepartamento,
-            nombreDepartamento: terc.nombreDepartamento,
-            terceroActivo: terc.terceroActivo,
-            terceroCliente: terc.terceroCliente,
-            terceroProveedor: terc.terceroProveedor,
-            tercerosEmpleado: terc.tercerosEmpleado,
-            terceroGeneral: terc.terceroGeneral,
-            idTipoRegimen: terc.idTipoRegimen,
-            idListaPreciosTercero: terc.idListaPreciosTercero,
-            retenedorIca: terc.retenedorIca,
-            retenedorIva: terc.retenedorIva,
-            retenedorRenta: terc.retenedorRenta,
-            declaraRenta: terc.declaraRenta,
-            tarifaIca: terc.tarifaIca,
             responsabilidadesTerceros: terc.responsabilidadesTerceros || [],
-        });
-        setSearch("");
-        setOpenDialog(false);
+        }));
+
+        try {
+            const terceros = await TerceroService.getAll();
+            const terceroCompleto = terceros.find(item => item.idTercero === terc.idTercero);
+            if (!terceroCompleto) {
+                throw new Error('El tercero seleccionado no fue encontrado en la lectura por ID');
+            }
+            setSelectedTercero(terceroCompleto);
+            setTercero({
+                ...terceroCompleto,
+                idTercero: terceroCompleto.idTercero,
+                idTipoDocumentoId: terceroCompleto.idTipoDocumentoId,
+                nombreTipoDocumentoId: terceroCompleto.nombreTipoDocumentoId,
+                digitoVerificacion: terceroCompleto.digitoVerificacion,
+                numeroIdentificacion: terceroCompleto.numeroIdentificacion,
+                primerNombre: terceroCompleto.primerNombre,
+                segundoNombre: terceroCompleto.segundoNombre,
+                primerApellido: terceroCompleto.primerApellido,
+                segundoApellido: terceroCompleto.segundoApellido,
+                razonSocial: terceroCompleto.razonSocial,
+                emailTercero: terceroCompleto.emailTercero,
+                telefonoTercero: terceroCompleto.telefonoTercero,
+                direccionTercero: terceroCompleto.direccionTercero,
+                idMunicipio: terceroCompleto.idMunicipio,
+                nombreMunicipio: terceroCompleto.nombreMunicipio,
+                idDepartamento: terceroCompleto.idDepartamento,
+                nombreDepartamento: terceroCompleto.nombreDepartamento,
+                terceroActivo: terceroCompleto.terceroActivo,
+                terceroCliente: terceroCompleto.terceroCliente,
+                terceroProveedor: terceroCompleto.terceroProveedor,
+                tercerosEmpleado: terceroCompleto.tercerosEmpleado,
+                terceroGeneral: terceroCompleto.terceroGeneral,
+                idTipoRegimen: terceroCompleto.idTipoRegimen,
+                idListaPreciosTercero: terceroCompleto.idListaPreciosTercero,
+                retenedorIca: terceroCompleto.retenedorIca,
+                retenedorIva: terceroCompleto.retenedorIva,
+                retenedorRenta: terceroCompleto.retenedorRenta,
+                declaraRenta: terceroCompleto.declaraRenta,
+                tarifaIca: terceroCompleto.tarifaIca,
+                responsabilidadesTerceros: terceroCompleto.responsabilidadesTerceros || [],
+            });
+            setSearch("");
+            setOpenDialog(false);
+        } catch (error) {
+            console.error('Error al cargar el tercero seleccionado:', error);
+            toast.error("No se pudo cargar el tercero seleccionado.", {
+                position: "top-center",
+            });
+        }
     };
     // Editar responsabilidad
     const handleEdit = (idx: number) => {
@@ -1420,8 +1441,12 @@ export default function SuppliersMaster() {
                 </Card>
                                     
             {/* Tabla de responsabilidades */}
-            <Card className="overflow-x-auto border-2 border-border bg-muted/40 shadow-sm">
-                <table className="min-w-full text-sm">
+            <fieldset
+                disabled={!tercero.numeroIdentificacion?.trim()}
+                className={!tercero.numeroIdentificacion?.trim() ? "opacity-50" : ""}
+            >
+                <Card className="overflow-x-auto border-2 border-border bg-muted/40 shadow-sm">
+                    <table className="min-w-full text-sm">
                     <thead>
                         <tr className="bg-muted">
                             <th className="px-2 py-2 text-left font-semibold w-64">Código Responsabilidad</th>
@@ -1580,8 +1605,9 @@ export default function SuppliersMaster() {
                             </tr>
                         )}
                     </tbody>
-                </table>
-            </Card>
+                    </table>
+                </Card>
+            </fieldset>
             {/* AlertDialog de éxito */}
             <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
                 <AlertDialogContent>

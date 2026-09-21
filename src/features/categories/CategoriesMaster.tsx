@@ -426,6 +426,10 @@ export default function CategoriesMaster() {
           </div>
         </Card>
         
+        <fieldset
+          disabled={!categoria.codigoCategoria?.trim()}
+          className={!categoria.codigoCategoria?.trim() ? "opacity-50" : ""}
+        >
         <Card className="overflow-x-auto border-2 border-border bg-muted/40 shadow-sm">
           <table className="min-w-full text-sm">
             <thead>
@@ -557,6 +561,7 @@ export default function CategoriesMaster() {
             </tbody>
           </table>
         </Card>
+        </fieldset>
         
       
 
