@@ -15,16 +15,16 @@ export interface IVentaDetalle {
     descuentoVenta: number;
     porcentajeImpoConsumo: number;
     impoConsumoVenta: number;
-    porcentajeReteIva: number;
-    reteIvaVenta: number;
-    porcentajeReteRenta: number;
-    reteRentaVenta: number;
-    baseReteRenta: number
-    porcentajeReteIca: number;
-    reteIcaVenta: number;
-    totalVenta: number;
-    costoUnitarioVenta: number;
-    costoTotalVenta: number;    
+    porcentajeReteIva?: number | null;
+    reteIvaVenta?: number | null;
+    porcentajeReteRenta?: number | null;
+    reteRentaVenta?: number | null;
+    baseReteRenta?: number | null;
+    porcentajeReteIca?: number | null;
+    reteIcaVenta?: number | null;
+    totalVenta?: number | null;
+    costoUnitarioVenta?: number | null;
+    costoTotalVenta?: number | null;   
     idTipoProducto: number;
-    indMuestra: boolean;
+    indicadorMuestra?: boolean | null;
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, FileText, Send } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, FileText, Send, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,10 +32,12 @@ import { IVentaTercero } from '@/types/IVentaTercero';
 import { IDocumentoLista } from '@/types/IDocumentoLista';
 import { DocumentoListaService } from '@/services/DocumentoListaService';
 import { FormasPagoService } from '@/services/FormasPagoService';
+import { MediosPagoService } from '@/services/MediosPagoService';
 import { VentaService } from '@/services/VentaService';
 import { toast } from "sonner";
 import { ITerceroDefault } from '@/types/ITerceroDefault';
 import { IFormasPago } from '@/types/IFormasPago';
+import { IMediosPago } from '@/types/IMediosPago';
 import { IVentaMedioPago } from '@/types/IVentaMedioPago';
 import { IConsecutivos } from '@/types/IConsecutivos';
 import FacturaModal from '../reports/FacturaModal';
@@ -46,6 +48,17 @@ import { ConsecutivosService } from '@/services/ConsecutivosService';
 
 
 type PosCategory = ICategorias & { icon: LucideIcon };
+
+const getLocalDate = (date = new Date()): string => {
+    const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+    return new Date(date.getTime() - offsetMs).toISOString().split('T')[0];
+};
+
+const addDaysToDate = (date: string, days: number): string => {
+    const result = new Date(`${date}T00:00:00`);
+    result.setDate(result.getDate() + days);
+    return getLocalDate(result);
+};
 
 const resolveCategoryIcon = (iconId?: string | null): LucideIcon => {
   if (!iconId) return Package;
@@ -59,18 +72,14 @@ const resolveCategoryIcon = (iconId?: string | null): LucideIcon => {
 };
 
 const emptyVentaTercero: IVentaTercero = {
-    idTercero: null,
+    idTercero: 0,
     idTipoDocumentoId: 0,
     digitoVerificacion: null,
-    numeroIdentificacion: null,
-    primerNombre: null,
-    primerApellido: null,
-    razonSocial: null,
-    telefonoTercero: null,
-    direccionTercero: null,
-    idMunicipio: 0,
+    numeroIdentificacion: '',
+    primerNombre: '',
+    primerApellido: '',
+    razonSocial: '',
     emailTercero: null,
-    idTipoPersona: null,
 };
 
 const buildVentaDetalle = (product: IProducto, quantity: number = 1, registroVenta: number = 1): IVentaDetalle => {
@@ -117,7 +126,7 @@ const buildVentaDetalle = (product: IProducto, quantity: number = 1, registroVen
         costoUnitarioVenta: 0,
         costoTotalVenta: 0,
         idTipoProducto: Number(product.idTipoProducto ?? 0),
-        indMuestra: false,
+        indicadorMuestra: false,
     };
 };
 
@@ -141,7 +150,9 @@ const RetailPOS = () => {
         idFormaPago: 1,
         numeroVenta: 0,
         prefijoVenta: '',
-        fechaVenta: '',
+        fechaVenta: getLocalDate(),
+        plazoDias: 0,
+        fechaVencimiento: getLocalDate(),
         esBorrador: false,
         idPuntoVenta: 1,
         idUsuario: 1,
@@ -223,6 +234,7 @@ const RetailPOS = () => {
     const [isLoadingDocumentoLista, setIsLoadingDocumentoLista] = useState(true);
     const [documentoListaError, setDocumentoListaError] = useState<string | null>(null);
     const [formasPago, setFormasPago] = useState<IFormasPago[]>([]);
+    const [mediosPago, setMediosPago] = useState<IMediosPago[]>([]);
     const [consecutivos, setConsecutivos] = useState<IConsecutivos[]>([]);
     const [parametrosVentaDefault, setParametrosVentaDefault] = useState<IParametrosVentaDefault | null>(null);
     const [isLoadingTerceroDefault, setIsLoadingTerceroDefault] = useState(true);
@@ -239,18 +251,16 @@ const RetailPOS = () => {
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
 
-    const BARCODE_DELAY = 50;
+    const selectedFormaPago = formasPago.find(
+        forma => forma.idFormaPago === factura.idFormaPago
+    );
+    const esCredito = selectedFormaPago?.nombreFormaPago
+        ?.trim()
+        .toLowerCase() === 'crédito' || selectedFormaPago?.nombreFormaPago
+        ?.trim()
+        .toLowerCase() === 'credito';
 
-    const paymentMethods = [
-        { id: '1', name: 'Efectivo', icon: DollarSign, color: 'bg-green-500' },
-        { id: '2', name: 'Nequi', icon: CreditCard, color: 'bg-blue-500' },
-        { id: '3', name: 'Daviplata', icon: Zap, color: 'bg-purple-500' },
-        { id: '4', name: 'Tarjeta Débito', icon: Zap, color: 'bg-purple-500' },
-        { id: '5', name: 'Tarjeta Crédito', icon: Zap, color: 'bg-purple-500' },
-        { id: '6', name: 'Bonos', icon: Zap, color: 'bg-purple-500' },
-        { id: '7', name: 'Vales', icon: Zap, color: 'bg-purple-500' },
-        { id: '8', name: 'Otro', icon: Zap, color: 'bg-purple-500' },
-    ];
+    const BARCODE_DELAY = 50;
 
     const [vendedores, setVendedores] = useState<any[]>([
         { id: 1, nombre: "Administrador" },
@@ -263,10 +273,12 @@ const RetailPOS = () => {
             setCategoryError(null);
             setIsLoadingCategories(true);
             const data = await CategoriasService.getAll();
-            const categoriesWithIcons = data.map((category) => ({
+            const categoriesWithIcons = data
+                .filter((category) => category.categoriaActiva === true)
+                .map((category) => ({
                 ...category,
                 icon: resolveCategoryIcon(category.iconoCategoria),
-            }));
+                }));
             setCategories([
                 { idCategoria: 0, codigoCategoria: 'all', nombreCategoria: 'Todo', iconoCategoria: 'Package', icon: Package },
                 ...categoriesWithIcons
@@ -325,11 +337,13 @@ const RetailPOS = () => {
         }
     };
 
-    const fetchProducts = async () => {
+    const fetchProducts = async (numeroIdentificacion?: string) => {
         try {
             setProductError(null);
             setIsLoadingProducts(true);
-            const data = await ProductoService.getProductosVentaByTercero(factura.terceroVenta?.numeroIdentificacion || "0");
+            const data = await ProductoService.getProductosVentaByTercero(
+                numeroIdentificacion || factura.terceroVenta?.numeroIdentificacion || "0"
+            );
             
             // 🔒 Filtramos duplicados por idProducto antes de guardar en el estado
             const uniqueProducts = Array.from(
@@ -383,6 +397,16 @@ const RetailPOS = () => {
         }
     };
 
+    const fetchMediosPago = async () => {
+        try {
+            const data = await MediosPagoService.getAll();
+            setMediosPago(data);
+        } catch (error) {
+            console.error('Error al cargar medios de pago:', error);
+            setMediosPago([]);
+        }
+    };
+
     const fetchConsecutivos = async () => {
         try {
             const data = await ConsecutivosService.getAll();
@@ -412,10 +436,6 @@ const RetailPOS = () => {
                         primerApellido: data.terceroVenta[0].primerApellido,
                         razonSocial: data.terceroVenta[0].razonSocial,
                         emailTercero: data.terceroVenta[0].emailTercero,
-                        telefonoTercero: null,
-                        direccionTercero: "",
-                        idMunicipio: 0,
-                        idTipoPersona: null,
                         digitoVerificacion: null,
                     }
                 });
@@ -492,6 +512,7 @@ const RetailPOS = () => {
             fetchTiposDocumento(),
             fetchDocumentoLista(),
             fetchFormasPago(),
+            fetchMediosPago(),
             fetchConsecutivos(),
             fetchProducts(),
             fetchTerceros()
@@ -577,22 +598,17 @@ const RetailPOS = () => {
 
 
     const handleSelectTercero = (terc: ITercero) => {
-        const telefonoTercero = terc.telefonoTercero ? String(terc.telefonoTercero) : null;
         setFactura(prev => ({
             ...prev,
             terceroVenta: buildVentaTercero({
-                idTercero: terc.idTercero ?? null,
+                idTercero: terc.idTercero ?? 0,
                 idTipoDocumentoId: terc.idTipoDocumentoId ?? 0,
                 digitoVerificacion: terc.digitoVerificacion ?? null,
-                numeroIdentificacion: terc.numeroIdentificacion ?? null,
-                primerNombre: terc.primerNombre ?? null,
-                primerApellido: terc.primerApellido ?? null,
-                razonSocial: terc.razonSocial ?? null,
-                telefonoTercero,
-                direccionTercero: terc.direccionTercero ?? null,
-                idMunicipio: terc.idMunicipio ?? 0,
+                numeroIdentificacion: terc.numeroIdentificacion ?? '',
+                primerNombre: terc.primerNombre ?? '',
+                primerApellido: terc.primerApellido ?? '',
+                razonSocial: terc.razonSocial ?? '',
                 emailTercero: terc.emailTercero ?? null,
-                idTipoPersona: 1
             })
         }));
         setOpenDialogTercero(false);
@@ -621,7 +637,9 @@ const RetailPOS = () => {
             idFormaPago: documentoDefault?.idFormaPago ?? 1,
             numeroVenta: 0,
             prefijoVenta: '',
-            fechaVenta: '',
+            fechaVenta: getLocalDate(),
+            plazoDias: 0,
+            fechaVencimiento: getLocalDate(),
             idPuntoVenta: 1,
             idUsuario: 1,
             totalRegistros: 0,
@@ -632,14 +650,13 @@ const RetailPOS = () => {
             totalIva: 0,
             totalVenta: 0,
             terceroVenta: buildVentaTercero({
-                idTercero: terceroDefault?.idTercero ?? null,
+                idTercero: terceroDefault?.idTercero ?? 0,
                 idTipoDocumentoId: terceroDefault?.idTipoDocumentoId ?? 0,
-                numeroIdentificacion: terceroDefault?.numeroIdentificacion ?? null,
-                primerNombre: terceroDefault?.primerNombre ?? null,
-                primerApellido: terceroDefault?.primerApellido ?? null,
-                razonSocial: terceroDefault?.razonSocial ?? null,
+                numeroIdentificacion: terceroDefault?.numeroIdentificacion ?? '',
+                primerNombre: terceroDefault?.primerNombre ?? '',
+                primerApellido: terceroDefault?.primerApellido ?? '',
+                razonSocial: terceroDefault?.razonSocial ?? '',
                 emailTercero: terceroDefault?.emailTercero ?? null,
-                idTipoPersona: null
             }),
             observaciones: null,
             ordenReferencia: null,
@@ -694,8 +711,8 @@ const RetailPOS = () => {
                 ...prev,
                 terceroVenta: buildVentaTercero({
                     ...(prev.terceroVenta ?? buildVentaTercero()),
-                    primerNombre: null,
-                    primerApellido: null,
+                    primerNombre: '',
+                    primerApellido: '',
                 })
             };
         });
@@ -715,7 +732,7 @@ const RetailPOS = () => {
                     ...prev,
                     terceroVenta: buildVentaTercero({
                         ...(prev.terceroVenta ?? buildVentaTercero()),
-                        razonSocial: resultado.name ?? prev.terceroVenta?.razonSocial ?? null,
+                        razonSocial: resultado.name ?? prev.terceroVenta?.razonSocial ?? '',
                         emailTercero: resultado.email ?? prev.terceroVenta?.emailTercero ?? null,
                     })
                 };
@@ -736,18 +753,14 @@ const RetailPOS = () => {
             setFactura(prev => ({
                 ...prev,
                 terceroVenta: buildVentaTercero({
-                    idTercero: tercero.idTercero ?? null,
+                    idTercero: tercero.idTercero ?? 0,
                     idTipoDocumentoId: tercero.idTipoDocumentoId ?? 7,
                     digitoVerificacion: tercero.digitoVerificacion ?? null,
-                    numeroIdentificacion: tercero.numeroIdentificacion ?? null,
-                    primerNombre: tercero.primerNombre ?? null,
-                    primerApellido: tercero.primerApellido ?? null,
-                    razonSocial: tercero.razonSocial ?? null,
-                    telefonoTercero: tercero.telefonoTercero ? String(tercero.telefonoTercero) : null,
-                    direccionTercero: tercero.direccionTercero ?? null,
-                    idMunicipio: tercero.idMunicipio ?? 0,
+                    numeroIdentificacion: tercero.numeroIdentificacion ?? '',
+                    primerNombre: tercero.primerNombre ?? '',
+                    primerApellido: tercero.primerApellido ?? '',
+                    razonSocial: tercero.razonSocial ?? '',
                     emailTercero: tercero.emailTercero ?? null,
-                    idTipoPersona: 1,
                 })
             }));
         }
@@ -775,13 +788,17 @@ const RetailPOS = () => {
             setSelectedFactura(data);
             setFactura(prev => ({
                 ...prev,
-                idVenta: data?.idVenta ?? null,
+                idVenta: data?.idVenta ?? 0,
                 idTipoDocumento: data?.idTipoDocumento ?? 0,
                 codigoDocumento: data?.codigoDocumento ?? '',
                 nombreDocumento: data?.nombreDocumento ?? null,
-                numeroVenta: data?.numeroVenta ?? null,
+                estadoDian: data?.estadoDian ?? null,
+                idFormaPago: data?.idFormaPago ?? 1,
+                numeroVenta: data?.numeroVenta ?? 0,
                 prefijoVenta: data?.prefijoVenta ?? '',
                 fechaVenta: data?.fechaVenta ?? '',
+                plazoDias: data?.plazoDias ?? 0,
+                fechaVencimiento: data?.fechaVencimiento ?? data?.fechaVenta ?? '',
                 idMetodoDian: data?.idMetodoDian ?? 2,
                 idPuntoVenta: data?.idPuntoVenta ?? null,
                 idUsuario: data?.idUsuario ?? null,
@@ -806,9 +823,7 @@ const RetailPOS = () => {
        const DEFAULT_TIPO_DOC_NIT = 7; // idTipoDocumentoId = 7 para NIT (código 31)
 
         const handleSaveVenta = async (indBorrador: boolean) => {
-            const todayLocal = new Date();
-            const offsetMs = todayLocal.getTimezoneOffset() * 60 * 1000;
-            const localISODate = new Date(todayLocal.getTime() - offsetMs).toISOString().split('T')[0];
+            const localISODate = getLocalDate();
 
             // 1. Normalizar cada ítem del detalle
             const detalleNormalizado = (factura.detalleVenta ?? []).map(item => {
@@ -837,18 +852,24 @@ const RetailPOS = () => {
             const totalDescuentoCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.descuentoVenta || 0), 0);
 
             // 3. Normalizar medio de pago (Efectivo = 1)
-            const mediosPagoNormalizados = (factura.mediosPagoVenta && factura.mediosPagoVenta.length > 0)
-                ? factura.mediosPagoVenta
-                : [{
-                    idMedioPagoVenta: 0,
-                    idMedioPago: 1,
-                    valorMedioPago: totalPrecioCalculado
-                }];
+            const mediosPagoNormalizados = esCredito
+                ? []
+                : (factura.mediosPagoVenta && factura.mediosPagoVenta.length > 0)
+                    ? factura.mediosPagoVenta
+                    : [{
+                        idMedioPagoVenta: 0,
+                        idMedioPago: 1,
+                        valorMedioPago: totalPrecioCalculado
+                    }];
 
             // 4. Estructurar la factura final
             const updatedFactura = {
                 ...factura,
                 fechaVenta: localISODate,
+                plazoDias: esCredito ? Math.max(0, Number(factura.plazoDias ?? 0)) : 0,
+                fechaVencimiento: esCredito
+                    ? addDaysToDate(localISODate, Math.max(0, Number(factura.plazoDias ?? 0)))
+                    : localISODate,
                 esBorrador: indBorrador,
 
                 // Detalle corregido
@@ -866,18 +887,12 @@ const RetailPOS = () => {
                 // Medios de pago
                 mediosPagoVenta: mediosPagoNormalizados,
 
-                // Tercero normalizado (Corregido idTipoPersona e idMunicipio)
+                // Tercero normalizado según el contrato actual
                 terceroVenta: factura.terceroVenta ? {
                     ...factura.terceroVenta,
                     idTipoDocumentoId: (factura.terceroVenta.idTipoDocumentoId && factura.terceroVenta.idTipoDocumentoId !== 0)
                         ? factura.terceroVenta.idTipoDocumentoId
                         : DEFAULT_TIPO_DOC_NIT,
-                    // Si idTipoPersona viene null/undefined, asigna 1 (Persona Jurídica para NIT)
-                    idTipoPersona: factura.terceroVenta.idTipoPersona ?? 1,
-                    // Si idMunicipio viene en 0, se envia null o el ID correspondiente para evitar fallo de FK
-                    idMunicipio: (factura.terceroVenta.idMunicipio && factura.terceroVenta.idMunicipio !== 0)
-                        ? factura.terceroVenta.idMunicipio
-                        : null,
                     terceroGeneral: factura.terceroVenta.terceroGeneral ?? false
                 } : null
             };
@@ -900,13 +915,17 @@ const RetailPOS = () => {
                     setSelectedFactura(data);
                     setFactura({
                         ...factura,
-                        idVenta: data?.idVenta ?? null,
+                        idVenta: data?.idVenta ?? 0,
                         idTipoDocumento: data?.idTipoDocumento ?? 0,
                         codigoDocumento: data?.codigoDocumento ?? '',
                         nombreDocumento: data?.nombreDocumento ?? null,
-                        numeroVenta: data?.numeroVenta ?? null,
+                        estadoDian: data?.estadoDian ?? null,
+                        idFormaPago: data?.idFormaPago ?? 1,
+                        numeroVenta: data?.numeroVenta ?? 0,
                         prefijoVenta: data?.prefijoVenta ?? '',
                         fechaVenta: data?.fechaVenta ?? '',
+                        plazoDias: data?.plazoDias ?? 0,
+                        fechaVencimiento: data?.fechaVencimiento ?? data?.fechaVenta ?? '',
                         esBorrador: data?.esBorrador ?? false,
                         idPuntoVenta: data?.idPuntoVenta ?? null,
                         idUsuario: data?.idUsuario ?? null,
@@ -918,18 +937,14 @@ const RetailPOS = () => {
                         totalIva: data?.totalIva ?? 0,
                         totalVenta: data?.totalVenta ?? 0,
                         terceroVenta: data?.terceroVenta ?? {
-                            idTercero: null,
+                            idTercero: 0,
                             idTipoDocumentoId: DEFAULT_TIPO_DOC_NIT,
                             digitoVerificacion: null,
-                            numeroIdentificacion: null,
-                            primerNombre: null,
-                            primerApellido: null,
-                            razonSocial: null,
-                            telefonoTercero: null,
-                            direccionTercero: null,
-                            idMunicipio: null,
+                            numeroIdentificacion: '',
+                            primerNombre: '',
+                            primerApellido: '',
+                            razonSocial: '',
                             emailTercero: null,
-                            idTipoPersona: 1,
                             terceroGeneral: false
                         },
                         detalleVenta: data?.detalleVenta ?? [],
@@ -1036,6 +1051,7 @@ const RetailPOS = () => {
 
     // Cálculos
     const [montoIngresado, setMontoIngresado] = useState<number>(0);
+    const [cambioEfectivo, setCambioEfectivo] = useState<number>(0);
     const subtotal = factura.detalleVenta?.reduce((sum, item) => sum + (item.precioUnitarioVenta * item.cantidadVenta), 0);
     const discount = factura.detalleVenta?.reduce((descuento, item) => descuento + item.descuentoVenta, 0);
     const tax = factura.detalleVenta?.reduce((iva, item) => iva + item.ivaVenta, 0);
@@ -1045,6 +1061,11 @@ const RetailPOS = () => {
     const total = (subtotal || 0) - (discount || 0) + (tax || 0) - (totalReteIva || 0) - (totalReteRenta || 0) - (totalReteIca || 0);
     const totalPagado = factura.mediosPagoVenta?.reduce((acc, curr) => acc + (curr.valorMedioPago || 0), 0) || 0;
     const saldoPendiente = total - totalPagado;
+    const esEfectivo = activePaymentMethod === '1';
+    const efectivoAgregado = factura.mediosPagoVenta?.some(
+        medioPago => medioPago.idMedioPago === 1
+    ) ?? false;
+    const cambioCalculado = efectivoAgregado ? cambioEfectivo : 0;
     const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + item.cantidadVenta, 0);
     const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
 
@@ -1076,7 +1097,7 @@ const RetailPOS = () => {
                         </Badge>
                     </div>
 
-                    {/* Lado derecho - Reloj */}
+                    {/* Lado derecho - Usuario */}
                     <div className="flex items-center space-x-4 mb-2">
                         {showFacturaModal && (
                             <div className="flex items-center space-x-2">
@@ -1194,8 +1215,9 @@ const RetailPOS = () => {
                             <User className="w-4 h-4 mr-1" />
                             Administrador
                         </Badge>
-                        <Clock className="h-5 w-5" />
-                        <span>{new Date().toLocaleTimeString()}</span>
+                        <Badge variant="outline" className="px-3 py-1 text-sm">
+                            {factura.estadoDian?.trim() || 'Pendiente DIAN'}
+                        </Badge>
                         <Button
                             variant="default"
                             size="icon"
@@ -1322,13 +1344,14 @@ const RetailPOS = () => {
                                     value={factura.terceroVenta?.numeroIdentificacion ?? ''}
                                     onChange={(e) => {
                                         const value = e.target.value;
+
                                         setFactura(prev => ({
                                             ...prev,
                                             terceroVenta: buildVentaTercero({
                                                 ...(prev.terceroVenta ?? buildVentaTercero()),
                                                 idTercero: value === prev.terceroVenta?.numeroIdentificacion
-                                                    ? prev.terceroVenta?.idTercero ?? null
-                                                    : null,
+                                                    ? prev.terceroVenta?.idTercero ?? 0
+                                                    : 0,
                                                 numeroIdentificacion: value
                                             })
                                         }));
@@ -1336,6 +1359,7 @@ const RetailPOS = () => {
                                         if (value.length >= 3) {
                                             handleSearchTercero(value);
                                         }
+                                        void fetchProducts(value);
                                     }}
                                     onFocus={(e) => e.target.select()}
                                     onBlur={(e) => {
@@ -1576,13 +1600,13 @@ const RetailPOS = () => {
                                                     <div className="flex items-center space-x-1">
                                                         <Checkbox
                                                             id={`muestra-${item.registroVenta}`}
-                                                            checked={item.indMuestra || false}
+                                                            checked={item.indicadorMuestra || false}
                                                             onCheckedChange={(checked) => {
                                                                 setFactura(prev => ({
                                                                     ...prev,
                                                                     detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.registroVenta === item.registroVenta
-                                                                            ? { ...detalleItem, indMuestra: checked as boolean }
+                                                                            ? { ...detalleItem, indicadorMuestra: checked as boolean }
                                                                             : detalleItem
                                                                     )
                                                                 }));
@@ -1839,6 +1863,7 @@ const RetailPOS = () => {
                             {/* Botón de Pago */}
                             <div className="payment-button-container h-[60px] p-2 border-t bg-background">
                                 <div className="flex gap-2 h-[44px]">
+                                    {/* Botón anterior de borrador conservado como referencia:
                                     <Button
                                         onClick={() => {
                                             handleSaveVenta(true);
@@ -1850,6 +1875,27 @@ const RetailPOS = () => {
                                         <FileText className="h-4 w-4 mr-2" />
                                         Guardar Borrador
                                     </Button>
+                                    */}
+                                    {showFacturaModal && facturaModalData ? (
+                                        <FacturaModal
+                                            facturaData={facturaModalData}
+                                            triggerText="Imprimir"
+                                            triggerVariant="outline"
+                                            idVenta={factura?.idVenta || 0}
+                                            idMetodoDian={factura?.idMetodoDian || 0}
+                                        />
+                                    ) : (
+                                        <Button
+                                            variant="outline"
+                                            disabled
+                                            className="flex-1 h-full text-sm font-bold"
+                                            size="lg"
+                                            title="La factura aún no está disponible para imprimir"
+                                        >
+                                            <Printer className="h-4 w-4 mr-2" />
+                                            Imprimir
+                                        </Button>
+                                    )}
                                     <Button
                                         onClick={() => setShowPayment(true)}
                                         className="flex-1 h-full text-sm font-bold"
@@ -1968,10 +2014,31 @@ const RetailPOS = () => {
                                 value={factura.idFormaPago?.toString() || ""} 
                                 onValueChange={(value) => {
                                     const idForma = parseInt(value);
+                                    const formaPago = formasPago.find(
+                                        forma => forma.idFormaPago === idForma
+                                    );
+                                    const esNuevaFormaCredito = ['crédito', 'credito'].includes(
+                                        formaPago?.nombreFormaPago?.trim().toLowerCase() ?? ''
+                                    );
+                                    const fechaDocumento = factura.fechaVenta || getLocalDate();
+                                    const plazoDias = esNuevaFormaCredito
+                                        ? Math.max(0, Number(factura.plazoDias ?? 30))
+                                        : 0;
+
                                     setFactura(prev => ({
                                         ...prev,
-                                        idFormaPago: idForma
+                                        idFormaPago: idForma,
+                                        plazoDias,
+                                        fechaVencimiento: esNuevaFormaCredito
+                                            ? addDaysToDate(fechaDocumento, plazoDias)
+                                            : fechaDocumento,
+                                        mediosPagoVenta: esNuevaFormaCredito
+                                            ? []
+                                            : prev.mediosPagoVenta
                                     }));
+                                    setActivePaymentMethod('');
+                                    setMontoIngresado(0);
+                                    setCambioEfectivo(0);
                                 }}
                             >
                                 <SelectTrigger className="w-full">
@@ -1987,7 +2054,41 @@ const RetailPOS = () => {
                             </Select>
                         </div>
 
-                        {/* Sección para agregar medios de pago */}
+                        {esCredito ? (
+                            <div className="space-y-4 mb-4">
+                                <div>
+                                    <Label htmlFor="plazo-dias" className="mb-2 block text-sm font-medium">
+                                        Días de plazo
+                                    </Label>
+                                    <Input
+                                        id="plazo-dias"
+                                        type="number"
+                                        min={0}
+                                        value={factura.plazoDias ?? 0}
+                                        onChange={(e) => {
+                                            const plazoDias = Math.max(0, Number(e.target.value) || 0);
+                                            const fechaDocumento = factura.fechaVenta || getLocalDate();
+                                            setFactura(prev => ({
+                                                ...prev,
+                                                plazoDias,
+                                                fechaVencimiento: addDaysToDate(fechaDocumento, plazoDias)
+                                            }));
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="fecha-vencimiento" className="mb-2 block text-sm font-medium">
+                                        Fecha de vencimiento
+                                    </Label>
+                                    <Input
+                                        id="fecha-vencimiento"
+                                        type="date"
+                                        value={factura.fechaVencimiento ?? ''}
+                                        readOnly
+                                    />
+                                </div>
+                            </div>
+                        ) : (
                         <div className="space-y-4 mb-4">
                             <div className="grid grid-cols-12 gap-2 items-end">
                                 <div className="col-span-6">
@@ -1997,9 +2098,9 @@ const RetailPOS = () => {
                                             <SelectValue placeholder="Seleccionar..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {paymentMethods.map(method => (
-                                                <SelectItem key={method.id} value={method.id.toString()}>
-                                                    {method.name}
+                                            {mediosPago.map(medioPago => (
+                                                <SelectItem key={medioPago.idMedioPago} value={medioPago.idMedioPago.toString()}>
+                                                    {medioPago.nombreMedioPago}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -2012,18 +2113,34 @@ const RetailPOS = () => {
                                         type="number"
                                         placeholder="0"
                                         value={montoIngresado || ''}
-                                        onChange={(e) => setMontoIngresado(Number(e.target.value))}
+                                        onChange={(e) => {
+                                            setMontoIngresado(Number(e.target.value));
+                                            if (!esEfectivo) {
+                                                setCambioEfectivo(0);
+                                            }
+                                        }}
                                     />
                                 </div>
 
                                 <div className="col-span-2">
                                     <Button 
-                                        disabled={!activePaymentMethod || montoIngresado <= 0 || montoIngresado > saldoPendiente}
+                                        disabled={
+                                            !activePaymentMethod ||
+                                            montoIngresado <= 0 ||
+                                            saldoPendiente <= 0 ||
+                                            (!esEfectivo && montoIngresado > saldoPendiente)
+                                        }
                                         onClick={() => {
+                                            const montoAplicado = esEfectivo
+                                                ? Math.min(montoIngresado, Math.max(saldoPendiente, 0))
+                                                : montoIngresado;
+                                            const cambio = esEfectivo
+                                                ? Math.max(0, montoIngresado - Math.max(saldoPendiente, 0))
+                                                : 0;
                                             const nuevoMedioPago: IVentaMedioPago = {
                                                 idMedioPagoVenta: 0,
                                                 idMedioPago: parseInt(activePaymentMethod),
-                                                valorMedioPago: montoIngresado
+                                                valorMedioPago: montoAplicado
                                             };
 
                                             setFactura(prev => ({
@@ -2033,6 +2150,7 @@ const RetailPOS = () => {
 
                                             setActivePaymentMethod("");
                                             setMontoIngresado(0);
+                                            setCambioEfectivo(cambio);
                                         }}
                                         className="w-full"
                                     >
@@ -2041,14 +2159,15 @@ const RetailPOS = () => {
                                 </div>
                             </div>
                         </div>
+                        )}
 
                         {/* Lista de medios de pago ingresados */}
-                        {factura.mediosPagoVenta && factura.mediosPagoVenta.length > 0 && (
+                        {!esCredito && factura.mediosPagoVenta && factura.mediosPagoVenta.length > 0 && (
                             <div className="border rounded-md p-3 mb-4 space-y-2 max-h-32 overflow-y-auto">
                                 <span className="text-xs text-muted-foreground font-medium block">Pagos agregados:</span>
                                 {factura.mediosPagoVenta.map((item, index) => (
                                     <div key={index} className="flex justify-between items-center text-sm border-b pb-1">
-                                        <span>{paymentMethods.find(m => m.id === item.idMedioPago.toString())?.name || 'Método'}</span>
+                                        <span>{mediosPago.find(medioPago => medioPago.idMedioPago === item.idMedioPago)?.nombreMedioPago || 'Método'}</span>
                                         <div className="flex items-center space-x-2">
                                             <span className="font-semibold">${formatCurrency(item.valorMedioPago)}</span>
                                             <Button 
@@ -2100,13 +2219,19 @@ const RetailPOS = () => {
                                         ${formatCurrency(saldoPendiente)}
                                     </span>
                                 </div>
+                                {cambioCalculado > 0 && (
+                                    <div className="flex justify-between items-center text-sm border-t pt-1 font-semibold text-green-700">
+                                        <span>Cambio / Devuelto</span>
+                                        <span>${formatCurrency(cambioCalculado)}</span>
+                                    </div>
+                                )}
                             </div>
                         </Card>
 
                         {/* Botones de acción */}
                         <DialogFooter className="flex space-x-2">
                             <Button
-                                disabled={saldoPendiente !== 0} // Habilita la acción solo si la suma cubre exacto el total
+                                disabled={!esCredito && saldoPendiente !== 0} // En crédito no se exige pago inmediato
                                 onClick={() => {
                                     setShowPayment(false);
                                     handleSaveVenta(false);

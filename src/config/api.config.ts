@@ -7,6 +7,7 @@ export const API_CONFIG = {
     ENDPOINTS: {
         CATEGORIES: '/categorias',
         PRODUCTS: '/productos',
+        PRODUCTOS_BUSQUEDA: '/productos-busqueda',
         SALES: '/venta',
         SUPPLIERS: '/terceros',
         UNIDADES_DE_MEDIDA: '/unidadesdemedida',
