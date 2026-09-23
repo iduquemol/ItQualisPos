@@ -1876,12 +1876,13 @@ const RetailPOS = () => {
                                         Guardar Borrador
                                     </Button>
                                     */}
-                                    {showFacturaModal && facturaModalData ? (
+                                    {factura?.idVenta ? (
                                         <FacturaModal
-                                            facturaData={facturaModalData}
+                                            key={factura.idVenta}
+                                            facturaData={facturaModalData ?? undefined}
                                             triggerText="Imprimir"
                                             triggerVariant="outline"
-                                            idVenta={factura?.idVenta || 0}
+                                            idVenta={factura.idVenta}
                                             idMetodoDian={factura?.idMetodoDian || 0}
                                         />
                                     ) : (
