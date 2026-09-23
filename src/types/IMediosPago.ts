@@ -3,4 +3,6 @@ export interface IMediosPago {
     codigoMedioPago: string; 
     nombreMedioPago: string;  
     codigoDianMedioPago: string;   
+    fechaGrabacionMedioPago?: string | null;
+    idMedioPagoExterno?: string | null;
 }

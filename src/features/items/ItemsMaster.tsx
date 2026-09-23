@@ -153,40 +153,45 @@ export default function ItemsMaster() {
     const [successMessage, setSuccessMessage] = useState("");
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-   const handleSelectProduct = (prod: IProducto) => {
-    setSelectedProduct(prod);
-    setProducto({
-        ...producto,
-        idProducto: prod.idProducto,
-        codigoProducto: prod.codigoProducto,
-        nombreProducto: prod.nombreProducto,
-        codigoBarras: prod.codigoBarras,
-        idCategoria: prod.idCategoria,
-        idUnidadMedida: prod.idUnidadMedida,
-        precioUnitario: prod.precioUnitario,
-        idTipoProducto: prod.idTipoProducto,
-        productoActivo: prod.productoActivo,
-        
-        // Propiedades corregidas y añadidas
-        idItemSector: prod.idItemSector || null,
-        idTerceroMandato: prod.idTerceroMandato || null,
-        porcentajeMaxDescuento: prod.porcentajeMaxDescuento || 0,
-        stockActualProducto: prod.stockActualProducto || null,
-        costoPromedioActualProducto: prod.costoPromedioActualProducto || null,
+    const handleSearchDialogChange = (isOpen: boolean) => {
+        setOpenDialog(isOpen);
+        if (!isOpen) {
+            setSearch("");
+        }
+    };
 
-        // Arrays / Relaciones
-        tributosProducto: prod.tributosProducto || [],
-        preciosProducto: (prod.preciosProducto || []).map(precio => {
-            const lista = listaPrecios.find(l => l.idListaPrecio === precio.idListaPrecio);
-            return {
-                ...precio,
-                codigoListaPrecio: lista?.codigoListaPrecio || precio.codigoListaPrecio || "",
-                nombreListaPrecio: lista?.nombreListaPrecio || precio.nombreListaPrecio || "",
-            };
-        }),
-    });
-    setOpenDialog(false);
-};
+    const handleSelectProduct = async (prod: IProducto) => {
+        if (!prod.idProducto) return;
+
+        try {
+            const products = await ProductoService.getAll();
+            const completeProduct = products.find(item => item.idProducto === prod.idProducto);
+            if (!completeProduct) {
+                throw new Error('El producto seleccionado no fue encontrado en la lectura por ID');
+            }
+
+            setSelectedProduct(completeProduct);
+            setProducto({
+                ...completeProduct,
+                tributosProducto: completeProduct.tributosProducto || [],
+                preciosProducto: (completeProduct.preciosProducto || []).map(precio => {
+                    const lista = listaPrecios.find(l => l.idListaPrecio === precio.idListaPrecio);
+                    return {
+                        ...precio,
+                        codigoListaPrecio: lista?.codigoListaPrecio || precio.codigoListaPrecio || "",
+                        nombreListaPrecio: lista?.nombreListaPrecio || precio.nombreListaPrecio || "",
+                    };
+                }),
+            });
+            setSearch("");
+            setOpenDialog(false);
+        } catch (error) {
+            console.error('Error al cargar el producto seleccionado:', error);
+            toast.error("No se pudo cargar el producto seleccionado.", {
+                position: "top-center",
+            });
+        }
+    };
 
     const handleNew = async () => {
     setSelectedProduct(null);
@@ -518,10 +523,12 @@ export default function ItemsMaster() {
             setCategoryError(null);
             setIsLoadingCategories(true);
             const data = await CategoriasService.getAll();
-            const categoriesWithIcons = data.map((category) => ({
+            const categoriesWithIcons = data
+                .filter((category) => category.categoriaActiva === true)
+                .map((category) => ({
                 ...category,
                 icon: iconMap[category.iconoCategoria ?? ''] ?? Package,
-            }));
+                }));
             setCategories([
                 { idCategoria: 0, nombreCategoria: "Seleccione una categoría", iconoCategoria: "Package", codigoCategoria: "0", icon: Package },
                 ...categoriesWithIcons
@@ -670,13 +677,51 @@ export default function ItemsMaster() {
     useEffect(() => {
         fetchCategories();
         fetchUnidadesDeMedida();
-        fetchProducts();
         fetchTributos();
         fetchTarifasPorTributo();
         fetchTipoProducto();
         fetchListasPrecios();
         fetchTercerosProveedores();
     }, []);
+
+    useEffect(() => {
+        let isCurrentSearch = true;
+
+        if (search.length === 0) {
+            fetchProducts();
+            return () => {
+                isCurrentSearch = false;
+            };
+        }
+
+        if (search.length < 5) return;
+
+        const timeoutId = window.setTimeout(async () => {
+            try {
+                setProductError(null);
+                setIsLoadingProducts(true);
+                const data = await ProductoService.search(search);
+
+                if (isCurrentSearch) {
+                    setProducts(data);
+                }
+            } catch (error) {
+                console.error('Error al buscar productos:', error);
+                if (isCurrentSearch) {
+                    setProductError('Error al buscar los productos');
+                }
+            } finally {
+                if (isCurrentSearch) {
+                    setIsLoadingProducts(false);
+                }
+            }
+        }, 400);
+
+        return () => {
+            isCurrentSearch = false;
+            window.clearTimeout(timeoutId);
+        };
+    }, [search]);
 
     return (
         <div className="p-6 bg-muted min-h-screen">
@@ -707,7 +752,7 @@ export default function ItemsMaster() {
                         <Plus className="w-5 h-5" />
                     </Button>
                     {/* Dialog de búsqueda */}
-                    <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+                    <Dialog open={openDialog} onOpenChange={handleSearchDialogChange}>
                         <DialogTrigger asChild>
                             <Button variant="outline" size="icon" title="Buscar producto">
                                 <Search className="w-5 h-5" />
@@ -733,13 +778,7 @@ export default function ItemsMaster() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {products
-                                            .filter(
-                                                prod =>
-                                                    prod.codigoProducto.toLowerCase().includes(search.toLowerCase()) ||
-                                                    prod.nombreProducto.toLowerCase().includes(search.toLowerCase())
-                                            )
-                                            .map((prod) => (
+                                        {products.map((prod) => (
                                                 <TableRow
                                                     key={prod.idProducto}
                                                     className="cursor-pointer hover:bg-primary/10"

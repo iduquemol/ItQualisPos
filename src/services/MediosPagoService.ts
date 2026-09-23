@@ -15,16 +15,7 @@ export const MediosPagoService = {
             if (!response.ok) {
                 throw new Error('Error al cargar medios de pago');
             }
-            // El backend devuelve objetos con propiedades en singular (idMedioPago, nombreMedioPago, etc.).
-            // Aseguramos el tipo correcto mapeando explícitamente, así el frontend no depende de la forma
-            // exacta que regrese el servidor y evitamos errores si el DTO cambia.
-            const raw = await response.json();
-            const data: IMediosPago[] = (raw as any[]).map((m) => ({
-                idMedioPago: m.idMedioPago,
-                codigoMedioPago: m.codigoMedioPago,
-                nombreMedioPago: m.nombreMedioPago,
-                codigoDianMedioPago: m.codigoDianMedioPago,
-            }));
+            const data = await response.json();
             return data;
         } catch (error) {
             console.error('Error en MediosPagoService.getAll:', error);

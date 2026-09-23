@@ -1,15 +1,11 @@
 export interface IVentaTercero {
-    idTercero: number | null;
+    idTercero: number;
     idTipoDocumentoId: number;
-    digitoVerificacion: string | null;
-    numeroIdentificacion: string | null;
-    primerNombre: string | null;
-    primerApellido: string | null;
-    razonSocial: string | null;
-    telefonoTercero: string | null;
-    direccionTercero: string | null;
-    idMunicipio?: number | null;
-    emailTercero: string | null;    
-    idTipoPersona?: number | null; 
+    digitoVerificacion?: string | null;
+    numeroIdentificacion: string;
+    primerNombre: string;
+    primerApellido: string;
+    razonSocial: string;
+    emailTercero?: string | null;    
     terceroGeneral?: boolean | null;
 }
