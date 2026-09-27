@@ -28,7 +28,7 @@ export const API_CONFIG = {
         PRINT_VENTA: '/print-venta',
         DEPARTAMENTOS: '/departamentos',
         TIPOS_REGIMEN: '/tiposregimen',
-        TIPOS_NOTAS_CREDITO: '/tiposDocumentoNotaCredito',
+        TIPOS_NOTAS_CREDITO: '/notacredito',
         TIPOS_DOCUMENTO_VENTA: '/tiposDocumentoVenta',
         COTIZACION: '/cotizacion',
         CONCEPTOS_NOTA_CREDITO: '/conceptosnotacredito',

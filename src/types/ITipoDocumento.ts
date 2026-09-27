@@ -21,4 +21,5 @@ export interface ITipoDocumento {
     idTipoDocumentoExterno: number;
     nombreTipoDocumentoExterno?: string | null;
     codigoTipoDocumentoExterno?: string | null;
+    prefijoConsecutivo?: string | null;
 }
