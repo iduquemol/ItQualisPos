@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, Save } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +28,7 @@ import { ITipoDocumentoIdentidad } from '@/types/ITipoDocumentoIdentidad';
 import { TipoDocumentoIdentidadService } from '@/services/TipoDocumentoIdentidadService';
 import { IVenta } from '@/types/IVenta';
 import { INotaCredito } from '@/types/INotaCredito';
+import { INotaCreditoDetalle } from '@/types/INotaCreditoDetalle';
 import { IDocumentoLista } from '@/types/IDocumentoLista';
 import { DocumentoListaService } from '@/services/DocumentoListaService';
 import { VentaService } from '@/services/VentaService';
@@ -40,14 +41,45 @@ import { ConceptoNotaCreditoService } from '@/services/ConceptoNotaCreditoServic
 import { IConceptoNotaCredito } from '@/types/IConceptoNotaCredito';
 import { NotaCreditoService } from '@/services/NotaCreditoService';
 
+type CreditNoteDetail = Omit<INotaCreditoDetalle,
+    | 'idProducto'
+    | 'cantidadNotaCredito'
+    | 'precioUnitarioNotaCredito'
+    | 'porcentajeDescuentoNotaCredito'
+    | 'descuentoNotaCredito'
+    | 'porcentajeIvaNotaCredito'
+    | 'ivaNotaCredito'
+> & {
+    idProducto: number;
+    cantidadNotaCredito: number;
+    precioUnitarioNotaCredito: number;
+    porcentajeDescuentoNotaCredito: number;
+    descuentoNotaCredito: number;
+    porcentajeIvaNotaCredito: number;
+    ivaNotaCredito: number;
+    cantidadFactura: number;
+    precioUnitarioFactura: number;
+    porcentajeIvaFactura: number;
+    ivaFactura: number;
+    porcentajeDescuentoFactura: number;
+    descuentoFactura: number;
+    costoTotalFactura: number;
+    totalFactura: number;
+    costoUnitarioFactura: number;
+};
+
+type CreditNoteForm = Omit<INotaCredito, 'detalleNotaCredito'> & {
+    detalleNotaCredito: CreditNoteDetail[] | null;
+};
+
 const MainCreditNote = () => {
     const navigate = useNavigate();
-    const [notaCredito, setNotaCredito] = useState<INotaCredito>({
-        idNotaCredito: null,
+    const createInitialNotaCredito = (): CreditNoteForm => ({
+        idNotaCredito: 0,
         idTipoDocumento: 5,
         codigoDocumento: '',
         nombreDocumento: null,
-        numeroNotaCredito: null,
+        numeroNotaCredito: 0,
         prefijoNotaCredito: '',
         fechaNotaCredito: '',
         conceptoNotaCredito: null,
@@ -59,13 +91,14 @@ const MainCreditNote = () => {
         totalBaseIva: null,
         totalIva: null,
         totalVenta: null,
-        idTerceroNotaCredito: null,
+        idTerceroNotaCredito: 0,
         numeroIdentificacionTerceroNotaCredito: null,
         nombreTerceroNotaCredito: null,
         idVenta: null,
         idConceptoCorreccionNota: null,
         detalleNotaCredito: [],
     });
+    const [notaCredito, setNotaCredito] = useState<CreditNoteForm>(createInitialNotaCredito);
 
     const [selectedFactura, setSelectedFactura] = useState<IVenta | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -121,6 +154,30 @@ const MainCreditNote = () => {
         { id: 2, nombre: "Vendedor 1" },
         { id: 3, nombre: "Vendedor 2" },
     ]);
+
+    useEffect(() => {
+        const selectedTipoDocumento = tiposDocumento.find(
+            (tipoDocumento) =>
+                Number(tipoDocumento.idTipoDocumentoExterno) === Number(notaCredito.idTipoDocumentoExterno) &&
+                Number(tipoDocumento.idTipoDocumento) === Number(notaCredito.idTipoDocumento)
+        ) ?? tiposDocumento.find(
+            (tipoDocumento) => Number(tipoDocumento.idTipoDocumento) === Number(notaCredito.idTipoDocumento)
+        );
+        if (!selectedTipoDocumento) return;
+
+        const idTipoDocumentoExterno = Number(selectedTipoDocumento.idTipoDocumentoExterno);
+        const prefijoConsecutivo = selectedTipoDocumento.prefijoConsecutivo ?? '';
+        if (
+            notaCredito.idTipoDocumentoExterno !== idTipoDocumentoExterno ||
+            notaCredito.prefijoNotaCredito !== prefijoConsecutivo
+        ) {
+            setNotaCredito((previous) => ({
+                ...previous,
+                idTipoDocumentoExterno,
+                prefijoNotaCredito: prefijoConsecutivo,
+            }));
+        }
+    }, [tiposDocumento, notaCredito.idTipoDocumento, notaCredito.idTipoDocumentoExterno, notaCredito.prefijoNotaCredito]);
 
 
 
@@ -201,10 +258,10 @@ const MainCreditNote = () => {
             const data = await VentaService.getParametrosVentaDefault();
             //console.log('Terceros por defecto cargado:', data);
             setParametrosVentaDefault(data);
-            setNotaCredito({
-                ...notaCredito,
+            setNotaCredito(previous => ({
+                ...previous,
                 idTipoDocumento: data.documentoNotaCredito[0].idTipoDocumento,
-            });
+            }));
         } catch (error) {
             console.error('Error:', error);
             setTerceroDefaultError('Error al cargar los parametros de venta por defecto');
@@ -310,16 +367,12 @@ const MainCreditNote = () => {
         return matchesSearch && matchesCategory;
     });
 
-    const handleNew = async () => {
-        await initializeComponent();
-        setActivePaymentMethod('');
-    };
-
-    const handleSelectVenta = async (documento: IDocumentoLista) => {
-        const data = await VentaService.getById(documento.idVenta);
+    const applyVentaToNotaCredito = (data: IVenta) => {
         setSelectedFactura(data);
-        setNotaCredito({
-            ...notaCredito,
+        setNotaCredito(previous => ({
+            ...previous,
+            conceptoNotaCredito: previous.conceptoNotaCredito,
+            idConceptoCorreccionNota: previous.idConceptoCorreccionNota,
             idVenta: data?.idVenta ?? null,
             idUsuario: data?.idUsuario ?? null,
             totalRegistros: data?.totalRegistros ?? 0,
@@ -329,17 +382,21 @@ const MainCreditNote = () => {
             totalBaseIva: data?.totalBaseIva ?? 0,
             totalIva: data?.totalIva ?? 0,
             totalVenta: data?.totalVenta ?? 0,
-            idTerceroNotaCredito: data?.terceroVenta?.idTercero ?? null,
+            idTerceroNotaCredito: data?.terceroVenta?.idTercero ?? 0,
             numeroIdentificacionTerceroNotaCredito: data?.terceroVenta?.numeroIdentificacion ?? null,
-            nombreTerceroNotaCredito: data?.terceroVenta?.razonSocial ? data.terceroVenta.razonSocial : (data?.terceroVenta?.primerNombre && data?.terceroVenta?.primerApellido ? `${data.terceroVenta.primerNombre} ${data.terceroVenta.primerApellido}` : null),
+            nombreTerceroNotaCredito: data?.terceroVenta?.razonSocial ||
+                (data?.terceroVenta?.primerNombre && data?.terceroVenta?.primerApellido
+                    ? `${data.terceroVenta.primerNombre} ${data.terceroVenta.primerApellido}`
+                    : null),
             detalleNotaCredito: (data?.detalleVenta ?? []).map(item => ({
                 idDetalleNotaCredito: 0,
+                idNotaCredito: 0,
                 registroNotaCredito: 0,
-                idProducto: item.idProducto,
-                codigoProducto: item.codigoProducto,
-                nombreProducto: item.nombreProducto,
-                cantidadNotaCredito: item.cantidadVenta,
-                cantidadFactura: item.cantidadVenta,
+                idProducto: item.idProducto ?? 0,
+                codigoProducto: item.codigoProducto ?? '',
+                nombreProducto: item.nombreProducto ?? '',
+                cantidadNotaCredito: item.cantidadVenta ?? 0,
+                cantidadFactura: item.cantidadVenta ?? 0,
                 precioUnitarioNotaCredito: item.precioUnitarioVenta ?? 0,
                 precioUnitarioFactura: item.precioUnitarioVenta ?? 0,
                 porcentajeIvaNotaCredito: item.porcentajeIvaVenta ?? 0,
@@ -358,9 +415,45 @@ const MainCreditNote = () => {
                 costoUnitarioFactura: item.costoUnitarioVenta ?? 0,
                 idDetalleVenta: item.idDetalleVenta,
             })),
-        });
-        setSearchDocumento(documento.numeroDocumento);
-        setOpenDialogFactura(false);
+        }));
+    };
+
+    const handleNew = async () => {
+        setSelectedFactura(null);
+        setNotaCredito(createInitialNotaCredito());
+        setSearchDocumento('');
+        setActivePaymentMethod('');
+        await initializeComponent();
+    };
+
+    const handleSelectVenta = async (documento: IDocumentoLista) => {
+        try {
+            const data = await VentaService.getById(documento.idVenta);
+            if (!data) {
+                throw new Error('La factura no fue encontrada');
+            }
+            applyVentaToNotaCredito(data);
+            setSearchDocumento(documento.numeroDocumento);
+            setOpenDialogFactura(false);
+        } catch (error) {
+            console.error('Error al cargar la factura:', error);
+            toast.error('No fue posible cargar la factura', { position: 'top-center' });
+        }
+    };
+
+    const handleSearchFactura = async () => {
+        const numeroFactura = searchDocumento.trim().toLowerCase();
+        if (!numeroFactura) return;
+
+        const documento = documentosLista.find(item =>
+            item.numeroDocumento?.trim().toLowerCase() === numeroFactura
+        );
+        if (!documento) {
+            toast.error('No se encontró una factura con ese número', { position: 'top-center' });
+            return;
+        }
+
+        await handleSelectVenta(documento);
     };
 
     const handleSaveNotaCredito = async () => {
@@ -369,6 +462,12 @@ const MainCreditNote = () => {
         const localISODate = new Date(todayLocal.getTime() - offsetMs).toISOString().split('T')[0];
         const updatedNotaCredito = {
             ...notaCredito,
+            idNotaCredito: Number.isInteger(notaCredito.idNotaCredito)
+                ? notaCredito.idNotaCredito
+                : 0,
+            numeroNotaCredito: Number.isInteger(notaCredito.numeroNotaCredito)
+                ? notaCredito.numeroNotaCredito
+                : 0,
             fechaNotaCredito: localISODate,
         };
         try {
@@ -621,8 +720,11 @@ const MainCreditNote = () => {
                             <User className="w-4 h-4 mr-1" />
                             Administrador
                         </Badge>
-                        <Clock className="h-5 w-5" />
-                        <span>{new Date().toLocaleTimeString()}</span>
+                        {selectedFactura && (
+                            <Badge variant="outline" className="px-3 py-1 text-sm">
+                                {selectedFactura.estadoDian?.trim() || 'Pendiente DIAN'}
+                            </Badge>
+                        )}
                         <Button
                             variant="default"
                             size="icon"
@@ -641,39 +743,39 @@ const MainCreditNote = () => {
             <div className="flex flex-1 overflow-hidden">
                 <div className="w-full flex flex-col h-[calc(100vh-80px)]">
                     {/* Header del Carrito */}
-                    <div className="p-3 border-b h-[60px] shrink-0">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <h2 className="text-sm font-normal">Tipo de documento</h2>
-                                <input
-                                    type="text"
-                                    className="rounded border px-3 py-2 text-sm bg-background w-20"
-                                    value={notaCredito.idTipoDocumento ?? ''}
-                                    onChange={(e) => setNotaCredito({ ...notaCredito, idTipoDocumento: parseInt(e.target.value) })}
-                                    readOnly
-                                />
-                                {/* <select
-                                    className="rounded border px-3 py-2 text-sm bg-background w-48"
-                                    value={notaCredito.idTipoDocumento}
+                    <div className="p-3 border-b min-h-[60px] h-auto shrink-0">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <h2 className="text-sm font-normal shrink-0">Tipo de documento</h2>
+                                <select
+                                    className="rounded border px-3 py-2 text-sm bg-background min-w-[180px] w-auto"
+                                    value={notaCredito.idTipoDocumentoExterno?.toString() ?? ''}
                                     onChange={(e) => {
-                                        const selectedId = parseInt(e.target.value);
-                                        console.log(selectedId);
-                                        const selectedTipoDocumento = tiposDocumento.find(td => td.idTipoDocumento === selectedId);
-                                        setNotaCredito({
-                                            ...notaCredito,
-                                            idTipoDocumento: selectedId,
-                                            idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
-                                        });
+                                        const selectedId = parseInt(e.target.value, 10);
+                                        const selectedTipoDocumento = tiposDocumento.find(
+                                            (tipoDocumento) => Number(tipoDocumento.idTipoDocumentoExterno) === selectedId
+                                        );
+                                        if (!selectedTipoDocumento) return;
+
+                                        setNotaCredito((previous) => ({
+                                            ...previous,
+                                            idTipoDocumento: selectedTipoDocumento.idTipoDocumento,
+                                            idTipoDocumentoExterno: selectedTipoDocumento.idTipoDocumentoExterno,
+                                            prefijoNotaCredito: selectedTipoDocumento.prefijoConsecutivo ?? '',
+                                        }));
                                     }}
+                                    disabled={isLoadingTiposDocumento}
                                     required
                                 >
+                                    <option value="">-- Seleccione --</option>
                                     {tiposDocumento.map(td => (
-                                        <option key={td.idTipoDocumento} value={td.idTipoDocumento}>
-                                            {td.nombreDocumento} ({td.codigoDocumento})
+                                        <option key={td.idTipoDocumentoExterno} value={td.idTipoDocumentoExterno}>
+                                            {td.nombreTipoDocumentoExterno}
                                         </option>
                                     ))}
-                                </select> */}
-                                <h2 className="text-sm font-normal">Prefijo</h2>
+                                </select>
+
+                                <h2 className="text-sm font-normal shrink-0">Prefijo</h2>
                                 <input
                                     type="text"
                                     className="rounded border px-3 py-2 text-sm bg-background w-20"
@@ -681,18 +783,20 @@ const MainCreditNote = () => {
                                     onChange={(e) => setNotaCredito({ ...notaCredito, prefijoNotaCredito: e.target.value })}
                                     readOnly
                                 />
-                                <h2 className="text-sm font-normal">Número</h2>
+
+                                <h2 className="text-sm font-normal shrink-0">Número</h2>
                                 <input
                                     type="text"
-                                    className="rounded border px-3 py-2 text-sm bg-background w-28"
+                                    className="rounded border px-3 py-2 text-sm bg-background w-24"
                                     value={notaCredito.numeroNotaCredito ?? ''}
                                     onChange={(e) => setNotaCredito({ ...notaCredito, numeroNotaCredito: parseInt(e.target.value) })}
                                     readOnly
                                 />
-                                <h2 className="text-sm font-normal">Fecha</h2>
+
+                                <h2 className="text-sm font-normal shrink-0">Fecha</h2>
                                 <input
                                     type="date"
-                                    className="rounded border px-3 py-2 text-sm bg-background w-30"
+                                    className="rounded border px-3 py-2 text-sm bg-background w-32"
                                     value={new Date().toISOString().split('T')[0]}
                                     onChange={(e) => setNotaCredito({ ...notaCredito, fechaNotaCredito: e.target.value })}
                                     readOnly
@@ -714,6 +818,12 @@ const MainCreditNote = () => {
                                 className="rounded border px-2 py-2 text-sm bg-background w-64"
                                 value={searchDocumento}
                                 onChange={(e) => setSearchDocumento(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        void handleSearchFactura();
+                                    }
+                                }}
+                                onBlur={() => void handleSearchFactura()}
                             />
                             <Dialog open={openDialogFactura} onOpenChange={setOpenDialogFactura}>
                                 <DialogTrigger asChild>
@@ -798,19 +908,23 @@ const MainCreditNote = () => {
                                 Concepto Nota Crédito:
                             </Label>
                             <select
+                                id="concepto-nota-credito"
                                 className="rounded border px-3 py-2 text-sm bg-background w-48"
                                 value={notaCredito.conceptoNotaCredito ?? ''}
                                 onChange={(e) => {
-                                    const selectedId = parseInt(e.target.value);
-                                    setNotaCredito({
-                                        ...notaCredito,
+                                    const val = parseInt(e.target.value, 10);
+                                    const selectedId = Number.isNaN(val) ? null : val;
+
+                                    setNotaCredito((prev) => ({
+                                        ...prev,
                                         conceptoNotaCredito: selectedId,
-                                        idConceptoCorreccionNota: selectedId,
-                                    });
+                                        idConceptoCorreccionNota: selectedId
+                                    }));
                                 }}
                                 required
                             >
-                                {conceptosNotaCredito.map(td => (
+                                <option value="">-- Seleccione --</option>
+                                {conceptosNotaCredito.map((td) => (
                                     <option key={td.idConceptoCorreccionNota} value={td.idConceptoCorreccionNota}>
                                         {td.nombreConceptoCorreccionNota}
                                     </option>

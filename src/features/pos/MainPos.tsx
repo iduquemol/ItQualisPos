@@ -39,12 +39,10 @@ import { ITerceroDefault } from '@/types/ITerceroDefault';
 import { IFormasPago } from '@/types/IFormasPago';
 import { IMediosPago } from '@/types/IMediosPago';
 import { IVentaMedioPago } from '@/types/IVentaMedioPago';
-import { IConsecutivos } from '@/types/IConsecutivos';
 import FacturaModal from '../reports/FacturaModal';
 import { IParametrosVentaDefault } from '@/types/IParametrosVentaDefault';
 import { Package, type LucideIcon } from "lucide-react";
 import { CATEGORY_ICONS, iconMap } from '@/types/ICategoryIcons';
-import { ConsecutivosService } from '@/services/ConsecutivosService';
 
 
 type PosCategory = ICategorias & { icon: LucideIcon };
@@ -61,14 +59,14 @@ const addDaysToDate = (date: string, days: number): string => {
 };
 
 const resolveCategoryIcon = (iconId?: string | null): LucideIcon => {
-  if (!iconId) return Package;
+    if (!iconId) return Package;
 
-  const normalizedIconId = iconId.trim().toLowerCase();
-  const categoryIcon = CATEGORY_ICONS.find(
-    ({ id }) => id.toLowerCase() === normalizedIconId
-  );
+    const normalizedIconId = iconId.trim().toLowerCase();
+    const categoryIcon = CATEGORY_ICONS.find(
+        ({ id }) => id.toLowerCase() === normalizedIconId
+    );
 
-  return categoryIcon?.icon ?? iconMap[iconId.trim()] ?? Package;
+    return categoryIcon?.icon ?? iconMap[iconId.trim()] ?? Package;
 };
 
 const emptyVentaTercero: IVentaTercero = {
@@ -100,6 +98,7 @@ const buildVentaDetalle = (product: IProducto, quantity: number = 1, registroVen
 
     return {
         idDetalleVenta: 0,
+        idVenta: 0,
         registroVenta,
         idProducto: Number(product.idProducto ?? 0),
         codigoProducto: product.codigoProducto ?? '',
@@ -235,7 +234,6 @@ const RetailPOS = () => {
     const [documentoListaError, setDocumentoListaError] = useState<string | null>(null);
     const [formasPago, setFormasPago] = useState<IFormasPago[]>([]);
     const [mediosPago, setMediosPago] = useState<IMediosPago[]>([]);
-    const [consecutivos, setConsecutivos] = useState<IConsecutivos[]>([]);
     const [parametrosVentaDefault, setParametrosVentaDefault] = useState<IParametrosVentaDefault | null>(null);
     const [isLoadingTerceroDefault, setIsLoadingTerceroDefault] = useState(true);
     const [terceroDefaultError, setTerceroDefaultError] = useState<string | null>(null);
@@ -257,8 +255,8 @@ const RetailPOS = () => {
     const esCredito = selectedFormaPago?.nombreFormaPago
         ?.trim()
         .toLowerCase() === 'crédito' || selectedFormaPago?.nombreFormaPago
-        ?.trim()
-        .toLowerCase() === 'credito';
+            ?.trim()
+            .toLowerCase() === 'credito';
 
     const BARCODE_DELAY = 50;
 
@@ -267,7 +265,7 @@ const RetailPOS = () => {
         { id: 2, nombre: "Vendedor 1" },
         { id: 3, nombre: "Vendedor 2" },
     ]);
-    
+
     const fetchCategories = async () => {
         try {
             setCategoryError(null);
@@ -276,8 +274,8 @@ const RetailPOS = () => {
             const categoriesWithIcons = data
                 .filter((category) => category.categoriaActiva === true)
                 .map((category) => ({
-                ...category,
-                icon: resolveCategoryIcon(category.iconoCategoria),
+                    ...category,
+                    icon: resolveCategoryIcon(category.iconoCategoria),
                 }));
             setCategories([
                 { idCategoria: 0, codigoCategoria: 'all', nombreCategoria: 'Todo', iconoCategoria: 'Package', icon: Package },
@@ -344,7 +342,7 @@ const RetailPOS = () => {
             const data = await ProductoService.getProductosVentaByTercero(
                 numeroIdentificacion || factura.terceroVenta?.numeroIdentificacion || "0"
             );
-            
+
             // 🔒 Filtramos duplicados por idProducto antes de guardar en el estado
             const uniqueProducts = Array.from(
                 new Map(data.map((item: any) => [item.idProducto, item])).values()
@@ -404,16 +402,6 @@ const RetailPOS = () => {
         } catch (error) {
             console.error('Error al cargar medios de pago:', error);
             setMediosPago([]);
-        }
-    };
-
-    const fetchConsecutivos = async () => {
-        try {
-            const data = await ConsecutivosService.getAll();
-            setConsecutivos(data);
-        } catch (error) {
-            console.error('Error al cargar consecutivos:', error);
-            setConsecutivos([]);
         }
     };
 
@@ -513,7 +501,6 @@ const RetailPOS = () => {
             fetchDocumentoLista(),
             fetchFormasPago(),
             fetchMediosPago(),
-            fetchConsecutivos(),
             fetchProducts(),
             fetchTerceros()
         ]);
@@ -538,6 +525,30 @@ const RetailPOS = () => {
     useEffect(() => {
         initializeComponent();
     }, []);
+
+    useEffect(() => {
+        const selectedTipoDocumento = tiposDocumento.find(
+            (tipoDocumento) =>
+                Number(tipoDocumento.idTipoDocumentoExterno) === Number(factura.idTipoDocumentoExterno) &&
+                Number(tipoDocumento.idTipoDocumento) === Number(factura.idTipoDocumento)
+        ) ?? tiposDocumento.find(
+            (tipoDocumento) => Number(tipoDocumento.idTipoDocumento) === Number(factura.idTipoDocumento)
+        );
+        if (!selectedTipoDocumento) return;
+
+        const idTipoDocumentoExterno = Number(selectedTipoDocumento.idTipoDocumentoExterno);
+        const prefijoConsecutivo = selectedTipoDocumento.prefijoConsecutivo ?? '';
+        if (
+            factura.idTipoDocumentoExterno !== idTipoDocumentoExterno ||
+            factura.prefijoVenta !== prefijoConsecutivo
+        ) {
+            setFactura((previous) => ({
+                ...previous,
+                idTipoDocumentoExterno,
+                prefijoVenta: prefijoConsecutivo,
+            }));
+        }
+    }, [tiposDocumento, factura.idTipoDocumento, factura.idTipoDocumentoExterno, factura.prefijoVenta]);
 
     // Manejo de eventos del teclado para escaneo de código de barras
     useEffect(() => {
@@ -584,8 +595,8 @@ const RetailPOS = () => {
         const barras = String(product?.codigoBarras ?? '').toLowerCase();
 
         // 3. Evaluar la búsqueda
-        const matchesSearch = term === '' 
-            ? true 
+        const matchesSearch = term === ''
+            ? true
             : (nombre.includes(term) || codigo.includes(term) || barras.includes(term));
 
         // 4. Evaluar la categoría (0 = "Todo")
@@ -676,7 +687,7 @@ const RetailPOS = () => {
             const result = await VentaService.resend(factura.idVenta, factura.idMetodoDian || 2);
             console.log("Factura enviada a la Dian:", result);
             setSuccessMessage(result.message || "Operación completada");
-            setShowSuccessDialog(true);  
+            setShowSuccessDialog(true);
         }
     }
 
@@ -784,181 +795,181 @@ const RetailPOS = () => {
     };
 
     const handleSelectVenta = async (documento: IDocumentoLista) => {
-            const data = await VentaService.getById(documento.idVenta);
-            setSelectedFactura(data);
-            setFactura(prev => ({
-                ...prev,
-                idVenta: data?.idVenta ?? 0,
-                idTipoDocumento: data?.idTipoDocumento ?? 0,
-                codigoDocumento: data?.codigoDocumento ?? '',
-                nombreDocumento: data?.nombreDocumento ?? null,
-                estadoDian: data?.estadoDian ?? null,
-                idFormaPago: data?.idFormaPago ?? 1,
-                numeroVenta: data?.numeroVenta ?? 0,
-                prefijoVenta: data?.prefijoVenta ?? '',
-                fechaVenta: data?.fechaVenta ?? '',
-                plazoDias: data?.plazoDias ?? 0,
-                fechaVencimiento: data?.fechaVencimiento ?? data?.fechaVenta ?? '',
-                idMetodoDian: data?.idMetodoDian ?? 2,
-                idPuntoVenta: data?.idPuntoVenta ?? null,
-                idUsuario: data?.idUsuario ?? null,
-                totalRegistros: data?.totalRegistros ?? 0,
-                cantidadProductos: data?.cantidadProductos ?? 0,
-                totalPrecio: data?.totalPrecio ?? 0,
-                totalDescuento: data?.totalDescuento ?? 0,
-                totalBaseIva: data?.totalBaseIva ?? 0,
-                totalIva: data?.totalIva ?? 0,
-                totalVenta: data?.totalVenta ?? 0,
-                terceroVenta: data?.terceroVenta ? buildVentaTercero(data.terceroVenta) : buildVentaTercero(),
-                detalleVenta: data?.detalleVenta ?? [],
-                mediosPagoVenta: data?.mediosPagoVenta ?? [],
+        const data = await VentaService.getById(documento.idVenta);
+        setSelectedFactura(data);
+        setFactura(prev => ({
+            ...prev,
+            idVenta: data?.idVenta ?? 0,
+            idTipoDocumento: data?.idTipoDocumento ?? 0,
+            codigoDocumento: data?.codigoDocumento ?? '',
+            nombreDocumento: data?.nombreDocumento ?? null,
+            estadoDian: data?.estadoDian ?? null,
+            idFormaPago: data?.idFormaPago ?? 1,
+            numeroVenta: data?.numeroVenta ?? 0,
+            prefijoVenta: data?.prefijoVenta ?? '',
+            fechaVenta: data?.fechaVenta ?? '',
+            plazoDias: data?.plazoDias ?? 0,
+            fechaVencimiento: data?.fechaVencimiento ?? data?.fechaVenta ?? '',
+            idMetodoDian: data?.idMetodoDian ?? 2,
+            idPuntoVenta: data?.idPuntoVenta ?? null,
+            idUsuario: data?.idUsuario ?? null,
+            totalRegistros: data?.totalRegistros ?? 0,
+            cantidadProductos: data?.cantidadProductos ?? 0,
+            totalPrecio: data?.totalPrecio ?? 0,
+            totalDescuento: data?.totalDescuento ?? 0,
+            totalBaseIva: data?.totalBaseIva ?? 0,
+            totalIva: data?.totalIva ?? 0,
+            totalVenta: data?.totalVenta ?? 0,
+            terceroVenta: data?.terceroVenta ? buildVentaTercero(data.terceroVenta) : buildVentaTercero(),
+            detalleVenta: data?.detalleVenta ?? [],
+            mediosPagoVenta: data?.mediosPagoVenta ?? [],
 
-            }));
-            setOpenDialog(false);
-            setShowFacturaModal(true);
-            const dataPrint = await VentaService.printById(documento.idVenta);
-            setFacturaModalData(dataPrint);        
-        };
+        }));
+        setOpenDialog(false);
+        setShowFacturaModal(true);
+        const dataPrint = await VentaService.printById(documento.idVenta);
+        setFacturaModalData(dataPrint);
+    };
 
-       const DEFAULT_TIPO_DOC_NIT = 7; // idTipoDocumentoId = 7 para NIT (código 31)
+    const DEFAULT_TIPO_DOC_NIT = 7; // idTipoDocumentoId = 7 para NIT (código 31)
 
-        const handleSaveVenta = async (indBorrador: boolean) => {
-            const localISODate = getLocalDate();
+    const handleSaveVenta = async (indBorrador: boolean) => {
+        const localISODate = getLocalDate();
 
-            // 1. Normalizar cada ítem del detalle
-            const detalleNormalizado = (factura.detalleVenta ?? []).map(item => {
-                const totalItemCalculado = (item.totalVenta && item.totalVenta > 0)
-                    ? item.totalVenta
-                    : (item.precioUnitarioVenta || 0) * (item.cantidadVenta || 1);
+        // 1. Normalizar cada ítem del detalle
+        const detalleNormalizado = (factura.detalleVenta ?? []).map(item => {
+            const totalItemCalculado = (item.totalVenta && item.totalVenta > 0)
+                ? item.totalVenta
+                : (item.precioUnitarioVenta || 0) * (item.cantidadVenta || 1);
 
-                // Si porcentajeIvaVenta es 0 o no hay ivaVenta, la baseIvaVenta debe ser 0
-                const tieneIva = (item.porcentajeIvaVenta && item.porcentajeIvaVenta > 0) || (item.ivaVenta && item.ivaVenta > 0);
-                const baseIvaCalculada = tieneIva 
-                    ? ((item.baseIvaVenta && item.baseIvaVenta > 0) ? item.baseIvaVenta : totalItemCalculado)
-                    : 0;
+            // Si porcentajeIvaVenta es 0 o no hay ivaVenta, la baseIvaVenta debe ser 0
+            const tieneIva = (item.porcentajeIvaVenta && item.porcentajeIvaVenta > 0) || (item.ivaVenta && item.ivaVenta > 0);
+            const baseIvaCalculada = tieneIva
+                ? ((item.baseIvaVenta && item.baseIvaVenta > 0) ? item.baseIvaVenta : totalItemCalculado)
+                : 0;
 
-                return {
-                    ...item,
-                    totalVenta: totalItemCalculado,
-                    baseIvaVenta: baseIvaCalculada
-                };
-            });
-
-            // 2. Calcular totales reales desde el detalle normalizado
-            const totalCantidadCalculada = detalleNormalizado.reduce((acc, item) => acc + (item.cantidadVenta || 0), 0);
-            const totalPrecioCalculado = total ?? detalleNormalizado.reduce((acc, item) => acc + (item.totalVenta || 0), 0);
-            const totalBaseIvaCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.baseIvaVenta || 0), 0);
-            const totalIvaCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.ivaVenta || 0), 0);
-            const totalDescuentoCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.descuentoVenta || 0), 0);
-
-            // 3. Normalizar medio de pago (Efectivo = 1)
-            const mediosPagoNormalizados = esCredito
-                ? []
-                : (factura.mediosPagoVenta && factura.mediosPagoVenta.length > 0)
-                    ? factura.mediosPagoVenta
-                    : [{
-                        idMedioPagoVenta: 0,
-                        idMedioPago: 1,
-                        valorMedioPago: totalPrecioCalculado
-                    }];
-
-            // 4. Estructurar la factura final
-            const updatedFactura = {
-                ...factura,
-                fechaVenta: localISODate,
-                plazoDias: esCredito ? Math.max(0, Number(factura.plazoDias ?? 0)) : 0,
-                fechaVencimiento: esCredito
-                    ? addDaysToDate(localISODate, Math.max(0, Number(factura.plazoDias ?? 0)))
-                    : localISODate,
-                esBorrador: indBorrador,
-
-                // Detalle corregido
-                detalleVenta: detalleNormalizado,
-
-                // Totales y Cantidades
-                cantidadProductos: totalCantidadCalculada > 0 ? totalCantidadCalculada : factura.cantidadProductos,
-                totalRegistros: detalleNormalizado.length,
-                totalPrecio: totalPrecioCalculado > 0 ? totalPrecioCalculado : factura.totalPrecio,
-                totalVenta: totalPrecioCalculado > 0 ? totalPrecioCalculado : factura.totalVenta,
-                totalBaseIva: totalBaseIvaCalculado,
-                totalIva: totalIvaCalculado,
-                totalDescuento: totalDescuentoCalculado,
-
-                // Medios de pago
-                mediosPagoVenta: mediosPagoNormalizados,
-
-                // Tercero normalizado según el contrato actual
-                terceroVenta: factura.terceroVenta ? {
-                    ...factura.terceroVenta,
-                    idTipoDocumentoId: (factura.terceroVenta.idTipoDocumentoId && factura.terceroVenta.idTipoDocumentoId !== 0)
-                        ? factura.terceroVenta.idTipoDocumentoId
-                        : DEFAULT_TIPO_DOC_NIT,
-                    terceroGeneral: factura.terceroVenta.terceroGeneral ?? false
-                } : null
+            return {
+                ...item,
+                totalVenta: totalItemCalculado,
+                baseIvaVenta: baseIvaCalculada
             };
+        });
 
-            try {
-                if (updatedFactura.idVenta) {
-                    console.log("Factura actualizada:", factura);
-                    setSuccessMessage("Factura actualizada correctamente");
-                    setShowSuccessDialog(true);
-                } else {
-                    console.log("Factura a guardar:", updatedFactura);
-                    const result = await VentaService.create(updatedFactura);
-                    console.log("Factura guardada:", result);
-                    setSuccessMessage(
-                        result.message ||   + "\nNúmero Documento Dian: " + result.numeroDocumentoDian
-                    );
-                    setShowSuccessDialog(true);
+        // 2. Calcular totales reales desde el detalle normalizado
+        const totalCantidadCalculada = detalleNormalizado.reduce((acc, item) => acc + (item.cantidadVenta || 0), 0);
+        const totalPrecioCalculado = total ?? detalleNormalizado.reduce((acc, item) => acc + (item.totalVenta || 0), 0);
+        const totalBaseIvaCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.baseIvaVenta || 0), 0);
+        const totalIvaCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.ivaVenta || 0), 0);
+        const totalDescuentoCalculado = detalleNormalizado.reduce((acc, item) => acc + (item.descuentoVenta || 0), 0);
 
-                    const data = await VentaService.getById(result.idFactura);
-                    setSelectedFactura(data);
-                    setFactura({
-                        ...factura,
-                        idVenta: data?.idVenta ?? 0,
-                        idTipoDocumento: data?.idTipoDocumento ?? 0,
-                        codigoDocumento: data?.codigoDocumento ?? '',
-                        nombreDocumento: data?.nombreDocumento ?? null,
-                        estadoDian: data?.estadoDian ?? null,
-                        idFormaPago: data?.idFormaPago ?? 1,
-                        numeroVenta: data?.numeroVenta ?? 0,
-                        prefijoVenta: data?.prefijoVenta ?? '',
-                        fechaVenta: data?.fechaVenta ?? '',
-                        plazoDias: data?.plazoDias ?? 0,
-                        fechaVencimiento: data?.fechaVencimiento ?? data?.fechaVenta ?? '',
-                        esBorrador: data?.esBorrador ?? false,
-                        idPuntoVenta: data?.idPuntoVenta ?? null,
-                        idUsuario: data?.idUsuario ?? null,
-                        totalRegistros: data?.totalRegistros ?? 0,
-                        cantidadProductos: data?.cantidadProductos ?? 0,
-                        totalPrecio: data?.totalPrecio ?? 0,
-                        totalDescuento: data?.totalDescuento ?? 0,
-                        totalBaseIva: data?.totalBaseIva ?? 0,
-                        totalIva: data?.totalIva ?? 0,
-                        totalVenta: data?.totalVenta ?? 0,
-                        terceroVenta: data?.terceroVenta ?? {
-                            idTercero: 0,
-                            idTipoDocumentoId: DEFAULT_TIPO_DOC_NIT,
-                            digitoVerificacion: null,
-                            numeroIdentificacion: '',
-                            primerNombre: '',
-                            primerApellido: '',
-                            razonSocial: '',
-                            emailTercero: null,
-                            terceroGeneral: false
-                        },
-                        detalleVenta: data?.detalleVenta ?? [],
-                        mediosPagoVenta: data?.mediosPagoVenta ?? [],
-                    });
+        // 3. Normalizar medio de pago (Efectivo = 1)
+        const mediosPagoNormalizados = esCredito
+            ? []
+            : (factura.mediosPagoVenta && factura.mediosPagoVenta.length > 0)
+                ? factura.mediosPagoVenta
+                : [{
+                    idMedioPagoVenta: 0,
+                    idMedioPago: 1,
+                    valorMedioPago: totalPrecioCalculado
+                }];
 
-                    const dataPrint = await VentaService.printById(result.idFactura);
-                    setFacturaModalData(dataPrint);
-                    setShowFacturaModal(true);
-                }
-            } catch (error) {
-                console.error('Error al guardar la factura:', error);
-            }
+        // 4. Estructurar la factura final
+        const updatedFactura = {
+            ...factura,
+            fechaVenta: localISODate,
+            plazoDias: esCredito ? Math.max(0, Number(factura.plazoDias ?? 0)) : 0,
+            fechaVencimiento: esCredito
+                ? addDaysToDate(localISODate, Math.max(0, Number(factura.plazoDias ?? 0)))
+                : localISODate,
+            esBorrador: indBorrador,
+
+            // Detalle corregido
+            detalleVenta: detalleNormalizado,
+
+            // Totales y Cantidades
+            cantidadProductos: totalCantidadCalculada > 0 ? totalCantidadCalculada : factura.cantidadProductos,
+            totalRegistros: detalleNormalizado.length,
+            totalPrecio: totalPrecioCalculado > 0 ? totalPrecioCalculado : factura.totalPrecio,
+            totalVenta: totalPrecioCalculado > 0 ? totalPrecioCalculado : factura.totalVenta,
+            totalBaseIva: totalBaseIvaCalculado,
+            totalIva: totalIvaCalculado,
+            totalDescuento: totalDescuentoCalculado,
+
+            // Medios de pago
+            mediosPagoVenta: mediosPagoNormalizados,
+
+            // Tercero normalizado según el contrato actual
+            terceroVenta: factura.terceroVenta ? {
+                ...factura.terceroVenta,
+                idTipoDocumentoId: (factura.terceroVenta.idTipoDocumentoId && factura.terceroVenta.idTipoDocumentoId !== 0)
+                    ? factura.terceroVenta.idTipoDocumentoId
+                    : DEFAULT_TIPO_DOC_NIT,
+                terceroGeneral: factura.terceroVenta.terceroGeneral ?? false
+            } : null
         };
+
+        try {
+            if (updatedFactura.idVenta) {
+                console.log("Factura actualizada:", factura);
+                setSuccessMessage("Factura actualizada correctamente");
+                setShowSuccessDialog(true);
+            } else {
+                console.log("Factura a guardar:", updatedFactura);
+                const result = await VentaService.create(updatedFactura);
+                console.log("Factura guardada:", result);
+                setSuccessMessage(
+                    result.message || + "\nNúmero Documento Dian: " + result.numeroDocumentoDian
+                );
+                setShowSuccessDialog(true);
+
+                const data = await VentaService.getById(result.idFactura);
+                setSelectedFactura(data);
+                setFactura({
+                    ...factura,
+                    idVenta: data?.idVenta ?? 0,
+                    idTipoDocumento: data?.idTipoDocumento ?? 0,
+                    codigoDocumento: data?.codigoDocumento ?? '',
+                    nombreDocumento: data?.nombreDocumento ?? null,
+                    estadoDian: data?.estadoDian ?? null,
+                    idFormaPago: data?.idFormaPago ?? 1,
+                    numeroVenta: data?.numeroVenta ?? 0,
+                    prefijoVenta: data?.prefijoVenta ?? '',
+                    fechaVenta: data?.fechaVenta ?? '',
+                    plazoDias: data?.plazoDias ?? 0,
+                    fechaVencimiento: data?.fechaVencimiento ?? data?.fechaVenta ?? '',
+                    esBorrador: data?.esBorrador ?? false,
+                    idPuntoVenta: data?.idPuntoVenta ?? null,
+                    idUsuario: data?.idUsuario ?? null,
+                    totalRegistros: data?.totalRegistros ?? 0,
+                    cantidadProductos: data?.cantidadProductos ?? 0,
+                    totalPrecio: data?.totalPrecio ?? 0,
+                    totalDescuento: data?.totalDescuento ?? 0,
+                    totalBaseIva: data?.totalBaseIva ?? 0,
+                    totalIva: data?.totalIva ?? 0,
+                    totalVenta: data?.totalVenta ?? 0,
+                    terceroVenta: data?.terceroVenta ?? {
+                        idTercero: 0,
+                        idTipoDocumentoId: DEFAULT_TIPO_DOC_NIT,
+                        digitoVerificacion: null,
+                        numeroIdentificacion: '',
+                        primerNombre: '',
+                        primerApellido: '',
+                        razonSocial: '',
+                        emailTercero: null,
+                        terceroGeneral: false
+                    },
+                    detalleVenta: data?.detalleVenta ?? [],
+                    mediosPagoVenta: data?.mediosPagoVenta ?? [],
+                });
+
+                const dataPrint = await VentaService.printById(result.idFactura);
+                setFacturaModalData(dataPrint);
+                setShowFacturaModal(true);
+            }
+        } catch (error) {
+            console.error('Error al guardar la factura:', error);
+        }
+    };
 
     // Funciones del carrito
     const addToCart = (product: IProducto) => {
@@ -1052,21 +1063,23 @@ const RetailPOS = () => {
     // Cálculos
     const [montoIngresado, setMontoIngresado] = useState<number>(0);
     const [cambioEfectivo, setCambioEfectivo] = useState<number>(0);
-    const subtotal = factura.detalleVenta?.reduce((sum, item) => sum + (item.precioUnitarioVenta * item.cantidadVenta), 0);
-    const discount = factura.detalleVenta?.reduce((descuento, item) => descuento + item.descuentoVenta, 0);
-    const tax = factura.detalleVenta?.reduce((iva, item) => iva + item.ivaVenta, 0);
+    const subtotal = factura.detalleVenta?.reduce((sum, item) => sum + (item.precioUnitarioVenta ?? 0) * (item.cantidadVenta ?? 0), 0);
+    const discount = factura.detalleVenta?.reduce((descuento, item) => descuento + (item.descuentoVenta ?? 0), 0);
+    const tax = factura.detalleVenta?.reduce((iva, item) => iva + (item.ivaVenta ?? 0), 0);
     const totalReteIva = factura.detalleVenta?.reduce((reteIva, item) => reteIva + (item.reteIvaVenta || 0), 0);
     const totalReteRenta = factura.detalleVenta?.reduce((reteRenta, item) => reteRenta + (item.reteRentaVenta || 0), 0);
     const totalReteIca = factura.detalleVenta?.reduce((reteIca, item) => reteIca + (item.reteIcaVenta || 0), 0);
     const total = (subtotal || 0) - (discount || 0) + (tax || 0) - (totalReteIva || 0) - (totalReteRenta || 0) - (totalReteIca || 0);
-    const totalPagado = factura.mediosPagoVenta?.reduce((acc, curr) => acc + (curr.valorMedioPago || 0), 0) || 0;
-    const saldoPendiente = total - totalPagado;
+    const totalPagado = esCredito
+        ? total
+        : factura.mediosPagoVenta?.reduce((acc, curr) => acc + (curr.valorMedioPago || 0), 0) || 0;
+    const saldoPendiente = Math.max(0, total - totalPagado);
     const esEfectivo = activePaymentMethod === '1';
     const efectivoAgregado = factura.mediosPagoVenta?.some(
         medioPago => medioPago.idMedioPago === 1
     ) ?? false;
     const cambioCalculado = efectivoAgregado ? cambioEfectivo : 0;
-    const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + item.cantidadVenta, 0);
+    const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + (item.cantidadVenta ?? 0), 0);
     const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
 
     return (
@@ -1215,9 +1228,11 @@ const RetailPOS = () => {
                             <User className="w-4 h-4 mr-1" />
                             Administrador
                         </Badge>
-                        <Badge variant="outline" className="px-3 py-1 text-sm">
-                            {factura.estadoDian?.trim() || 'Pendiente DIAN'}
-                        </Badge>
+                        {selectedFactura && (
+                            <Badge variant="outline" className="px-3 py-1 text-sm">
+                                {factura.estadoDian?.trim() || 'Pendiente DIAN'}
+                            </Badge>
+                        )}
                         <Button
                             variant="default"
                             size="icon"
@@ -1242,7 +1257,7 @@ const RetailPOS = () => {
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-4">
                                 <h2 className="text-sm font-normal">Tipo de documento</h2>
-                               <select
+                                <select
                                     className="rounded border px-3 py-2 text-sm bg-background w-80 font-bold"
                                     value={factura.idTipoDocumentoExterno?.toString() || ''}
                                     onChange={(e) => {
@@ -1250,28 +1265,24 @@ const RetailPOS = () => {
                                         if (!selectedId) return;
 
                                         const selectedTipoDocumento = tiposDocumento.find(
-                                        (td) => Number(td.idTipoDocumentoExterno) === selectedId
+                                            (td) => Number(td.idTipoDocumentoExterno) === selectedId
                                         );
-                                        const consecutivo = consecutivos.find(
-                                            (item) => item.idTipoDocumento === selectedTipoDocumento?.idTipoDocumento
-                                        ) ?? consecutivos.find(
-                                            (item) => item.idConsecutivo === selectedTipoDocumento?.idConsecutivoHabilitacion
-                                        );
+                                        if (!selectedTipoDocumento) return;
 
                                         setFactura((prev) => ({
-                                        ...prev,
-                                        idTipoDocumentoExterno: selectedId,
-                                        idTipoDocumento: selectedTipoDocumento?.idTipoDocumento || 0,
-                                        idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
-                                        idFormaPago: selectedTipoDocumento?.idFormaPago || 0,
-                                        prefijoVenta: consecutivo?.prefijoConsecutivo || '',
+                                            ...prev,
+                                            idTipoDocumentoExterno: selectedId,
+                                            idTipoDocumento: selectedTipoDocumento?.idTipoDocumento || 0,
+                                            idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
+                                            idFormaPago: selectedTipoDocumento?.idFormaPago || 0,
+                                            prefijoVenta: selectedTipoDocumento.prefijoConsecutivo || '',
                                         }));
                                     }}
                                     required
                                 >
                                     {tiposDocumento.map((td) => (
                                         <option key={td.idTipoDocumentoExterno} value={td.idTipoDocumentoExterno}>
-                                        {`${td.nombreTipoDocumentoExterno || ''} - ${td.codigoTipoDocumentoExterno || ''}`}
+                                            {`${td.nombreTipoDocumentoExterno || ''} - ${td.codigoTipoDocumentoExterno || ''}`}
                                         </option>
                                     ))}
                                 </select>
@@ -1556,7 +1567,7 @@ const RetailPOS = () => {
                                             <div className="flex-1 min-w-0">
                                                 {item.idTipoProducto === 2 ? (
                                                     <Input
-                                                        value={item.nombreProducto}
+                                                        value={item.nombreProducto ?? ''}
                                                         onChange={(e) => {
                                                             setFactura({
                                                                 ...factura,
@@ -1633,9 +1644,9 @@ const RetailPOS = () => {
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.porcentajeDescuentoVenta || ''}
                                                             onChange={(e) => {
-                                                                const baseIvaVentaCalculada = parseFloat((item.cantidadVenta * item.precioUnitarioVenta - (parseFloat(e.target.value) || 0) / 100).toFixed(2));
+                                                                const baseIvaVentaCalculada = parseFloat(((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0) - (parseFloat(e.target.value) || 0) / 100).toFixed(2));
                                                                 const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
-                                                                const valorDescuento = parseFloat(((item.precioUnitarioVenta * item.cantidadVenta) * ((parseFloat(e.target.value) || 0) / 100)).toFixed(2));
+                                                                const valorDescuento = parseFloat((((item.precioUnitarioVenta ?? 0) * (item.cantidadVenta ?? 0)) * ((parseFloat(e.target.value) || 0) / 100)).toFixed(2));
                                                                 setFactura(prev => ({
                                                                     ...prev,
                                                                     detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
@@ -1665,7 +1676,7 @@ const RetailPOS = () => {
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.descuentoVenta || ''}
                                                             onChange={(e) => {
-                                                                const baseIvaVentaCalculada = parseFloat((item.cantidadVenta * item.precioUnitarioVenta - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
+                                                                const baseIvaVentaCalculada = parseFloat(((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0) - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
                                                                 const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
                                                                 setFactura(prev => ({
                                                                     ...prev,
@@ -1744,19 +1755,19 @@ const RetailPOS = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => updateQuantity(item.idProducto, -1)}
+                                                                onClick={() => updateQuantity(item.idProducto ?? 0, -1)}
                                                                 className="h-8 w-8 rounded-r-none"
                                                             >
                                                                 <Minus className="h-4 w-4" />
                                                             </Button>
                                                             <Input
                                                                 type="number"
-                                                                value={item.cantidadVenta}
+                                                                value={item.cantidadVenta ?? ''}
                                                                 onFocus={(e) => e.target.select()}
                                                                 onChange={(e) => {
                                                                     const value = e.target.value;
                                                                     const newQuantity = value === '' ? 0 : parseFloat(value);
-                                                                    const baseIvaVentaCalculada = parseFloat((newQuantity * item.precioUnitarioVenta - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
+                                                                    const baseIvaVentaCalculada = parseFloat((newQuantity * (item.precioUnitarioVenta ?? 0) - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
                                                                     const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
                                                                     if (newQuantity >= 0) {
                                                                         setFactura(prev => ({
@@ -1784,7 +1795,7 @@ const RetailPOS = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => updateQuantity(item.idProducto, 1)}
+                                                                onClick={() => updateQuantity(item.idProducto ?? 0, 1)}
                                                                 className="h-8 w-8 rounded-l-none"
                                                             >
                                                                 <Plus className="h-4 w-4" />
@@ -1794,7 +1805,7 @@ const RetailPOS = () => {
                                                     <div className="flex flex-col">
                                                         <span className="text-xs font-bold mb-1 whitespace-nowrap text-center">Valor Total</span>
                                                         <span className="font-bold text-primary min-w-[80px] text-right h-8 flex items-center justify-end">
-                                                            ${formatCurrency((item.precioUnitarioVenta * item.cantidadVenta) - item.descuentoVenta + item.ivaVenta)}
+                                                            ${formatCurrency(((item.precioUnitarioVenta ?? 0) * (item.cantidadVenta ?? 0)) - (item.descuentoVenta ?? 0) + (item.ivaVenta ?? 0))}
                                                         </span>
                                                     </div>
                                                     <div className="flex flex-col">
@@ -1802,7 +1813,7 @@ const RetailPOS = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            onClick={() => removeFromCart(item.idProducto)}
+                                                            onClick={() => removeFromCart(item.idProducto ?? 0)}
                                                             className="text-destructive hover:text-destructive h-8 w-8"
                                                         >
                                                             <Trash className="h-4 w-4" />
@@ -1934,7 +1945,7 @@ const RetailPOS = () => {
                                 </button>
                             )}
                         </div>
-                        
+
                     </div>
 
 
@@ -1968,7 +1979,7 @@ const RetailPOS = () => {
                             {/* Agregamos index en los argumentos del map: (product, index) */}
                             {filteredProducts.map((product, index) => (
                                 <Card
-                                    key={`${product.idProducto}-${index}`} 
+                                    key={`${product.idProducto}-${index}`}
                                     className={`cursor-pointer transition-all hover:shadow-lg ${(product.stockActualProducto ?? 0) <= 0 ? 'border-destructive/50' : ''
                                         }`}
                                     onClick={() => addToCart(product)}
@@ -2011,8 +2022,8 @@ const RetailPOS = () => {
 
                         <div className="mb-4">
                             <Label className="mb-2 block text-sm font-medium">Forma de pago</Label>
-                            <Select 
-                                value={factura.idFormaPago?.toString() || ""} 
+                            <Select
+                                value={factura.idFormaPago?.toString() || ""}
                                 onValueChange={(value) => {
                                     const idForma = parseInt(value);
                                     const formaPago = formasPago.find(
@@ -2038,7 +2049,7 @@ const RetailPOS = () => {
                                             : prev.mediosPagoVenta
                                     }));
                                     setActivePaymentMethod('');
-                                    setMontoIngresado(0);
+                                    setMontoIngresado(esNuevaFormaCredito ? total : 0);
                                     setCambioEfectivo(0);
                                 }}
                             >
@@ -2065,10 +2076,27 @@ const RetailPOS = () => {
                                         id="plazo-dias"
                                         type="number"
                                         min={0}
-                                        value={factura.plazoDias ?? 0}
+                                        placeholder="0"
+                                        value={factura.plazoDias ? String(factura.plazoDias) : ''}
                                         onChange={(e) => {
-                                            const plazoDias = Math.max(0, Number(e.target.value) || 0);
+                                            const val = e.target.value;
+
+                                            // Si el usuario borra todo el contenido, dejamos el plazo en 0
+                                            if (val === '') {
+                                                const fechaDocumento = factura.fechaVenta || getLocalDate();
+                                                setFactura(prev => ({
+                                                    ...prev,
+                                                    plazoDias: 0,
+                                                    fechaVencimiento: addDaysToDate(fechaDocumento, 0)
+                                                }));
+                                                return;
+                                            }
+
+                                            // Convertimos a entero para eliminar cualquier "0" a la izquierda (ej. "030" pasa a ser 30)
+                                            const parsed = parseInt(val, 10);
+                                            const plazoDias = isNaN(parsed) ? 0 : Math.max(0, parsed);
                                             const fechaDocumento = factura.fechaVenta || getLocalDate();
+
                                             setFactura(prev => ({
                                                 ...prev,
                                                 plazoDias,
@@ -2090,76 +2118,76 @@ const RetailPOS = () => {
                                 </div>
                             </div>
                         ) : (
-                        <div className="space-y-4 mb-4">
-                            <div className="grid grid-cols-12 gap-2 items-end">
-                                <div className="col-span-6">
-                                    <Label className="mb-2 block text-xs font-medium">Método de pago</Label>
-                                    <Select value={activePaymentMethod} onValueChange={setActivePaymentMethod}>
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Seleccionar..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {mediosPago.map(medioPago => (
-                                                <SelectItem key={medioPago.idMedioPago} value={medioPago.idMedioPago.toString()}>
-                                                    {medioPago.nombreMedioPago}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                            <div className="space-y-4 mb-4">
+                                <div className="grid grid-cols-12 gap-2 items-end">
+                                    <div className="col-span-6">
+                                        <Label className="mb-2 block text-xs font-medium">Método de pago</Label>
+                                        <Select value={activePaymentMethod} onValueChange={setActivePaymentMethod}>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Seleccionar..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {mediosPago.map(medioPago => (
+                                                    <SelectItem key={medioPago.idMedioPago} value={medioPago.idMedioPago.toString()}>
+                                                        {medioPago.nombreMedioPago}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
-                                <div className="col-span-4">
-                                    <Label className="mb-2 block text-xs font-medium">Monto</Label>
-                                    <Input 
-                                        type="number"
-                                        placeholder="0"
-                                        value={montoIngresado || ''}
-                                        onChange={(e) => {
-                                            setMontoIngresado(Number(e.target.value));
-                                            if (!esEfectivo) {
-                                                setCambioEfectivo(0);
+                                    <div className="col-span-4">
+                                        <Label className="mb-2 block text-xs font-medium">Monto</Label>
+                                        <Input
+                                            type="number"
+                                            placeholder="0"
+                                            value={montoIngresado || ''}
+                                            onChange={(e) => {
+                                                setMontoIngresado(Number(e.target.value));
+                                                if (!esEfectivo) {
+                                                    setCambioEfectivo(0);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+
+                                    <div className="col-span-2">
+                                        <Button
+                                            disabled={
+                                                !activePaymentMethod ||
+                                                montoIngresado <= 0 ||
+                                                saldoPendiente <= 0 ||
+                                                (!esEfectivo && montoIngresado > saldoPendiente)
                                             }
-                                        }}
-                                    />
-                                </div>
+                                            onClick={() => {
+                                                const montoAplicado = esEfectivo
+                                                    ? Math.min(montoIngresado, Math.max(saldoPendiente, 0))
+                                                    : montoIngresado;
+                                                const cambio = esEfectivo
+                                                    ? Math.max(0, montoIngresado - Math.max(saldoPendiente, 0))
+                                                    : 0;
+                                                const nuevoMedioPago: IVentaMedioPago = {
+                                                    idMedioPagoVenta: 0,
+                                                    idMedioPago: parseInt(activePaymentMethod),
+                                                    valorMedioPago: montoAplicado
+                                                };
 
-                                <div className="col-span-2">
-                                    <Button 
-                                        disabled={
-                                            !activePaymentMethod ||
-                                            montoIngresado <= 0 ||
-                                            saldoPendiente <= 0 ||
-                                            (!esEfectivo && montoIngresado > saldoPendiente)
-                                        }
-                                        onClick={() => {
-                                            const montoAplicado = esEfectivo
-                                                ? Math.min(montoIngresado, Math.max(saldoPendiente, 0))
-                                                : montoIngresado;
-                                            const cambio = esEfectivo
-                                                ? Math.max(0, montoIngresado - Math.max(saldoPendiente, 0))
-                                                : 0;
-                                            const nuevoMedioPago: IVentaMedioPago = {
-                                                idMedioPagoVenta: 0,
-                                                idMedioPago: parseInt(activePaymentMethod),
-                                                valorMedioPago: montoAplicado
-                                            };
+                                                setFactura(prev => ({
+                                                    ...prev,
+                                                    mediosPagoVenta: [...(prev.mediosPagoVenta || []), nuevoMedioPago]
+                                                }));
 
-                                            setFactura(prev => ({
-                                                ...prev,
-                                                mediosPagoVenta: [...(prev.mediosPagoVenta || []), nuevoMedioPago]
-                                            }));
-
-                                            setActivePaymentMethod("");
-                                            setMontoIngresado(0);
-                                            setCambioEfectivo(cambio);
-                                        }}
-                                        className="w-full"
-                                    >
-                                        +
-                                    </Button>
+                                                setActivePaymentMethod("");
+                                                setMontoIngresado(0);
+                                                setCambioEfectivo(cambio);
+                                            }}
+                                            className="w-full"
+                                        >
+                                            +
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
                         )}
 
                         {/* Lista de medios de pago ingresados */}
@@ -2171,9 +2199,9 @@ const RetailPOS = () => {
                                         <span>{mediosPago.find(medioPago => medioPago.idMedioPago === item.idMedioPago)?.nombreMedioPago || 'Método'}</span>
                                         <div className="flex items-center space-x-2">
                                             <span className="font-semibold">${formatCurrency(item.valorMedioPago)}</span>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
                                                 className="h-6 w-6 p-0 text-red-500"
                                                 onClick={() => {
                                                     setFactura(prev => ({
