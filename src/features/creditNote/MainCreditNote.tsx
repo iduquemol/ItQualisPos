@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, Save } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, Save, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -142,6 +142,7 @@ const MainCreditNote = () => {
     const [lastKeyTime, setLastKeyTime] = useState<number>(0);
     const [showFacturaModal, setShowFacturaModal] = useState(false);
     const [facturaModalData, setFacturaModalData] = useState<any>(null);
+    const [savedNotaCreditoId, setSavedNotaCreditoId] = useState<number | null>(null);
     const [searchTercero, setSearchTercero] = useState("");
     const [vendedorSeleccionado, setVendedorSeleccionado] = useState(1);
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -368,6 +369,7 @@ const MainCreditNote = () => {
     });
 
     const applyVentaToNotaCredito = (data: IVenta) => {
+        setSavedNotaCreditoId(null);
         setSelectedFactura(data);
         setNotaCredito(previous => ({
             ...previous,
@@ -419,6 +421,7 @@ const MainCreditNote = () => {
     };
 
     const handleNew = async () => {
+        setSavedNotaCreditoId(null);
         setSelectedFactura(null);
         setNotaCredito(createInitialNotaCredito());
         setSearchDocumento('');
@@ -481,6 +484,7 @@ const MainCreditNote = () => {
                 console.log("Nota crédito a guardar:", updatedNotaCredito);
                 const result = await NotaCreditoService.create(updatedNotaCredito);
                 console.log("Nota crédito guardada:", result);
+                setSavedNotaCreditoId(result.idNotaCredito || null);
                 setSuccessMessage(result.message +
                     "\nNúmero Documento Dian: " + result.idNotaCredito);
                 setShowSuccessDialog(true);
@@ -1187,14 +1191,35 @@ const MainCreditNote = () => {
                             </div>
 
                             <div className="h-[60px] p-4 border-t bg-background">
-                                <Button
-                                    onClick={() => handleSaveNotaCredito()}
-                                    className="w-full h-[40px] text-lg font-bold"
-                                    size="lg"
-                                >
-                                    <Check className="h-5 w-5 mr-2" />
-                                    Guardar Nota Crédito
-                                </Button>
+                                <div className="flex gap-2">
+                                    {savedNotaCreditoId ? (
+                                        <FacturaModal
+                                            key={savedNotaCreditoId}
+                                            idVenta={savedNotaCreditoId}
+                                            idMetodoDian={3}
+                                            triggerText="Imprimir"
+                                            triggerVariant="outline"
+                                        />
+                                    ) : (
+                                        <Button
+                                            variant="outline"
+                                            disabled
+                                            className="h-10 px-4"
+                                            title="La nota crédito aún no está guardada"
+                                        >
+                                            <Printer className="h-4 w-4 mr-2" />
+                                            Imprimir
+                                        </Button>
+                                    )}
+                                    <Button
+                                        onClick={() => handleSaveNotaCredito()}
+                                        className="flex-1 h-[40px] text-lg font-bold"
+                                        size="lg"
+                                    >
+                                        <Check className="h-5 w-5 mr-2" />
+                                        Guardar Nota Crédito
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     )}
