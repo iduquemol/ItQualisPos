@@ -2239,11 +2239,11 @@ const RetailPOS = () => {
                                     <span className="text-xl font-bold">${formatCurrency(total)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
-                                    <span className="text-muted-foreground">Total Cubierto</span>
+                                    <span className="text-muted-foreground">Total Recibido</span>
                                     <span className="font-medium text-green-600">${formatCurrency(totalPagado)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm border-t pt-1">
-                                    <span className="text-muted-foreground">Saldo Restante</span>
+                                    <span className="text-muted-foreground">Saldo</span>
                                     <span className={`font-bold ${saldoPendiente === 0 ? 'text-green-600' : 'text-red-500'}`}>
                                         ${formatCurrency(saldoPendiente)}
                                     </span>
