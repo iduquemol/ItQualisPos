@@ -1,34 +1,10 @@
 import { API_CONFIG } from "@/config/api.config";
-import { INotaCredito } from "@/types/INotaCredito";
 import { IParametrosVentaDefault } from "@/types/IParametrosVentaDefault";
 import { IPrintVenta } from "@/types/IPrintVenta";
 import { IResponseVenta } from "@/types/IResponseVenta";
-import { ITerceroDefault } from "@/types/ITerceroDefault";
-import { ITipoDocumentoDefault } from "@/types/ITipoDocumentoDefault";
 import { IVenta } from "@/types/IVenta";
 
-export const NotaCreditoService = {
-    async getAll(): Promise<INotaCredito[]> {
-        try {
-            const response = await fetch(
-                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.NOTAS_CREDITO),
-                {
-                    headers: API_CONFIG.OPTIONS.headers,
-                    mode: 'cors',
-                    credentials: 'same-origin'
-                }
-            );
-            if (!response.ok) {
-                throw new Error('Error al cargar notas de crédito');
-            }
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Error en NotaCreditoService.getAll:', error);
-            throw error;
-        }
-    },
-
+export const VentaService = {
     async getById(idventa: number): Promise<IVenta | null> {
         try {
             const response = await fetch(
@@ -44,7 +20,7 @@ export const NotaCreditoService = {
                     body: JSON.stringify({ idventa: idventa })
                 }
             );
-            //console.log(response.url);
+
             if (!response.ok) {
                 throw new Error('Error al cargar venta por ID');
             }
@@ -71,22 +47,23 @@ export const NotaCreditoService = {
                     body: JSON.stringify({ idventa: idventa })
                 }
             );
-            //console.log(response.url);
+
             if (!response.ok) {
                 throw new Error('Error al imprimir venta por ID');
             }
-            const data = await response.json();
-            return data;
+
+            const text = await response.text();
+            return text && text.trim().length > 0 ? JSON.parse(text) : null;
         } catch (error) {
             console.error('Error en VentaService.printById:', error);
             throw error;
         }
     },
 
-    async create(notaCredito: INotaCredito): Promise<IResponseVenta> {
+    async previewPdf(idventa: number, idMetodoDian: number): Promise<Blob> {
         try {
             const response = await fetch(
-                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.NOTA_CREDITO),
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.PREVIEW_PDF),
                 {
                     method: "POST",
                     headers: {
@@ -95,16 +72,69 @@ export const NotaCreditoService = {
                     },
                     mode: 'cors',
                     credentials: 'same-origin',
-                    body: JSON.stringify(notaCredito)
+                    body: JSON.stringify({ idventa: idventa, idMetodoDian: idMetodoDian })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Error al previsualizar PDF de venta por ID');
+            }
+            const blob = await response.blob();
+            return blob;
+        } catch (error) {
+            console.error('Error en VentaService.previewPdf:', error);
+            throw error;
+        }
+    },
+
+    async create(factura: IVenta): Promise<IResponseVenta> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.VENTA),
+                {
+                    method: "POST",
+                    headers: {
+                        ...API_CONFIG.OPTIONS.headers,
+                        "Content-Type": "application/json"
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin',
+                    body: JSON.stringify(factura)
                 }
             );
             if (!response.ok) {
-                throw new Error('Error al crear nota de crédito');
+                throw new Error('Error al crear factura');
             }
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error('Error en NotaCreditoService.create:', error);
+            console.error('Error en VentaService.create:', error);
+            throw error;
+        }
+    },
+
+    async resend(idventa: number, idmetododian: number): Promise<IResponseVenta> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.RESEND_VENTA),
+                {
+                    method: "POST",
+                    headers: {
+                        ...API_CONFIG.OPTIONS.headers,
+                        "Content-Type": "application/json"
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ idventa: idventa, idmetododian: idmetododian })
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al enviar la factura a la DIAN');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error en VentaService.resend:', error);
             throw error;
         }
     },
@@ -113,7 +143,7 @@ export const NotaCreditoService = {
         try {
             const response = await fetch(
                 API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.PARAMETROS_VENTA_DEFAULT),
-                {
+                { 
                     headers: API_CONFIG.OPTIONS.headers,
                     mode: 'cors',
                     credentials: 'same-origin'

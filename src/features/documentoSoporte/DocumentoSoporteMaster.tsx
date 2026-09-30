@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, FileText, Send } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, FileText, Send, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -134,26 +134,7 @@ const buildVentaTercero = (values: Partial<IVentaTercero> = {}): IVentaTercero =
     ...values,
 });
 
-const recalculateVentaDetalle = (item: IVentaDetalle, quantity: number): IVentaDetalle => {
-    const precioUnitario = Number(item.precioUnitarioVenta ?? 0);
-    const porcentajeDescuento = Number(item.porcentajeDescuentoVenta ?? 0);
-    const baseIvaVenta = parseFloat((quantity * precioUnitario - porcentajeDescuento / 100).toFixed(2));
-    const ivaVenta = parseFloat((baseIvaVenta * (Number(item.porcentajeIvaVenta ?? 0) / 100)).toFixed(2));
-
-    return {
-        ...item,
-        cantidadVenta: quantity,
-        baseIvaVenta,
-        ivaVenta,
-        descuentoVenta: parseFloat((precioUnitario * quantity * (porcentajeDescuento / 100)).toFixed(2)),
-        reteIvaVenta: parseFloat((ivaVenta * (Number(item.porcentajeReteIva ?? 0) / 100)).toFixed(2)),
-        reteRentaVenta: parseFloat((baseIvaVenta * (Number(item.porcentajeReteRenta ?? 0) / 100)).toFixed(2)),
-        baseReteRenta: baseIvaVenta,
-        reteIcaVenta: parseFloat(((baseIvaVenta * (Number(item.porcentajeReteIca ?? 0) / 100)) / 1000).toFixed(2)),
-    };
-};
-
-const RetailPOS = () => {
+const DocumentoSoporteMaster = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const facturaDesdeTerceros = location.state?.from === 'terceros'
@@ -271,33 +252,11 @@ const RetailPOS = () => {
     const selectedFormaPago = formasPago.find(
         forma => forma.idFormaPago === factura.idFormaPago
     );
-    const tipoDocumentoSeleccionado = tiposDocumento.find(
-        tipo => Number(factura.idTipoDocumentoExterno ?? 0) > 0
-            && Number(tipo.idTipoDocumentoExterno) === Number(factura.idTipoDocumentoExterno)
-    ) ?? tiposDocumento.find(
-        tipo => Number(tipo.idTipoDocumento) === Number(factura.idTipoDocumento)
-    );
-    const facturaValidadaDian = factura.estadoDian === 'Validado DIAN';
-    const numeroIdentificacionCliente = factura.terceroVenta?.numeroIdentificacion?.trim();
-    const clienteRegistrado = Number(factura.terceroVenta?.idTercero ?? 0) > 0
-        || terceros.some(tercero =>
-            Boolean(numeroIdentificacionCliente)
-            && tercero.numeroIdentificacion?.trim() === numeroIdentificacionCliente
-        );
     const esCredito = selectedFormaPago?.nombreFormaPago
         ?.trim()
         .toLowerCase() === 'crédito' || selectedFormaPago?.nombreFormaPago
             ?.trim()
             .toLowerCase() === 'credito';
-
-    useEffect(() => {
-        const idMedioPago = tipoDocumentoSeleccionado?.idMedioPago;
-        setActivePaymentMethod(idMedioPago != null ? String(idMedioPago) : '');
-    }, [
-        factura.idTipoDocumentoExterno,
-        factura.idTipoDocumento,
-        tipoDocumentoSeleccionado?.idMedioPago,
-    ]);
 
     const BARCODE_DELAY = 50;
 
@@ -682,7 +641,6 @@ const RetailPOS = () => {
         setFactura(prev => ({
             ...prev,
             idVenta: 0,
-            estadoDian: null,
             idTipoDocumento: documentoDefault?.idTipoDocumento ?? 4,
             codigoDocumento: '',
             nombreDocumento: null,
@@ -841,7 +799,7 @@ const RetailPOS = () => {
         setSelectedFactura(data);
         setFactura(prev => ({
             ...prev,
-            idVenta: data?.idVenta ?? documento.idVenta,
+            idVenta: data?.idVenta ?? 0,
             idTipoDocumento: data?.idTipoDocumento ?? 0,
             codigoDocumento: data?.codigoDocumento ?? '',
             nombreDocumento: data?.nombreDocumento ?? null,
@@ -867,9 +825,6 @@ const RetailPOS = () => {
             mediosPagoVenta: data?.mediosPagoVenta ?? [],
 
         }));
-        if (data?.estadoDian === 'Validado DIAN') {
-            setShowPayment(false);
-        }
         setOpenDialog(false);
         setShowFacturaModal(true);
         const dataPrint = await VentaService.printById(documento.idVenta);
@@ -879,8 +834,6 @@ const RetailPOS = () => {
     const DEFAULT_TIPO_DOC_NIT = 7; // idTipoDocumentoId = 7 para NIT (código 31)
 
     const handleSaveVenta = async (indBorrador: boolean) => {
-        if (facturaValidadaDian) return;
-
         const localISODate = getLocalDate();
 
         // 1. Normalizar cada ítem del detalle
@@ -973,7 +926,7 @@ const RetailPOS = () => {
                 setSelectedFactura(data);
                 setFactura({
                     ...factura,
-                    idVenta: data?.idVenta ?? result.idFactura,
+                    idVenta: data?.idVenta ?? 0,
                     idTipoDocumento: data?.idTipoDocumento ?? 0,
                     codigoDocumento: data?.codigoDocumento ?? '',
                     nombreDocumento: data?.nombreDocumento ?? null,
@@ -1021,23 +974,28 @@ const RetailPOS = () => {
     // Funciones del carrito
     const addToCart = (product: IProducto) => {
         setFactura(prev => {
-            if (facturaValidadaDian) return prev;
-
             const detalleVentaActual = prev.detalleVenta ?? [];
-            const existingItemIndex = detalleVentaActual.findIndex(item =>
-                (Number(product.idProducto ?? 0) > 0 && item.idProducto === Number(product.idProducto))
-                || (Boolean(product.codigoProducto) && item.codigoProducto === product.codigoProducto)
-            );
+            const existingItem = detalleVentaActual.find(item => item.idProducto === Number(product.idProducto ?? 0));
 
-            if (existingItemIndex !== -1) {
-                const detalleActualizado = detalleVentaActual.map((item, index) =>
-                    index === existingItemIndex
-                        ? recalculateVentaDetalle(item, Number(item.cantidadVenta ?? 0) + 1)
-                        : item
-                );
+            if (product.idTipoProducto === 2) {
+                const nuevoDetalle = buildVentaDetalle(product, 1, detalleVentaActual.length + 1);
                 return {
                     ...prev,
-                    detalleVenta: detalleActualizado,
+                    detalleVenta: [...detalleVentaActual, nuevoDetalle],
+                };
+            }
+
+            if (existingItem) {
+                return {
+                    ...prev,
+                    detalleVenta: detalleVentaActual.map(item =>
+                        item.idProducto === Number(product.idProducto ?? 0)
+                            ? {
+                                ...item,
+                                cantidadVenta: Number(item.cantidadVenta ?? 0) + 1,
+                            }
+                            : item
+                    ),
                 };
             }
 
@@ -1050,21 +1008,35 @@ const RetailPOS = () => {
     };
 
     const updateQuantity = (id: number, change: number) => {
-        setFactura(prev => {
-            if (facturaValidadaDian) return prev;
-            return {
-                ...prev,
-                detalleVenta: (prev.detalleVenta ?? []).map(item =>
-                    item.idProducto === id
-                        ? recalculateVentaDetalle(item, Number(item.cantidadVenta ?? 0) + change)
-                        : item
-                )
-            };
-        });
+        setFactura(prev => ({
+            ...prev,
+            detalleVenta: (prev.detalleVenta ?? []).map(item => {
+                if (item.idProducto === id) {
+                    const newQuantity = Number(item.cantidadVenta ?? 0) + change;
+                    const baseIvaVentaCalculada = parseFloat((newQuantity * Number(item.precioUnitarioVenta ?? 0) - (Number(item.porcentajeDescuentoVenta ?? 0) / 100)).toFixed(2));
+                    const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((Number(item.porcentajeIvaVenta ?? 0)) / 100)).toFixed(2));
+                    return {
+                        ...item,
+                        cantidadVenta: newQuantity,
+                        baseIvaVenta: baseIvaVentaCalculada,
+                        ivaVenta: ivaVentaCalculada,
+                        descuentoVenta: parseFloat(
+                            ((Number(item.precioUnitarioVenta ?? 0) * newQuantity) * ((Number(item.porcentajeDescuentoVenta ?? 0)) / 100)).toFixed(2)
+                        ),
+                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((Number(item.porcentajeReteIva ?? 0)) / 100)).toFixed(2)),
+                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((Number(item.porcentajeReteRenta ?? 0)) / 100)).toFixed(2)),
+                        baseReteRenta: baseIvaVentaCalculada,
+                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((Number(item.porcentajeReteIca ?? 0)) / 100)) / 1000).toFixed(2)),
+                    };
+                }
+                return item;
+            })
+        }));
+
     };
 
     const removeFromCart = (id: number) => {
-        setFactura(prev => facturaValidadaDian ? prev : ({
+        setFactura(prev => ({
             ...prev,
             detalleVenta: (prev.detalleVenta ?? []).filter(item => item.idProducto !== id)
         }));
@@ -1099,7 +1071,7 @@ const RetailPOS = () => {
     const totalReteIca = factura.detalleVenta?.reduce((reteIca, item) => reteIca + (item.reteIcaVenta || 0), 0);
     const total = (subtotal || 0) - (discount || 0) + (tax || 0) - (totalReteIva || 0) - (totalReteRenta || 0) - (totalReteIca || 0);
     const totalPagado = esCredito
-        ? 0
+        ? total
         : factura.mediosPagoVenta?.reduce((acc, curr) => acc + (curr.valorMedioPago || 0), 0) || 0;
     const saldoPendiente = Math.max(0, total - totalPagado);
     const esEfectivo = activePaymentMethod === '1';
@@ -1109,16 +1081,6 @@ const RetailPOS = () => {
     const cambioCalculado = efectivoAgregado ? cambioEfectivo : 0;
     const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + (item.cantidadVenta ?? 0), 0);
     const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
-    const handlePaymentModalChange = (open: boolean) => {
-        setShowPayment(open);
-        if (!open) return;
-
-        const idMedioPago = tipoDocumentoSeleccionado?.idMedioPago;
-        setActivePaymentMethod(idMedioPago != null ? String(idMedioPago) : '');
-        if (factura.idFormaPago === 1) {
-            setMontoIngresado(total);
-        }
-    };
 
     return (
         <div className="h-screen bg-background flex flex-col overflow-hidden">
@@ -1127,7 +1089,7 @@ const RetailPOS = () => {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
                         <h1 className="text-xl sm:text-2xl font-bold tracking-wide text-foreground ml-0 sm:ml-2">
-                            Factura
+                            Documento Soporte
                         </h1>
                     </div>
 
@@ -1154,7 +1116,6 @@ const RetailPOS = () => {
                             <Select
                                 value={vendedorSeleccionado.toString()}
                                 onValueChange={(value) => setVendedorSeleccionado(parseInt(value))}
-                                disabled={facturaValidadaDian}
                             >
                                 <SelectTrigger className="h-9 w-32 text-xs" id="vendedor-select">
                                     <SelectValue />
@@ -1270,7 +1231,6 @@ const RetailPOS = () => {
                                 <select
                                     className="rounded border px-3 py-2 text-sm bg-background w-80 font-bold"
                                     value={factura.idTipoDocumentoExterno?.toString() || ''}
-                                    disabled={facturaValidadaDian}
                                     onChange={(e) => {
                                         const selectedId = Number(e.target.value);
                                         if (!selectedId) return;
@@ -1280,31 +1240,14 @@ const RetailPOS = () => {
                                         );
                                         if (!selectedTipoDocumento) return;
 
-                                        const nuevaFormaPagoId = Number(selectedTipoDocumento.idFormaPago ?? 0);
-                                        const nombreNuevaFormaPago = formasPago.find(
-                                            forma => forma.idFormaPago === nuevaFormaPagoId
-                                        )?.nombreFormaPago?.trim().toLowerCase();
-                                        const resetearPagos = nuevaFormaPagoId !== factura.idFormaPago
-                                            && nombreNuevaFormaPago !== 'contado';
-                                        const idMedioPagoPredeterminado = selectedTipoDocumento.idMedioPago;
-
                                         setFactura((prev) => ({
                                             ...prev,
                                             idTipoDocumentoExterno: selectedId,
                                             idTipoDocumento: selectedTipoDocumento?.idTipoDocumento || 0,
                                             idMetodoDian: selectedTipoDocumento?.idMetodoDian || 0,
-                                            idFormaPago: nuevaFormaPagoId,
+                                            idFormaPago: selectedTipoDocumento?.idFormaPago || 0,
                                             prefijoVenta: selectedTipoDocumento.prefijoConsecutivo || '',
-                                            mediosPagoVenta: resetearPagos ? [] : prev.mediosPagoVenta,
                                         }));
-
-                                        if (resetearPagos) {
-                                            setCambioEfectivo(0);
-                                        }
-                                        setActivePaymentMethod(idMedioPagoPredeterminado != null
-                                            ? String(idMedioPagoPredeterminado)
-                                            : '');
-                                        setMontoIngresado(nuevaFormaPagoId === 1 ? total : 0);
                                     }}
                                     required
                                 >
@@ -1339,7 +1282,7 @@ const RetailPOS = () => {
                                     readOnly
                                 />
                             </div>
-                            
+
                             {/* Indicador de Escaneo */}
                             {/* {barcodeBuffer && (
                                 <div className="flex items-center space-x-2 bg-background/80 backdrop-blur-sm p-2 rounded-lg border shadow-lg">
@@ -1359,7 +1302,6 @@ const RetailPOS = () => {
                                 <select
                                     className="w-full rounded border px-2 py-2 text-sm bg-background w-42"
                                     value={factura.terceroVenta?.idTipoDocumentoId ?? 0}
-                                    disabled={facturaValidadaDian || clienteRegistrado}
                                     onChange={(e) => setFactura(prev => ({
                                         ...prev,
                                         terceroVenta: buildVentaTercero({
@@ -1379,7 +1321,6 @@ const RetailPOS = () => {
                                     placeholder="Número de Identificación"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={factura.terceroVenta?.numeroIdentificacion ?? ''}
-                                    disabled={facturaValidadaDian}
                                     onChange={(e) => {
                                         const value = e.target.value;
 
@@ -1408,7 +1349,6 @@ const RetailPOS = () => {
                                     placeholder="Primer Nombre"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={factura.terceroVenta?.primerNombre ?? ''}
-                                    disabled={facturaValidadaDian}
                                     onChange={(e) => setFactura(prev => ({
                                         ...prev,
                                         terceroVenta: buildVentaTercero({
@@ -1421,7 +1361,6 @@ const RetailPOS = () => {
                                     placeholder="Primer Apellido"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={factura.terceroVenta?.primerApellido ?? ''}
-                                    disabled={facturaValidadaDian}
                                     onChange={(e) => setFactura(prev => ({
                                         ...prev,
                                         terceroVenta: buildVentaTercero({
@@ -1435,7 +1374,6 @@ const RetailPOS = () => {
                                     placeholder="Email"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={factura.terceroVenta?.emailTercero ?? ''}
-                                    disabled={facturaValidadaDian}
                                     onChange={(e) => setFactura(prev => ({
                                         ...prev,
                                         terceroVenta: buildVentaTercero({
@@ -1448,7 +1386,6 @@ const RetailPOS = () => {
                                     placeholder="Razón Social"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={factura.terceroVenta?.razonSocial ?? ''}
-                                    disabled={facturaValidadaDian}
                                     onChange={(e) => setFactura(prev => ({
                                         ...prev,
                                         terceroVenta: buildVentaTercero({
@@ -1460,7 +1397,7 @@ const RetailPOS = () => {
                             </div>
                             <Dialog open={openDialogTercero} onOpenChange={setOpenDialogTercero}>
                                 <DialogTrigger asChild>
-                                    <Button variant="outline" size="icon" title="Buscar cliente" disabled={facturaValidadaDian}>
+                                    <Button variant="outline" size="icon" title="Buscar cliente">
                                         <Search className="w-8 h-8" />
                                     </Button>
                                 </DialogTrigger>
@@ -1521,7 +1458,6 @@ const RetailPOS = () => {
                                 variant="outline"
                                 size="icon"
                                 title="Diligenciar información ampliada del tercero"
-                                disabled={facturaValidadaDian}
                                 onClick={() => navigate('/terceros', {
                                     state: {
                                         from: 'pos',
@@ -1546,7 +1482,6 @@ const RetailPOS = () => {
                                         placeholder="Observaciones"
                                         className="rounded border px-2 py-2 text-base bg-background flex-1"
                                         value={factura.observaciones || ''}
-                                        disabled={facturaValidadaDian}
                                         onChange={(e) => setFactura({
                                             ...factura,
                                             observaciones: e.target.value
@@ -1559,7 +1494,6 @@ const RetailPOS = () => {
                                         placeholder="Orden Referencia"
                                         className="rounded border px-2 py-2 text-base bg-background flex-1"
                                         value={factura.ordenReferencia || ''}
-                                        disabled={facturaValidadaDian}
                                         onChange={(e) => setFactura({
                                             ...factura,
                                             ordenReferencia: e.target.value
@@ -1573,7 +1507,6 @@ const RetailPOS = () => {
                                         placeholder="Fecha Orden Referencia"
                                         className="rounded border px-2 py-2 text-base bg-background flex-1"
                                         value={factura.fechaOrdenReferencia || ''}
-                                        disabled={facturaValidadaDian}
                                         onChange={(e) => setFactura({
                                             ...factura,
                                             fechaOrdenReferencia: e.target.value
@@ -1603,7 +1536,6 @@ const RetailPOS = () => {
                                                 {item.idTipoProducto === 2 ? (
                                                     <Input
                                                         value={item.nombreProducto ?? ''}
-                                                        disabled={facturaValidadaDian}
                                                         onChange={(e) => {
                                                             setFactura({
                                                                 ...factura,
@@ -1626,7 +1558,6 @@ const RetailPOS = () => {
                                                         <Input
                                                             type="number"
                                                             value={item.precioUnitarioVenta || ''}
-                                                            disabled={facturaValidadaDian}
                                                             onChange={(e) => {
                                                                 setFactura(prev => ({
                                                                     ...prev,
@@ -1649,7 +1580,6 @@ const RetailPOS = () => {
                                                         <Checkbox
                                                             id={`muestra-${item.registroVenta}`}
                                                             checked={item.indicadorMuestra || false}
-                                                            disabled={facturaValidadaDian}
                                                             onCheckedChange={(checked) => {
                                                                 setFactura(prev => ({
                                                                     ...prev,
@@ -1681,7 +1611,6 @@ const RetailPOS = () => {
                                                             type="number"
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.porcentajeDescuentoVenta || ''}
-                                                            disabled={facturaValidadaDian}
                                                             onChange={(e) => {
                                                                 const baseIvaVentaCalculada = parseFloat(((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0) - (parseFloat(e.target.value) || 0) / 100).toFixed(2));
                                                                 const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
@@ -1714,7 +1643,6 @@ const RetailPOS = () => {
                                                             type="number"
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.descuentoVenta || ''}
-                                                            disabled={facturaValidadaDian}
                                                             onChange={(e) => {
                                                                 const baseIvaVentaCalculada = parseFloat(((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0) - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
                                                                 const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
@@ -1795,7 +1723,6 @@ const RetailPOS = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                disabled={facturaValidadaDian}
                                                                 onClick={() => updateQuantity(item.idProducto ?? 0, -1)}
                                                                 className="h-8 w-8 rounded-r-none"
                                                             >
@@ -1804,7 +1731,6 @@ const RetailPOS = () => {
                                                             <Input
                                                                 type="number"
                                                                 value={item.cantidadVenta ?? ''}
-                                                                disabled={facturaValidadaDian}
                                                                 onFocus={(e) => e.target.select()}
                                                                 onChange={(e) => {
                                                                     const value = e.target.value;
@@ -1837,7 +1763,6 @@ const RetailPOS = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                disabled={facturaValidadaDian}
                                                                 onClick={() => updateQuantity(item.idProducto ?? 0, 1)}
                                                                 className="h-8 w-8 rounded-l-none"
                                                             >
@@ -1856,7 +1781,6 @@ const RetailPOS = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            disabled={facturaValidadaDian}
                                                             onClick={() => removeFromCart(item.idProducto ?? 0)}
                                                             className="text-destructive hover:text-destructive h-8 w-8"
                                                         >
@@ -1931,27 +1855,35 @@ const RetailPOS = () => {
                                         Guardar Borrador
                                     </Button>
                                     */}
-                                    {facturaValidadaDian ? (
+                                    {factura?.idVenta ? (
                                         <FacturaModal
-                                            key={`ver-factura-${factura.idVenta}`}
+                                            key={factura.idVenta}
                                             facturaData={facturaModalData ?? undefined}
-                                            triggerText="Ver Factura"
-                                            triggerVariant="default"
-                                            triggerClassName="flex-1 h-full text-sm font-bold gap-2"
+                                            triggerText="Imprimir"
+                                            triggerVariant="outline"
                                             idVenta={factura.idVenta}
-                                            idMetodoDian={factura.idMetodoDian || 0}
+                                            idMetodoDian={factura?.idMetodoDian || 0}
                                         />
                                     ) : (
                                         <Button
-                                            onClick={() => handlePaymentModalChange(true)}
-                                            disabled={!(total > 0)}
+                                            variant="outline"
+                                            disabled
                                             className="flex-1 h-full text-sm font-bold"
                                             size="lg"
+                                            title="La factura aún no está disponible para imprimir"
                                         >
-                                            <Check className="h-4 w-4 mr-2" />
-                                            Procesar Venta
+                                            <Printer className="h-4 w-4 mr-2" />
+                                            Imprimir
                                         </Button>
                                     )}
+                                    <Button
+                                        onClick={() => setShowPayment(true)}
+                                        className="flex-1 h-full text-sm font-bold"
+                                        size="lg"
+                                    >
+                                        <Check className="h-4 w-4 mr-2" />
+                                        Procesar Venta
+                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -1968,7 +1900,6 @@ const RetailPOS = () => {
                             <Input
                                 placeholder="Buscar por nombre, código..."
                                 value={searchTerm}
-                                disabled={facturaValidadaDian}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10 pr-10 w-full"
                             />
@@ -1976,7 +1907,6 @@ const RetailPOS = () => {
                                 <button
                                     type="button"
                                     onClick={() => setSearchTerm('')}
-                                    disabled={facturaValidadaDian}
                                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     <X className="h-4 w-4" />
@@ -1999,7 +1929,7 @@ const RetailPOS = () => {
                                         <TabsTrigger
                                             key={category.idCategoria ?? index}
                                             value={category.idCategoria?.toString() ?? ""}
-                                            disabled={isLoadingCategories || facturaValidadaDian}
+                                            disabled={isLoadingCategories}
                                             className="flex items-center space-x-1 px-2 py-1 flex-1 min-w-[calc(33.33%-4px)]"
                                         >
                                             <RenderIcon className="h-4 w-4 shrink-0" />
@@ -2018,11 +1948,9 @@ const RetailPOS = () => {
                             {filteredProducts.map((product, index) => (
                                 <Card
                                     key={`${product.idProducto}-${index}`}
-                                    className={`cursor-pointer transition-all hover:shadow-lg ${facturaValidadaDian ? 'pointer-events-none opacity-60' : ''} ${(product.stockActualProducto ?? 0) <= 0 ? 'border-destructive/50' : ''
+                                    className={`cursor-pointer transition-all hover:shadow-lg ${(product.stockActualProducto ?? 0) <= 0 ? 'border-destructive/50' : ''
                                         }`}
-                                    onClick={() => {
-                                        if (!facturaValidadaDian) addToCart(product);
-                                    }}
+                                    onClick={() => addToCart(product)}
                                 >
                                     <CardHeader className="pb-2">
                                         <div className="flex justify-between items-start">
@@ -2054,10 +1982,7 @@ const RetailPOS = () => {
                 </div>
 
                 {/* Modal de Pago */}
-                <Dialog
-                    open={showPayment}
-                    onOpenChange={handlePaymentModalChange}
-                >
+                <Dialog open={showPayment} onOpenChange={setShowPayment}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader className="text-center">
                             <DialogTitle className="text-xl mb-4">Seleccionar métodos y forma de pago</DialogTitle>
@@ -2067,17 +1992,14 @@ const RetailPOS = () => {
                             <Label className="mb-2 block text-sm font-medium">Forma de pago</Label>
                             <Select
                                 value={factura.idFormaPago?.toString() || ""}
-                                disabled={facturaValidadaDian}
                                 onValueChange={(value) => {
                                     const idForma = parseInt(value);
                                     const formaPago = formasPago.find(
                                         forma => forma.idFormaPago === idForma
                                     );
-                                    const nombreNuevaFormaPago = formaPago?.nombreFormaPago?.trim().toLowerCase() ?? '';
-                                    const esNuevaFormaCredito = ['crédito', 'credito'].includes(nombreNuevaFormaPago);
-                                    const resetearPagos = idForma !== factura.idFormaPago
-                                        && nombreNuevaFormaPago !== 'contado';
-                                    const idMedioPagoPredeterminado = tipoDocumentoSeleccionado?.idMedioPago;
+                                    const esNuevaFormaCredito = ['crédito', 'credito'].includes(
+                                        formaPago?.nombreFormaPago?.trim().toLowerCase() ?? ''
+                                    );
                                     const fechaDocumento = factura.fechaVenta || getLocalDate();
                                     const plazoDias = esNuevaFormaCredito
                                         ? Math.max(0, Number(factura.plazoDias ?? 30))
@@ -2090,18 +2012,13 @@ const RetailPOS = () => {
                                         fechaVencimiento: esNuevaFormaCredito
                                             ? addDaysToDate(fechaDocumento, plazoDias)
                                             : fechaDocumento,
-                                        mediosPagoVenta: resetearPagos ? [] : prev.mediosPagoVenta
+                                        mediosPagoVenta: esNuevaFormaCredito
+                                            ? []
+                                            : prev.mediosPagoVenta
                                     }));
-                                    if (resetearPagos) {
-                                        setCambioEfectivo(0);
-                                    }
-                                    setActivePaymentMethod(idMedioPagoPredeterminado != null
-                                        ? String(idMedioPagoPredeterminado)
-                                        : '');
-                                    setMontoIngresado(idForma === 1 ? total : 0);
-                                    if (esNuevaFormaCredito) {
-                                        setCambioEfectivo(0);
-                                    }
+                                    setActivePaymentMethod('');
+                                    setMontoIngresado(esNuevaFormaCredito ? total : 0);
+                                    setCambioEfectivo(0);
                                 }}
                             >
                                 <SelectTrigger className="w-full">
@@ -2129,7 +2046,6 @@ const RetailPOS = () => {
                                         min={0}
                                         placeholder="0"
                                         value={factura.plazoDias ? String(factura.plazoDias) : ''}
-                                        disabled={facturaValidadaDian}
                                         onChange={(e) => {
                                             const val = e.target.value;
 
@@ -2174,7 +2090,7 @@ const RetailPOS = () => {
                                 <div className="grid grid-cols-12 gap-2 items-end">
                                     <div className="col-span-6">
                                         <Label className="mb-2 block text-xs font-medium">Método de pago</Label>
-                                        <Select value={activePaymentMethod} onValueChange={setActivePaymentMethod} disabled={facturaValidadaDian}>
+                                        <Select value={activePaymentMethod} onValueChange={setActivePaymentMethod}>
                                             <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Seleccionar..." />
                                             </SelectTrigger>
@@ -2194,7 +2110,6 @@ const RetailPOS = () => {
                                             type="number"
                                             placeholder="0"
                                             value={montoIngresado || ''}
-                                            disabled={facturaValidadaDian}
                                             onChange={(e) => {
                                                 setMontoIngresado(Number(e.target.value));
                                                 if (!esEfectivo) {
@@ -2207,7 +2122,6 @@ const RetailPOS = () => {
                                     <div className="col-span-2">
                                         <Button
                                             disabled={
-                                                facturaValidadaDian ||
                                                 !activePaymentMethod ||
                                                 montoIngresado <= 0 ||
                                                 saldoPendiente <= 0 ||
@@ -2256,7 +2170,6 @@ const RetailPOS = () => {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                disabled={facturaValidadaDian}
                                                 className="h-6 w-6 p-0 text-red-500"
                                                 onClick={() => {
                                                     setFactura(prev => ({
@@ -2305,7 +2218,7 @@ const RetailPOS = () => {
                                 </div>
                                 {cambioCalculado > 0 && (
                                     <div className="flex justify-between items-center text-sm border-t pt-1 font-semibold text-green-700">
-                                        <span>Cambio</span>
+                                        <span>Cambio / Devuelto</span>
                                         <span>${formatCurrency(cambioCalculado)}</span>
                                     </div>
                                 )}
@@ -2315,7 +2228,7 @@ const RetailPOS = () => {
                         {/* Botones de acción */}
                         <DialogFooter className="flex space-x-2">
                             <Button
-                                disabled={facturaValidadaDian || (!esCredito && saldoPendiente !== 0)} // En crédito no se exige pago inmediato
+                                disabled={!esCredito && saldoPendiente !== 0} // En crédito no se exige pago inmediato
                                 onClick={() => {
                                     setShowPayment(false);
                                     handleSaveVenta(false);
@@ -2326,7 +2239,6 @@ const RetailPOS = () => {
                             </Button>
                             <Button
                                 variant="outline"
-                                disabled={facturaValidadaDian}
                                 onClick={() => setShowPayment(false)}
                             >
                                 Cancelar
@@ -2356,4 +2268,4 @@ const RetailPOS = () => {
     );
 };
 
-export default RetailPOS;
+export default DocumentoSoporteMaster;

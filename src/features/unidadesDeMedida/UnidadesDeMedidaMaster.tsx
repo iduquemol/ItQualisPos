@@ -162,20 +162,7 @@ export default function UnidadesDeMedidaMaster() {
 
   return (
     <div className="p-6 bg-muted min-h-screen">
-      {/* Header */}
-      <div className="flex items-center space-x-4 mb-8">
-        <div className="bg-primary p-3 rounded-lg">
-          <Package className="h-6 w-6 text-primary-foreground" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Astil</h1>
-          <p className="text-sm text-muted-foreground">
-            Sistema de Punto de Venta
-          </p>
-        </div>
-      </div>
 
-      {/* Barra de Acciones */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold">Unidades de Medida</h2>
