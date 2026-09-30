@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, Save, Printer } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import Tesseract from 'tesseract.js';
 import { CategoriasService } from '@/services/CategoryService';
@@ -82,6 +82,7 @@ const MainCreditNote = () => {
         numeroNotaCredito: 0,
         prefijoNotaCredito: '',
         fechaNotaCredito: '',
+        observaciones: '',
         conceptoNotaCredito: null,
         idUsuario: 1,
         totalRegistros: null,
@@ -135,9 +136,13 @@ const MainCreditNote = () => {
     const [conceptosNotaCredito, setConceptosNotaCredito] = useState<IConceptoNotaCredito[]>([]);
     const [isLoadingConceptosNotaCredito, setIsLoadingConceptosNotaCredito] = useState(true);
     const [conceptoNotaCreditoError, setConceptoNotaCreditoError] = useState<string | null>(null);
+    const [notasCredito, setNotasCredito] = useState<INotaCredito[]>([]);
+    const [isLoadingNotasCredito, setIsLoadingNotasCredito] = useState(false);
+    const [notasCreditoError, setNotasCreditoError] = useState<string | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
     const [openDialogFactura, setOpenDialogFactura] = useState(false);
     const [searchDocumento, setSearchDocumento] = useState("");
+    const [searchNotaCredito, setSearchNotaCredito] = useState("");
     const [barcodeBuffer, setBarcodeBuffer] = useState<string>('');
     const [lastKeyTime, setLastKeyTime] = useState<number>(0);
     const [showFacturaModal, setShowFacturaModal] = useState(false);
@@ -147,6 +152,8 @@ const MainCreditNote = () => {
     const [vendedorSeleccionado, setVendedorSeleccionado] = useState(1);
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
+    const [showConfirmSaveDialog, setShowConfirmSaveDialog] = useState(false);
+    const [isSavingNotaCredito, setIsSavingNotaCredito] = useState(false);
 
     const BARCODE_DELAY = 50;
 
@@ -186,7 +193,7 @@ const MainCreditNote = () => {
         try {
             setTipoDocumentoError(null);
             setIsLoadingTiposDocumento(true);
-            const data = await TipoDocumentoService.getTiposNotasCredito();
+            const data = await TipoDocumentoService.getTiposDocumentoNotaCredito();
             setTiposDocumento([
                 ...data
             ]);
@@ -350,6 +357,7 @@ const MainCreditNote = () => {
             fetchDocumentoLista(),
             fetchConceptosNotaCredito(),
             fetchTerceros()
+
         ]);
     };
 
@@ -444,6 +452,50 @@ const MainCreditNote = () => {
         }
     };
 
+    const handleSelectNotaCredito = async (notaSeleccionada: INotaCredito) => {
+        try {
+            const notas = await NotaCreditoService.getAll();
+            const nota = notas.find(
+                (item) => Number(item.idNotaCredito) === Number(notaSeleccionada.idNotaCredito)
+            );
+            if (!nota) {
+                throw new Error('La nota de crédito seleccionada no fue encontrada');
+            }
+
+            setNotasCredito(notas);
+            setSelectedFactura(null);
+            setSavedNotaCreditoId(nota.idNotaCredito ?? null);
+            setNotaCredito({
+                ...nota,
+                idNotaCredito: nota.idNotaCredito ?? 0,
+                observaciones: nota.observaciones ?? '',
+                detalleNotaCredito: (nota.detalleNotaCredito ?? []).map((detalle) => ({
+                    ...detalle,
+                    idProducto: detalle.idProducto ?? 0,
+                    cantidadNotaCredito: detalle.cantidadNotaCredito ?? 0,
+                    precioUnitarioNotaCredito: detalle.precioUnitarioNotaCredito ?? 0,
+                    porcentajeDescuentoNotaCredito: detalle.porcentajeDescuentoNotaCredito ?? 0,
+                    descuentoNotaCredito: detalle.descuentoNotaCredito ?? 0,
+                    porcentajeIvaNotaCredito: detalle.porcentajeIvaNotaCredito ?? 0,
+                    ivaNotaCredito: detalle.ivaNotaCredito ?? 0,
+                    cantidadFactura: detalle.cantidadNotaCredito ?? 0,
+                    precioUnitarioFactura: detalle.precioUnitarioNotaCredito ?? 0,
+                    porcentajeIvaFactura: detalle.porcentajeIvaNotaCredito ?? 0,
+                    ivaFactura: detalle.ivaNotaCredito ?? 0,
+                    porcentajeDescuentoFactura: detalle.porcentajeDescuentoNotaCredito ?? 0,
+                    descuentoFactura: detalle.descuentoNotaCredito ?? 0,
+                    costoTotalFactura: detalle.costoTotalNotaCredito ?? 0,
+                    totalFactura: detalle.totalNotaCredito ?? 0,
+                    costoUnitarioFactura: detalle.costoUnitarioNotaCredito ?? 0,
+                })),
+            });
+            setOpenDialog(false);
+        } catch (error) {
+            console.error('Error al cargar la nota de crédito:', error);
+            toast.error('No fue posible cargar la nota de crédito seleccionada', { position: 'top-center' });
+        }
+    };
+
     const handleSearchFactura = async () => {
         const numeroFactura = searchDocumento.trim().toLowerCase();
         if (!numeroFactura) return;
@@ -457,6 +509,23 @@ const MainCreditNote = () => {
         }
 
         await handleSelectVenta(documento);
+    };
+
+    const handleOpenDialogChange = async (open: boolean) => {
+        setOpenDialog(open);
+        if (!open) return;
+
+        try {
+            setIsLoadingNotasCredito(true);
+            setNotasCreditoError(null);
+            const data = await NotaCreditoService.getAll();
+            setNotasCredito(data);
+        } catch (error) {
+            console.error('Error al cargar notas de crédito:', error);
+            setNotasCreditoError('Error al cargar las notas de crédito');
+        } finally {
+            setIsLoadingNotasCredito(false);
+        }
     };
 
     const handleSaveNotaCredito = async () => {
@@ -474,10 +543,12 @@ const MainCreditNote = () => {
             fechaNotaCredito: localISODate,
         };
         try {
+            setIsSavingNotaCredito(true);
             if (updatedNotaCredito.idNotaCredito) {
                 // Actualizar nota credito existente
                 //await VentaService.update(notaCredito);
                 console.log("Nota crédito actualizada:", notaCredito);
+                setSavedNotaCreditoId(updatedNotaCredito.idNotaCredito);
                 setSuccessMessage("Nota crédito actualizada correctamente");
                 setShowSuccessDialog(true);
             } else {
@@ -485,6 +556,10 @@ const MainCreditNote = () => {
                 const result = await NotaCreditoService.create(updatedNotaCredito);
                 console.log("Nota crédito guardada:", result);
                 setSavedNotaCreditoId(result.idNotaCredito || null);
+                setNotaCredito((previous) => ({
+                    ...previous,
+                    idNotaCredito: result.idNotaCredito,
+                }));
                 setSuccessMessage(result.message +
                     "\nNúmero Documento Dian: " + result.idNotaCredito);
                 setShowSuccessDialog(true);
@@ -533,6 +608,9 @@ const MainCreditNote = () => {
             //await fetchProducts();
         } catch (error) {
             console.error('Error al guardar la factura:', error);
+            toast.error('No fue posible guardar la nota de crédito', { position: 'top-center' });
+        } finally {
+            setIsSavingNotaCredito(false);
         }
     };
 
@@ -587,353 +665,413 @@ const MainCreditNote = () => {
     const tax = notaCredito.detalleNotaCredito?.reduce((iva, item) => iva + item.ivaNotaCredito, 0) ?? 0;
     // const loyaltyDiscount = customerInfo.loyalty ? subtotal * 0.05 : 0; // 5% descuento por lealtad
     const total = subtotal - discount + tax;
-    const totalItems = notaCredito.detalleNotaCredito?.reduce((sum, item) => sum + item.cantidadNotaCredito, 0);
     const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
 
     return (
-        <div className="h-screen bg-background flex flex-col overflow-hidden">
+        <div className="min-h-screen bg-background flex flex-col">
             {/* Panel Superior */}
-            <div className="w-full border-b bg-card p-1">
-                <div className="flex items-center justify-between">
-                    {/* Lado izquierdo - Logo y título */}
-                    <div className="flex items-center space-x-4 mb-2">
-                        <div className="bg-primary p-3 rounded-lg">
-                            <Package className="h-6 w-6 text-primary-foreground" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold">Astil</h1>
-                            <p className="text-sm text-muted-foreground">Sistema de Punto de Venta</p>
-                        </div>
+            <div className="w-full border-b bg-card px-4 py-2.5 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                        <h1 className="text-xl sm:text-2xl font-bold tracking-wide text-foreground ml-0 sm:ml-2">
+                            Nota Crédito
+                        </h1>
                     </div>
 
-                    {/* Centro - Total de la Nota */}
-                    <div className="flex items-center space-x-4 mb-2">
-                        <Badge className="flex items-center gap-2 px-4 py-2 text-lg bg-orange-500 text-white">
-                            <span className="font-medium">Nota Crédito</span>
-                        </Badge>
-                        <Badge className="flex items-center gap-2 px-4 py-2 text-lg bg-primary text-primary-foreground">
-                            {/* <DollarSign className="w-5 h-5" /> */}
-                            <span className="font-medium">Total:</span>
-                            <span className="font-bold text-xl">${formatCurrency(total)}</span>
-                        </Badge>
-                    </div>
 
-                    {/* Lado derecho - Reloj */}
-                    <div className="flex items-center space-x-4 mb-2">
-                        {showFacturaModal && (
-                            <FacturaModal
-                                idVenta={facturaModalData?.idVenta ?? selectedFactura?.idVenta ?? 0}
-                                facturaData={facturaModalData}
-                                triggerText="Imprimir Factura"
-                                triggerVariant="secondary"
-                                idMetodoDian={facturaModalData?.idMetodoDian ?? selectedFactura?.idMetodoDian ?? 0}
-                            />
+                    <div className="flex items-center gap-3">
+
+                        <Badge className="flex items-center gap-2 px-3.5 py-1 text-sm bg-primary text-primary-foreground shadow-sm">
+                            <span className="font-normal opacity-90 text-xs uppercase tracking-wider">Total:</span>
+                            <span className="font-bold text-base">${formatCurrency(total)}</span>
+                        </Badge>
+
+                        {selectedFactura && (
+                            <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-medium">
+                                {selectedFactura.estadoDian?.trim() || 'Pendiente DIAN'}
+                            </Badge>
                         )}
-                        <Button
-                            variant="default"
-                            size="icon"
-                            title="Nueva nota crédito"
-                            onClick={() => handleNew()}
-                            className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
-                        >
-                            <Plus className="w-5 h-5" />
-                        </Button>
-                        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="icon" title="Buscar documento">
-                                    <Search className="w-5 h-5" />
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl">
-                                <DialogHeader>
-                                    <DialogTitle>Buscar documento</DialogTitle>
-                                </DialogHeader>
-                                {/* Input de búsqueda */}
-                                <Input
-                                    className="mb-4"
-                                    placeholder="Buscar por número de documento, nombre cliente o número identificación"
-                                    value={searchDocumento}
-                                    onChange={e => setSearchDocumento(e.target.value)}
-                                />
-                                <div className="overflow-x-auto max-h-[400px]">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Documento</TableHead>
-                                                <TableHead>Número Documento</TableHead>
-                                                <TableHead>Número Identificación</TableHead>
-                                                <TableHead>Nombre Cliente</TableHead>
-                                                <TableHead>Total</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {documentosLista
-                                                .filter(
-                                                    doc =>
-                                                        doc.numeroDocumento?.toLowerCase().includes(searchDocumento.toLowerCase()) ||
-                                                        doc.nombreCliente?.toLowerCase().includes(searchDocumento.toLowerCase()) ||
-                                                        doc.numeroIdentificacion?.toString().includes(searchDocumento.toLowerCase()) ||
-                                                        doc.documento?.toLowerCase().includes(searchDocumento.toLowerCase())
-                                                )
-                                                .map((doc) => (
-                                                    <TableRow
-                                                        key={doc.idVenta}
-                                                        className="cursor-pointer hover:bg-primary/10"
-                                                        onClick={() => handleSelectVenta(doc)}
-                                                    >
-                                                        <TableCell>{doc.documento}</TableCell>
-                                                        <TableCell>{doc.numeroDocumento}</TableCell>
-                                                        <TableCell>{doc.numeroIdentificacion}</TableCell>
-                                                        <TableCell>{doc.nombreCliente}</TableCell>
-                                                        <TableCell>{doc.totalVenta}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                        </TableBody>
-                                    </Table>
-                                    {isLoadingProducts && (
-                                        <div className="text-center text-muted-foreground py-4">Cargando...</div>
-                                    )}
-                                    {productError && (
-                                        <div className="text-center text-red-500 py-4">{productError}</div>
-                                    )}
-                                </div>
-                            </DialogContent>
-                        </Dialog>
-                        {/* Select de vendedor */}
-                        <div className="flex items-center space-x-2">
-                            <Label htmlFor="vendedor-select" className="text-sm font-medium whitespace-nowrap">
+
+                        {/* Selector de Vendedor */}
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="vendedor-select" className="text-xs font-medium text-muted-foreground whitespace-nowrap hidden sm:inline">
                                 Vendedor:
                             </Label>
                             <Select
                                 value={vendedorSeleccionado.toString()}
                                 onValueChange={(value) => setVendedorSeleccionado(parseInt(value))}
                             >
-                                <SelectTrigger className="w-36" id="vendedor-select">
+                                <SelectTrigger className="h-9 w-32 text-xs" id="vendedor-select">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {vendedores.map(vendedor => (
-                                        <SelectItem key={vendedor.id} value={vendedor.id.toString()}>
+                                    {vendedores.map((vendedor) => (
+                                        <SelectItem key={vendedor.id} value={vendedor.id.toString()} className="text-xs">
                                             {vendedor.nombre}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
-                        <Badge className="flex items-center gap-1 px-2 py-1 text-base bg-primary text-primary-foreground">
-                            <User className="w-4 h-4 mr-1" />
-                            Administrador
-                        </Badge>
-                        {selectedFactura && (
-                            <Badge variant="outline" className="px-3 py-1 text-sm">
-                                {selectedFactura.estadoDian?.trim() || 'Pendiente DIAN'}
-                            </Badge>
-                        )}
+
+                        {/* Botón Nueva Nota Crédito */}
                         <Button
                             variant="default"
+                            size="icon"
+                            title="Nueva nota crédito"
+                            onClick={() => handleNew()}
+                            className="h-9 w-9 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all"
+                        >
+                            <Plus className="w-4 h-4" />
+                        </Button>
+
+                        {/* Diálogo / Botón Buscar Nota Crédito */}
+                        <Dialog open={openDialog} onOpenChange={handleOpenDialogChange}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="icon" title="Buscar nota crédito" className="h-9 w-9">
+                                    <Search className="w-4 h-4" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl">
+                                <DialogHeader>
+                                    <DialogTitle>Buscar Nota Crédito</DialogTitle>
+                                </DialogHeader>
+                                <Input
+                                    className="mb-4"
+                                    placeholder="Buscar por número de nota, nombre cliente o número de identificación"
+                                    value={searchNotaCredito}
+                                    onChange={(e) => setSearchNotaCredito(e.target.value)}
+                                />
+                                <div className="overflow-x-auto max-h-[400px]">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Documento</TableHead>
+                                                <TableHead>Número Nota Crédito</TableHead>
+                                                <TableHead>Fecha</TableHead>
+                                                <TableHead>Total</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {notasCredito
+                                                .filter(
+                                                    (nota) =>
+                                                        `${nota.prefijoNotaCredito ?? ''}${nota.numeroNotaCredito ?? ''}`
+                                                            .toLowerCase()
+                                                            .includes(searchNotaCredito.toLowerCase()) ||
+                                                        nota.nombreTerceroNotaCredito
+                                                            ?.toLowerCase()
+                                                            .includes(searchNotaCredito.toLowerCase()) ||
+                                                        nota.numeroIdentificacionTerceroNotaCredito
+                                                            ?.toString()
+                                                            .includes(searchNotaCredito.toLowerCase()) ||
+                                                        nota.nombreDocumento
+                                                            ?.toLowerCase()
+                                                            .includes(searchNotaCredito.toLowerCase())
+                                                )
+                                                .map((nota) => (
+                                                    <TableRow
+                                                        key={nota.idNotaCredito}
+                                                        className="cursor-pointer hover:bg-primary/10"
+                                                        onClick={() => void handleSelectNotaCredito(nota)}
+                                                    >
+                                                        <TableCell>{nota.nombreDocumento ?? nota.codigoDocumento}</TableCell>
+                                                        <TableCell>
+                                                            {nota.prefijoNotaCredito}
+                                                            {nota.numeroNotaCredito}
+                                                        </TableCell>
+                                                        <TableCell>{nota.fechaNotaCredito}</TableCell>
+                                                        <TableCell>{nota.totalNotaCredito ?? nota.totalVenta ?? 0}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                        </TableBody>
+                                    </Table>
+                                    {isLoadingNotasCredito && (
+                                        <div className="text-center text-muted-foreground py-4">Cargando...</div>
+                                    )}
+                                    {notasCreditoError && (
+                                        <div className="text-center text-red-500 py-4">{notasCreditoError}</div>
+                                    )}
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+
+                        {/* Botón Salir */}
+                        <Button
+                            variant="destructive"
                             size="icon"
                             title="Salir"
                             onClick={() => {
                                 navigate('/main-menu');
                             }}
-                            className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                            className="h-9 w-9 shadow-sm transition-all"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-4 h-4" />
                         </Button>
+
                     </div>
                 </div>
             </div>
 
             <div className="flex flex-1 overflow-hidden">
-                <div className="w-full flex flex-col h-[calc(100vh-80px)]">
+                <div className="w-full flex flex-col flex-1 overflow-y-auto">
                     {/* Header del Carrito */}
-                    <div className="p-3 border-b min-h-[60px] h-auto shrink-0">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <h2 className="text-sm font-normal shrink-0">Tipo de documento</h2>
+                    <div className="p-3 border-b bg-background">
+                        {/* Estructura de rejilla responsiva (4 columnas en pantallas medianas/grandes) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+
+                            {/* Tipo de Documento (Ocupa 5 columnas en escritorio) */}
+                            <div className="lg:col-span-5 flex items-center gap-2">
+                                <label className="text-sm font-medium whitespace-nowrap min-w-[130px]">
+                                    Tipo de documento
+                                </label>
                                 <select
-                                    className="rounded border px-3 py-2 text-sm bg-background min-w-[180px] w-auto"
+                                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
                                     value={notaCredito.idTipoDocumentoExterno?.toString() ?? ''}
                                     onChange={(e) => {
-                                        const selectedId = parseInt(e.target.value, 10);
+                                        const selectedValue = e.target.value;
+                                        if (!selectedValue) return;
+
                                         const selectedTipoDocumento = tiposDocumento.find(
-                                            (tipoDocumento) => Number(tipoDocumento.idTipoDocumentoExterno) === selectedId
+                                            (td) => String(td.idTipoDocumentoExterno) === String(selectedValue)
                                         );
+
                                         if (!selectedTipoDocumento) return;
 
                                         setNotaCredito((previous) => ({
                                             ...previous,
                                             idTipoDocumento: selectedTipoDocumento.idTipoDocumento,
                                             idTipoDocumentoExterno: selectedTipoDocumento.idTipoDocumentoExterno,
-                                            prefijoNotaCredito: selectedTipoDocumento.prefijoConsecutivo ?? '',
+                                            prefijoNotaCredito: selectedTipoDocumento.prefijoConsecutivo ?? ''
                                         }));
                                     }}
                                     disabled={isLoadingTiposDocumento}
                                     required
                                 >
                                     <option value="">-- Seleccione --</option>
-                                    {tiposDocumento.map(td => (
+                                    {tiposDocumento.map((td) => (
                                         <option key={td.idTipoDocumentoExterno} value={td.idTipoDocumentoExterno}>
-                                            {td.nombreTipoDocumentoExterno}
+                                            {td.nombreDocumento}
                                         </option>
                                     ))}
                                 </select>
+                            </div>
 
-                                <h2 className="text-sm font-normal shrink-0">Prefijo</h2>
+                            {/* Prefijo (Ocupa 2 columnas en escritorio) */}
+                            <div className="lg:col-span-2 flex items-center gap-2">
+                                <label className="text-sm font-medium whitespace-nowrap">
+                                    Prefijo
+                                </label>
                                 <input
                                     type="text"
-                                    className="rounded border px-3 py-2 text-sm bg-background w-20"
+                                    className="w-full rounded-md border border-input bg-muted px-3 py-1.5 text-sm text-center shadow-sm font-medium"
                                     value={notaCredito.prefijoNotaCredito ?? ''}
-                                    onChange={(e) => setNotaCredito({ ...notaCredito, prefijoNotaCredito: e.target.value })}
-                                    readOnly
-                                />
-
-                                <h2 className="text-sm font-normal shrink-0">Número</h2>
-                                <input
-                                    type="text"
-                                    className="rounded border px-3 py-2 text-sm bg-background w-24"
-                                    value={notaCredito.numeroNotaCredito ?? ''}
-                                    onChange={(e) => setNotaCredito({ ...notaCredito, numeroNotaCredito: parseInt(e.target.value) })}
-                                    readOnly
-                                />
-
-                                <h2 className="text-sm font-normal shrink-0">Fecha</h2>
-                                <input
-                                    type="date"
-                                    className="rounded border px-3 py-2 text-sm bg-background w-32"
-                                    value={new Date().toISOString().split('T')[0]}
-                                    onChange={(e) => setNotaCredito({ ...notaCredito, fechaNotaCredito: e.target.value })}
                                     readOnly
                                 />
                             </div>
-                            <Badge className="bg-primary text-primary-foreground">
-                                {totalItems}
-                            </Badge>
+
+                            {/* Número (Ocupa 2 columnas en escritorio) */}
+                            <div className="lg:col-span-2 flex items-center gap-2">
+                                <label className="text-sm font-medium whitespace-nowrap">
+                                    Número
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-md border border-input bg-muted px-3 py-1.5 text-sm text-center shadow-sm font-medium"
+                                    value={notaCredito.numeroNotaCredito ?? ''}
+                                    readOnly
+                                />
+                            </div>
+
+                            {/* Fecha (Ocupa 3 columnas en escritorio) */}
+                            <div className="lg:col-span-3 flex items-center gap-2">
+                                <label className="text-sm font-medium whitespace-nowrap">
+                                    Fecha
+                                </label>
+                                <input
+                                    type="date"
+                                    className="w-full rounded-md border border-input bg-muted px-3 py-1.5 text-sm shadow-sm"
+                                    value={
+                                        notaCredito.fechaNotaCredito
+                                            ? new Date(notaCredito.fechaNotaCredito).toISOString().split('T')[0]
+                                            : new Date().toISOString().split('T')[0]
+                                    }
+                                    readOnly
+                                />
+                            </div>
+
                         </div>
                     </div>
 
                     {/* Panel de Número de Factura */}
 
-                    <div className="border-b bg-muted/50">
-                        <div className="flex items-center gap-2 ml-3 mt-2 mb-2 mr-2">
-                            <h2 className="text-sm font-normal">Número de Factura</h2>
-                            <Input
-                                placeholder="Ingrese el número de la factura"
-                                className="rounded border px-2 py-2 text-sm bg-background w-64"
-                                value={searchDocumento}
-                                onChange={(e) => setSearchDocumento(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        void handleSearchFactura();
-                                    }
-                                }}
-                                onBlur={() => void handleSearchFactura()}
-                            />
-                            <Dialog open={openDialogFactura} onOpenChange={setOpenDialogFactura}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="icon" title="Buscar documento">
-                                        <Search className="w-8 h-8" />
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-4xl">
-                                    <DialogHeader>
-                                        <DialogTitle>Buscar documento</DialogTitle>
-                                    </DialogHeader>
-                                    {/* Input de búsqueda */}
-                                    <Input
-                                        className="mb-4"
-                                        placeholder="Buscar por número de documento, nombre cliente o número identificación"
-                                        value={searchDocumento}
-                                        onChange={e => setSearchDocumento(e.target.value)}
-                                    />
-                                    <div className="overflow-x-auto max-h-[400px]">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Documento</TableHead>
-                                                    <TableHead>Número Documento</TableHead>
-                                                    <TableHead>Número Identificación</TableHead>
-                                                    <TableHead>Nombre Cliente</TableHead>
-                                                    <TableHead>Total</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {documentosLista
-                                                    .filter(
-                                                        doc =>
-                                                            doc.numeroDocumento?.toLowerCase().includes(searchDocumento.toLowerCase()) ||
-                                                            doc.nombreCliente?.toLowerCase().includes(searchDocumento.toLowerCase()) ||
-                                                            doc.numeroIdentificacion?.toString().includes(searchDocumento.toLowerCase()) ||
-                                                            doc.documento?.toLowerCase().includes(searchDocumento.toLowerCase())
-                                                    )
-                                                    .map((doc) => (
-                                                        <TableRow
-                                                            key={doc.idVenta}
-                                                            className="cursor-pointer hover:bg-primary/10"
-                                                            onClick={() => handleSelectVenta(doc)}
-                                                        >
-                                                            <TableCell>{doc.documento}</TableCell>
-                                                            <TableCell>{doc.numeroDocumento}</TableCell>
-                                                            <TableCell>{doc.numeroIdentificacion}</TableCell>
-                                                            <TableCell>{doc.nombreCliente}</TableCell>
-                                                            <TableCell>{doc.totalVenta}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                            </TableBody>
-                                        </Table>
-                                        {isLoadingDocumentoLista && (
-                                            <div className="text-center text-muted-foreground py-4">Cargando...</div>
-                                        )}
-                                        {documentoListaError && (
-                                            <div className="text-center text-red-500 py-4">{documentoListaError}</div>
-                                        )}
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-                            <Label className="text-sm font-normal whitespace-nowrap">
-                                Cliente:
-                            </Label>
-                            <Input
-                                placeholder="Número de identificación"
-                                className="rounded border px-2 py-2 text-sm bg-background w-32"
-                                value={notaCredito.numeroIdentificacionTerceroNotaCredito || ''}
-                                readOnly
-                            />
-                            <Label className="text-sm font-normal whitespace-nowrap">
-                                Nombre:
-                            </Label>
-                            <Input
-                                placeholder="Nombre del cliente"
-                                className="rounded border px-2 py-2 text-sm bg-background w-48"
-                                value={notaCredito.nombreTerceroNotaCredito || ''}
-                                readOnly
-                            />
-                            <Label htmlFor="concepto-nota-credito" className="text-sm font-normal whitespace-nowrap">
-                                Concepto Nota Crédito:
-                            </Label>
-                            <select
-                                id="concepto-nota-credito"
-                                className="rounded border px-3 py-2 text-sm bg-background w-48"
-                                value={notaCredito.conceptoNotaCredito ?? ''}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value, 10);
-                                    const selectedId = Number.isNaN(val) ? null : val;
+                    <div className="p-3 border-b bg-muted/50">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
 
-                                    setNotaCredito((prev) => ({
-                                        ...prev,
-                                        conceptoNotaCredito: selectedId,
-                                        idConceptoCorreccionNota: selectedId
-                                    }));
-                                }}
-                                required
-                            >
-                                <option value="">-- Seleccione --</option>
-                                {conceptosNotaCredito.map((td) => (
-                                    <option key={td.idConceptoCorreccionNota} value={td.idConceptoCorreccionNota}>
-                                        {td.nombreConceptoCorreccionNota}
-                                    </option>
-                                ))}
-                            </select>
+                            {/* Campo Búsqueda de Factura + Botón Lupa (Ocupa 5 columnas en escritorio) */}
+                            <div className="lg:col-span-5 flex items-center gap-2">
+                                <Label className="text-sm font-medium whitespace-nowrap min-w-[130px]">
+                                    Número de Factura
+                                </Label>
+                                <div className="flex items-center gap-1.5 w-full">
+                                    <Input
+                                        placeholder="Ingrese el número de la factura"
+                                        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm"
+                                        value={searchDocumento}
+                                        onChange={(e) => setSearchDocumento(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                void handleSearchFactura();
+                                            }
+                                        }}
+                                        onBlur={() => void handleSearchFactura()}
+                                    />
+
+                                    {/* Modal Diálogo para Búsqueda Avanzada */}
+                                    <Dialog open={openDialogFactura} onOpenChange={setOpenDialogFactura}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="icon" title="Buscar documento" className="shrink-0 h-9 w-9">
+                                                <Search className="w-4 h-4" />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-4xl">
+                                            <DialogHeader>
+                                                <DialogTitle>Buscar documento</DialogTitle>
+                                            </DialogHeader>
+                                            {/* Input de búsqueda */}
+                                            <Input
+                                                className="mb-4"
+                                                placeholder="Buscar por número de documento, nombre cliente o número identificación"
+                                                value={searchDocumento}
+                                                onChange={(e) => setSearchDocumento(e.target.value)}
+                                            />
+                                            <div className="overflow-x-auto max-h-[400px]">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Documento</TableHead>
+                                                            <TableHead>Número Documento</TableHead>
+                                                            <TableHead>Número Identificación</TableHead>
+                                                            <TableHead>Nombre Cliente</TableHead>
+                                                            <TableHead>Total</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {documentosLista
+                                                            .filter(
+                                                                (doc) =>
+                                                                    doc.numeroDocumento?.toLowerCase().includes(searchDocumento.toLowerCase()) ||
+                                                                    doc.nombreCliente?.toLowerCase().includes(searchDocumento.toLowerCase()) ||
+                                                                    doc.numeroIdentificacion?.toString().includes(searchDocumento.toLowerCase()) ||
+                                                                    doc.documento?.toLowerCase().includes(searchDocumento.toLowerCase())
+                                                            )
+                                                            .map((doc) => (
+                                                                <TableRow
+                                                                    key={doc.idVenta}
+                                                                    className="cursor-pointer hover:bg-primary/10"
+                                                                    onClick={() => handleSelectVenta(doc)}
+                                                                >
+                                                                    <TableCell>{doc.documento}</TableCell>
+                                                                    <TableCell>{doc.numeroDocumento}</TableCell>
+                                                                    <TableCell>{doc.numeroIdentificacion}</TableCell>
+                                                                    <TableCell>{doc.nombreCliente}</TableCell>
+                                                                    <TableCell>{doc.totalVenta}</TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                    </TableBody>
+                                                </Table>
+                                                {isLoadingDocumentoLista && (
+                                                    <div className="text-center text-muted-foreground py-4">Cargando...</div>
+                                                )}
+                                                {documentoListaError && (
+                                                    <div className="text-center text-red-500 py-4">{documentoListaError}</div>
+                                                )}
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                            </div>
+
+                            {/* Identificación del Cliente (Ocupa 3 columnas en escritorio) */}
+                            <div className="lg:col-span-3 flex items-center gap-2">
+                                <Label className="text-sm font-medium whitespace-nowrap">
+                                    Cliente:
+                                </Label>
+                                <Input
+                                    placeholder="Número de identificación"
+                                    className="w-full rounded-md border border-input bg-muted px-3 py-1.5 text-sm shadow-sm font-medium"
+                                    value={notaCredito.numeroIdentificacionTerceroNotaCredito || ''}
+                                    readOnly
+                                />
+                            </div>
+
+                            {/* Nombre del Cliente (Ocupa 4 columnas en escritorio) */}
+                            <div className="lg:col-span-4 flex items-center gap-2">
+                                <Label className="text-sm font-medium whitespace-nowrap">
+                                    Nombre:
+                                </Label>
+                                <Input
+                                    placeholder="Nombre del cliente"
+                                    className="w-full rounded-md border border-input bg-muted px-3 py-1.5 text-sm shadow-sm font-medium truncate"
+                                    value={notaCredito.nombreTerceroNotaCredito || ''}
+                                    readOnly
+                                />
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div className="p-3 border-b bg-muted/50">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+
+                            {/* Observaciones (Ocupa 7 columnas en escritorio) */}
+                            <div className="lg:col-span-7 flex items-center gap-2">
+                                <Label className="text-sm font-medium whitespace-nowrap min-w-[130px]">
+                                    Observaciones:
+                                </Label>
+                                <Input
+                                    placeholder="Observaciones de la nota crédito"
+                                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm"
+                                    value={notaCredito.observaciones ?? ''}
+                                    onChange={(e) =>
+                                        setNotaCredito({
+                                            ...notaCredito,
+                                            observaciones: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+
+                            {/* Concepto Nota Crédito (Ocupa 5 columnas en escritorio) */}
+                            <div className="lg:col-span-5 flex items-center gap-2">
+                                <Label htmlFor="concepto-nota-credito" className="text-sm font-medium whitespace-nowrap">
+                                    Concepto Nota Crédito:
+                                </Label>
+                                <select
+                                    id="concepto-nota-credito"
+                                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    value={notaCredito.conceptoNotaCredito ?? ''}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value, 10);
+                                        const selectedId = Number.isNaN(val) ? null : val;
+
+                                        setNotaCredito((prev) => ({
+                                            ...prev,
+                                            conceptoNotaCredito: selectedId,
+                                            idConceptoCorreccionNota: selectedId,
+                                        }));
+                                    }}
+                                    required
+                                >
+                                    <option value="">-- Seleccione --</option>
+                                    {conceptosNotaCredito.map((td) => (
+                                        <option key={td.idConceptoCorreccionNota} value={td.idConceptoCorreccionNota}>
+                                            {td.nombreConceptoCorreccionNota}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
                         </div>
                     </div>
 
@@ -1193,38 +1331,54 @@ const MainCreditNote = () => {
                             <div className="h-[60px] p-4 border-t bg-background">
                                 <div className="flex gap-2">
                                     {savedNotaCreditoId ? (
-                                        <FacturaModal
-                                            key={savedNotaCreditoId}
-                                            idVenta={savedNotaCreditoId}
-                                            idMetodoDian={3}
-                                            triggerText="Imprimir"
-                                            triggerVariant="outline"
-                                        />
+                                        <div className="flex-1 [&>button]:w-full [&>button]:h-[40px] [&>button]:text-lg [&>button]:font-bold">
+                                            <FacturaModal
+                                                key={savedNotaCreditoId}
+                                                idVenta={savedNotaCreditoId}
+                                                idMetodoDian={3}
+                                                triggerText="Ver Nota Crédito"
+                                                triggerVariant="default"
+                                            />
+                                        </div>
                                     ) : (
                                         <Button
-                                            variant="outline"
-                                            disabled
-                                            className="h-10 px-4"
-                                            title="La nota crédito aún no está guardada"
+                                            onClick={() => setShowConfirmSaveDialog(true)}
+                                            disabled={isSavingNotaCredito}
+                                            className="flex-1 h-[40px] text-lg font-bold"
+                                            size="lg"
                                         >
-                                            <Printer className="h-4 w-4 mr-2" />
-                                            Imprimir
+                                            <Check className="h-5 w-5 mr-2" />
+                                            {isSavingNotaCredito ? 'Guardando...' : 'Guardar Nota Crédito'}
                                         </Button>
                                     )}
-                                    <Button
-                                        onClick={() => handleSaveNotaCredito()}
-                                        className="flex-1 h-[40px] text-lg font-bold"
-                                        size="lg"
-                                    >
-                                        <Check className="h-5 w-5 mr-2" />
-                                        Guardar Nota Crédito
-                                    </Button>
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
+            <AlertDialog open={showConfirmSaveDialog} onOpenChange={setShowConfirmSaveDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar guardado</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            ¿Desea guardar esta nota de crédito?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            disabled={isSavingNotaCredito}
+                            onClick={() => {
+                                setShowConfirmSaveDialog(false);
+                                void handleSaveNotaCredito();
+                            }}
+                        >
+                            Confirmar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
             {/* AlertDialog de éxito */}
             <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
                 <AlertDialogContent>

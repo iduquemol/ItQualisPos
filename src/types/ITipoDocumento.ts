@@ -18,6 +18,10 @@ export interface ITipoDocumento {
     idTipoDocumentoCotiza?: number | null;
     idTipoDocumentoND?: number | null;
     idConsecutivoHabilitacion?: number | null;
+
+    idMedioPago?: number | null;
+    nombreMedioPago?: string | null;
+
     idTipoDocumentoExterno: number;
     nombreTipoDocumentoExterno?: string | null;
     codigoTipoDocumentoExterno?: string | null;

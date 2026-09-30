@@ -18,6 +18,7 @@ interface FacturaModalProps {
   facturaData?: any;
   triggerText?: string;
   triggerVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  triggerClassName?: string;
 }
 
 const FacturaModal: React.FC<FacturaModalProps> = ({
@@ -26,6 +27,7 @@ const FacturaModal: React.FC<FacturaModalProps> = ({
   facturaData,
   triggerText = "Ver Factura",
   triggerVariant = "default",
+  triggerClassName = "h-10 px-4 flex items-center gap-2",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -87,7 +89,7 @@ const FacturaModal: React.FC<FacturaModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant={triggerVariant} className="h-10 px-4 flex items-center gap-2">
+        <Button variant={triggerVariant} className={triggerClassName}>
           <Printer size={16} />
           {triggerText}
         </Button>

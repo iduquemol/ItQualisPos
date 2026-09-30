@@ -30,6 +30,34 @@ export const TipoDocumentoService = {
         }
     },
 
+    async getTiposDocumentoNotaCredito(): Promise<ITipoDocumento[]> {
+        try {
+            const response = await fetch(
+            API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.TIPOS_DOCUMENTO_NOTA_CREDITO),
+                {
+                    headers: API_CONFIG.OPTIONS.headers,
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al cargar tipos de documento nota crédito');
+            }
+
+            const data = await response.json();
+            const tiposDocumento = Array.isArray(data)
+                ? data
+                : Array.isArray(data?.data)
+                    ? data.data
+                    : [];
+
+            return tiposDocumento as ITipoDocumento[];
+        } catch (error) {
+            console.error('Error en TipoDocumentoService.getTiposDocumentoNotaCredito:', error);
+            throw error;
+        }
+    },
+
     async getTiposVenta(): Promise<ITipoDocumento[]> {
         try {
             const response = await fetch(

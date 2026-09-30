@@ -22,6 +22,7 @@ import SellersPage from './pages/VendedoresPage';
 import UsersPage from './pages/UsersPage';
 import UnidadesDeMedidaPage from './pages/UnidadesDeMedidaPage';
 import ListasPreciosPage from './pages/listasPreciosPage';
+import DocumentoSoportePage from './pages/DocumentoSoporte';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -139,6 +140,12 @@ function App() {
                     path="/listas-precios"
                     element={
                         isAuthenticated ? <AppLayout><ListasPreciosPage /></AppLayout> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/documento-soporte"
+                    element={
+                        isAuthenticated ? <AppLayout><DocumentoSoportePage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route

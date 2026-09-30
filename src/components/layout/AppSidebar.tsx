@@ -34,7 +34,8 @@ const menuGroups = [
       { label: "Ventas", icon: Receipt, path: "/pos" },
       { label: "Cotizaciones", icon: ScrollText, path: "/estimates" },
       { label: "Notas Crédito", icon: FileText, path: "/credit-notes" },
-      { label: "Tipos de Documentos", icon: FileCog, path: "/documentos-externos" },
+      { label: "Documentos Soporte", icon: FileCog, path: "/documento-soporte" },
+      { label: "Tipos de Documentos", icon: FileText, path: "/documentos-externos" },
       { label: "Parámetros de Venta", icon: SlidersHorizontal, path: "/parametros-venta" },
     ],
   },
@@ -43,9 +44,9 @@ const menuGroups = [
     icon: Package,
     children: [
       { label: "Items", icon: Package, path: "/items" },
-      { label: "Categorías", icon: FolderTree, path: "/categories" },   
-      { label: "Unidades de Medida", icon: FolderTree, path: "/unidades-medida" },  
-      { label: "Listas de Precios", icon: FolderTree, path: "/listas-precios" },  
+      { label: "Categorías", icon: FolderTree, path: "/categories" },
+      { label: "Unidades de Medida", icon: FolderTree, path: "/unidades-medida" },
+      { label: "Listas de Precios", icon: FolderTree, path: "/listas-precios" },
     ],
   },
   {
@@ -60,7 +61,7 @@ const menuGroups = [
     icon: Building2,
     children: [
       { label: "Empresas", icon: Building2, path: "/empresas" },
-      { label: "Resoluciones", icon: FileCheck2, path: "/resoluciones" },      
+      { label: "Resoluciones", icon: FileCheck2, path: "/resoluciones" },
       { label: "Actividades ICA", icon: Landmark, path: "/actividades-ica" },
       { label: "Sucursales", icon: GitBranch, path: "/sucursales" },
       { label: "Vendedores", icon: BadgeDollarSign, path: "/vendedores" },
