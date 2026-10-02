@@ -23,6 +23,27 @@ export const ProductoService = {
         }
     },
 
+    async getProductosCompra(): Promise<IProducto[]> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.PRODUCTOS_COMPRA),
+                {
+                    headers: API_CONFIG.OPTIONS.headers,
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al cargar productos');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error en ProductoService.getProductosCompra:', error);
+            throw error;
+        }
+    },
+
     async search(query: string): Promise<IProducto[]> {
         try {
             const response = await fetch(

@@ -55,24 +55,22 @@ export default function ItemsMaster() {
         imagenProducto: "",
         quantity: 0,
 
-        // Nuevos campos de inventario y costo inicializados en null o 0
         stockActualProducto: null,
         costoPromedioActualProducto: null,
 
-        // Porcentajes e Impuestos corregidos
         porcentajeIva: 0,
         porcentajeImpoConsumo: 0,
         porcentajeReteIva: 0,
         porcentajeReteRenta: 0,
         porcentajeReteIca: 0,
-        porcentajeMaxDescuento: 0, // Corregido el nombre aquí
+        porcentajeMaxDescuento: 0, 
 
-        // Tercero Mandato y Sector (Tipos corregidos)
         idItemSector: null, 
         idTerceroMandato: null,
         indicadorMandato: false,
+        itemVenta: false,
+        itemCompra: false,
 
-        // Arrays de detalles inicializados vacíos
         tributosProducto: [],
         preciosProducto: [],
     });
@@ -1056,6 +1054,35 @@ export default function ItemsMaster() {
                                 />
                                 <span className="text-sm text-muted-foreground">
                                     {producto.productoActivo ? "Activo" : "Inactivo"}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Item de Venta</label>
+                            <div className="flex items-center space-x-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={producto.itemVenta || false}
+                                    onChange={e => setProducto({ ...producto, itemVenta: e.target.checked })}
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {producto.itemVenta ? "Activo" : "Inactivo"}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-muted-foreground mb-1">Item de Compra</label>
+                            <div className="flex items-center space-x-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={producto.itemCompra || false}
+                                    onChange={e => setProducto({ ...producto, itemCompra: e.target.checked })}
+
+                                    className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {producto.itemCompra ? "Activo" : "Inactivo"}
                                 </span>
                             </div>
                         </div>

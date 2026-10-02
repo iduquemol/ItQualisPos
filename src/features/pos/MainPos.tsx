@@ -43,6 +43,8 @@ import FacturaModal from '../reports/FacturaModal';
 import { IParametrosVentaDefault } from '@/types/IParametrosVentaDefault';
 import { Package, type LucideIcon } from "lucide-react";
 import { CATEGORY_ICONS, iconMap } from '@/types/ICategoryIcons';
+import { VendedorService } from '@/services/VendedorService';
+import { IVendedores } from '@/types/IVendedores';
 
 
 type PosCategory = ICategorias & { icon: LucideIcon };
@@ -301,11 +303,22 @@ const RetailPOS = () => {
 
     const BARCODE_DELAY = 50;
 
-    const [vendedores, setVendedores] = useState<any[]>([
-        { id: 1, nombre: "Administrador" },
-        { id: 2, nombre: "Vendedor 1" },
-        { id: 3, nombre: "Vendedor 2" },
-    ]);
+    const [vendedores, setVendedores] = useState<IVendedores[]>([]);
+
+    const fetchVendedores = async () => {
+        try {
+            const data = await VendedorService.getAll();
+            setVendedores(data);
+            setVendedorSeleccionado(current =>
+                data.some(vendedor => vendedor.idVendedor === current)
+                    ? current
+                    : data[0]?.idVendedor ?? current
+            );
+        } catch (error) {
+            console.error('Error al cargar vendedores:', error);
+            toast.error('Error al cargar los vendedores');
+        }
+    };
 
     const fetchCategories = async () => {
         try {
@@ -536,6 +549,7 @@ const RetailPOS = () => {
     const initializeComponent = async () => {
         await Promise.all([
             fetchCategories(),
+            fetchVendedores(),
             fetchTipoDocumentoIdentidad(),
             fetchParametrosVentaDefault(),
             fetchTiposDocumento(),
@@ -1056,7 +1070,7 @@ const RetailPOS = () => {
                 ...prev,
                 detalleVenta: (prev.detalleVenta ?? []).map(item =>
                     item.idProducto === id
-                        ? recalculateVentaDetalle(item, Number(item.cantidadVenta ?? 0) + change)
+                        ? recalculateVentaDetalle(item, Math.max(0, Number(item.cantidadVenta ?? 0) + change))
                         : item
                 )
             };
@@ -1161,8 +1175,8 @@ const RetailPOS = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {vendedores.map(vendedor => (
-                                        <SelectItem key={vendedor.id} value={vendedor.id.toString()} className="text-xs">
-                                            {vendedor.nombre}
+                                        <SelectItem key={vendedor.idVendedor} value={vendedor.idVendedor.toString()} className="text-xs">
+                                            {vendedor.nombreVendedor}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

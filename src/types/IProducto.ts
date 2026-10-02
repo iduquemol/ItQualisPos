@@ -2,38 +2,36 @@ import { IPrecioProducto } from "./IPrecioProducto";
 import { ITributoProducto } from "./ITributoProducto";
 
 export interface IProducto {
-    idProducto: number | null;
+    idProducto: number;
     codigoProducto: string;
     nombreProducto: string;
-    imagenProducto: string | null;
-    codigoBarras: string | null;
+    imagenProducto?: string | null;
+    codigoBarras?: string | null;
     idCategoria: number;
     idUnidadMedida: number;
-    precioUnitario: number;
-    precioPos: number;
-    
-    // Inventario y costos
-    stockActualProducto: number | null;
-    costoPromedioActualProducto: number | null;
+    precioUnitario?: number | null;
+    stockActualProducto?: number | null;
+    costoPromedioActualProducto?: number | null;
+    productoActivo?: boolean | null; 
+    precioPos?: number | null; 
 
-    // Porcentajes e Impuestos
-    porcentajeIva: number | null;
-    porcentajeImpoConsumo: number | null;
-    porcentajeReteIva: number | null;
-    porcentajeReteRenta: number | null;
-    porcentajeReteIca: number | null;
-    porcentajeMaxDescuento: number | null; // Corregido aquí
+    porcentajeIva?: number | null;
+    porcentajeImpoConsumo?: number | null;
+    porcentajeReteIva?: number | null;
+    idTipoProducto: number; 
+    porcentajeReteRenta?: number | null;
+    porcentajeReteIca?: number | null;
+    porcentajeMaxDescuento?: number | null; 
 
     quantity: number;
-    idTipoProducto: number; // ID of the product type
-    productoActivo: boolean; // Indicates if the product is active
     
-    // Tercero Mandato y Sector
-    idItemSector: number | null; // Corregido a number para manejar el ID del sector
-    idTerceroMandato: number | null; // ID of the third-party mandate
-    indicadorMandato: boolean; 
+    fechaGrabacionProducto?: string | null; 
+    idItemSector?: number | null; 
+    idTerceroMandato?: number | null; 
+    indicadorMandato?: boolean | null; 
+    itemVenta?: boolean | null;
+    itemCompra?: boolean | null;
     
-    // Arrays / Relaciones
-    preciosProducto: IPrecioProducto[]; // Array of IPrecioProducto
-    tributosProducto: ITributoProducto[]; // Array of ITributo
+    preciosProducto: IPrecioProducto[]; 
+    tributosProducto: ITributoProducto[]; 
 }

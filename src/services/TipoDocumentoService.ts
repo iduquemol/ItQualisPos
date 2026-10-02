@@ -33,7 +33,7 @@ export const TipoDocumentoService = {
     async getTiposDocumentoNotaCredito(): Promise<ITipoDocumento[]> {
         try {
             const response = await fetch(
-            API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.TIPOS_DOCUMENTO_NOTA_CREDITO),
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.TIPOS_DOCUMENTO_NOTA_CREDITO),
                 {
                     headers: API_CONFIG.OPTIONS.headers,
                     mode: 'cors',
@@ -62,7 +62,7 @@ export const TipoDocumentoService = {
         try {
             const response = await fetch(
                 API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.TIPOS_DOCUMENTO_VENTA),
-                { 
+                {
                     headers: API_CONFIG.OPTIONS.headers,
                     mode: 'cors',
                     credentials: 'same-origin'
@@ -83,7 +83,7 @@ export const TipoDocumentoService = {
         try {
             const response = await fetch(
                 API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.TIPOS_NOTAS_CREDITO),
-                { 
+                {
                     headers: API_CONFIG.OPTIONS.headers,
                     mode: 'cors',
                     credentials: 'same-origin'
@@ -96,6 +96,27 @@ export const TipoDocumentoService = {
             return data;
         } catch (error) {
             console.error('Error en TipoDocumentoService.getTiposNotasCredito:', error);
+            throw error;
+        }
+    },
+
+    async getTiposDocumentoDsa(): Promise<ITipoDocumento[]> {
+        try {
+            const response = await fetch(
+                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.TIPOS_DOCUMENTO_DSA),
+                {
+                    headers: API_CONFIG.OPTIONS.headers,
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                }
+            );
+            if (!response.ok) {
+                throw new Error('Error al cargar tipos de documento de documento soporte (DSA)');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error en TipoDocumentoService.getTiposDocumentoDsa:', error);
             throw error;
         }
     },
