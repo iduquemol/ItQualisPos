@@ -18,6 +18,7 @@ export interface ITipoDocumento {
     idTipoDocumentoCotiza?: number | null;
     idTipoDocumentoND?: number | null;
     idConsecutivoHabilitacion?: number | null;
+    documentoDsa?: boolean | null;
 
     idMedioPago?: number | null;
     nombreMedioPago?: string | null;

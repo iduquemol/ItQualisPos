@@ -5,10 +5,13 @@ export const API_CONFIG = {
         ? 'http://localhost:5264/api'
         : import.meta.env.VITE_API_URL,
     ENDPOINTS: {
+        OBTENER_DOCUMENTO_SOPORTE: '/obtener-documento-soporte',
         TIPOS_DOCUMENTO_NOTA_CREDITO: '/tipos-documento-notas-credito',
+        TIPOS_DOCUMENTO_DSA: '/tipos-documento-dsa',
         NOTAS_CREDITO: '/notascredito',
         CATEGORIES: '/categorias',
         PRODUCTS: '/productos',
+        PRODUCTOS_COMPRA: '/productos-compra',
         PRODUCTOS_BUSQUEDA: '/productos-busqueda',
         SALES: '/venta',
         SUPPLIERS: '/terceros',

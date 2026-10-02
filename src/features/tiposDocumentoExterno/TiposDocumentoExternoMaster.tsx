@@ -406,11 +406,10 @@ export default function TiposDocumentoExternoMaster() {
                   Tipo Documento (*)
                 </label>
                 <select
-                  className={`w-full p-2 text-sm border rounded-md bg-background focus:ring-2 focus:ring-primary ${
-                    !tipoDocExterno.idTipoDocumento && formError
+                  className={`w-full p-2 text-sm border rounded-md bg-background focus:ring-2 focus:ring-primary ${!tipoDocExterno.idTipoDocumento && formError
                       ? "border-red-500"
                       : "border-input"
-                  }`}
+                    }`}
                   value={tipoDocExterno.idTipoDocumento || ""}
                   onChange={(e) =>
                     setTipoDocExterno({
@@ -433,7 +432,7 @@ export default function TiposDocumentoExternoMaster() {
                 )}
               </div>
 
-               {/* Forma de Pago */}
+              {/* Forma de Pago */}
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
                   Forma de Pago
@@ -473,14 +472,20 @@ export default function TiposDocumentoExternoMaster() {
                   }
                 >
                   <option value="">Seleccione un consecutivo</option>
-                  {consecutivos?.map((c: IConsecutivos) => (
-                    <option key={c.idConsecutivo} value={c.idConsecutivo}>
-                      {c.nombreConsecutivo || c.prefijoConsecutivo || `Consecutivo ${c.idConsecutivo}`}
-                    </option>
-                  ))}
+                  {consecutivos
+                    ?.filter(
+                      (c: IConsecutivos) =>
+                        c.idTipoDocumento === tipoDocExterno?.idTipoDocumento &&
+                        c.consecutivoActivo === true
+                    )
+                    .map((c: IConsecutivos) => (
+                      <option key={c.idConsecutivo} value={c.idConsecutivo}>
+                        {c.nombreConsecutivo || c.prefijoConsecutivo || `Consecutivo ${c.idConsecutivo}`}
+                      </option>
+                    ))}
                 </select>
               </div>
-            </div>  
+            </div>
 
             {/* Grid para las Notas FE */}
             <div className="border-t pt-4 mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
