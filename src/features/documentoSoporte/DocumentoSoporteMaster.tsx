@@ -29,8 +29,10 @@ import { TipoDocumentoIdentidadService } from '@/services/TipoDocumentoIdentidad
 import { IVenta } from '@/types/IVenta';
 import { IVentaDetalle } from '@/types/IVentaDetalle';
 import { IVentaTercero } from '@/types/IVentaTercero';
+import { IDocumentoSoporte } from '@/types/IDocumentoSoporte';
 import { IDocumentoLista } from '@/types/IDocumentoLista';
 import { DocumentoListaService } from '@/services/DocumentoListaService';
+import { DocumentoSoporteService } from '@/services/DocumentoSoporteService';
 import { FormasPagoService } from '@/services/FormasPagoService';
 import { MediosPagoService } from '@/services/MediosPagoService';
 import { VentaService } from '@/services/VentaService';
@@ -46,6 +48,7 @@ import { CATEGORY_ICONS, iconMap } from '@/types/ICategoryIcons';
 
 
 type PosCategory = ICategorias & { icon: LucideIcon };
+type DocumentoSoporteForm = IVenta & Pick<IDocumentoSoporte, 'fechaInicialServicio' | 'fechaFinalServicio'>;
 
 const getLocalDate = (date = new Date()): string => {
     const offsetMs = date.getTimezoneOffset() * 60 * 1000;
@@ -129,10 +132,126 @@ const buildVentaDetalle = (product: IProducto, quantity: number = 1, registroVen
     };
 };
 
+const recalculateVentaDetalle = (item: IVentaDetalle, quantity: number): IVentaDetalle => {
+    const cantidadVenta = Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
+    const precioUnitario = Number(item.precioUnitarioVenta ?? 0);
+    const porcentajeDescuento = Number(item.porcentajeDescuentoVenta ?? 0);
+    const baseIvaVenta = parseFloat((cantidadVenta * precioUnitario - porcentajeDescuento / 100).toFixed(2));
+    const ivaVenta = parseFloat((baseIvaVenta * (Number(item.porcentajeIvaVenta ?? 0) / 100)).toFixed(2));
+
+    return {
+        ...item,
+        cantidadVenta,
+        baseIvaVenta,
+        ivaVenta,
+        descuentoVenta: parseFloat((precioUnitario * cantidadVenta * (porcentajeDescuento / 100)).toFixed(2)),
+        reteIvaVenta: parseFloat((ivaVenta * (Number(item.porcentajeReteIva ?? 0) / 100)).toFixed(2)),
+        reteRentaVenta: parseFloat((baseIvaVenta * (Number(item.porcentajeReteRenta ?? 0) / 100)).toFixed(2)),
+        baseReteRenta: baseIvaVenta,
+        reteIcaVenta: parseFloat(((baseIvaVenta * (Number(item.porcentajeReteIca ?? 0) / 100)) / 1000).toFixed(2)),
+    };
+};
+
 const buildVentaTercero = (values: Partial<IVentaTercero> = {}): IVentaTercero => ({
     ...emptyVentaTercero,
     ...values,
 });
+
+const mapDocumentoSoporteToVentaView = (documento: IDocumentoSoporte): DocumentoSoporteForm => {
+    const tercero = documento.terceroDsa?.[0];
+
+    return {
+        idVenta: documento.idDsa,
+        idTipoDocumento: documento.idTipoDocumentoDsa,
+        idTipoDocumentoExterno: documento.idTipoDocumentoExterno,
+        codigoDocumento: '',
+        nombreDocumento: null,
+        idMetodoDian: null,
+        idFormaPago: documento.idFormaPagoDsa ?? null,
+        numeroVenta: documento.numeroDsa,
+        prefijoVenta: documento.prefijoDsa,
+        idTerceroVenta: documento.idTerceroDsa,
+        fechaVenta: documento.fechaDsa,
+        plazoDias: documento.plazoDiasDsa,
+        fechaVencimiento: documento.fechaVencimientoDsa,
+        esBorrador: false,
+        idPuntoVenta: null,
+        idUsuario: documento.idUsuario ?? null,
+        totalRegistros: documento.totalRegistrosDsa ?? 0,
+        cantidadProductos: documento.cantidadProductosDsa ?? 0,
+        totalPrecio: documento.totalPrecioDsa ?? 0,
+        totalDescuento: documento.totalDescuentoDsa ?? 0,
+        totalBaseIva: 0,
+        totalIva: 0,
+        totalVenta: documento.totalDsa ?? 0,
+        totalBaseReteRenta: documento.totalBaseReteRentaDsa ?? 0,
+        totalReteRenta: documento.totalReteRentaDsa ?? 0,
+        totalBaseReteIca: documento.totalBaseReteIcaDsa ?? 0,
+        totalReteIca: documento.totalReteIcaDsa ?? 0,
+        cufe: documento.cufe ?? null,
+        firmaDigital: documento.firmaDigital ?? null,
+        fechaHoraAutorizacion: documento.fechaHoraAutorizacion ?? null,
+        idResolucion: documento.idResolucionDsa ?? null,
+        idResponseDian: documento.idResponseDianDsa ?? null,
+        idTipoOperacionDian: documento.idTipoOperacionDian ?? null,
+        fechaGrabacionVenta: documento.fechaGrabacionDsa ?? null,
+        estadoDian: documento.validadoDian ? 'Validado DIAN' : null,
+        observaciones: documento.observacionesDsa ?? null,
+        ordenReferencia: documento.ordenReferenciaDsa ?? null,
+        fechaOrdenReferencia: documento.fechaOrdenReferenciaDsa ?? null,
+        fechaInicialServicio: documento.fechaInicialServicio ?? null,
+        fechaFinalServicio: documento.fechaFinalServicio ?? null,
+        terceroVenta: tercero ? buildVentaTercero({
+            idTercero: tercero.idTercero,
+            idTipoDocumentoId: tercero.idTipoDocumentoId ?? 0,
+            numeroIdentificacion: tercero.numeroIdentificacion ?? '',
+            primerNombre: tercero.primerNombre ?? '',
+            primerApellido: tercero.primerApellido ?? '',
+            razonSocial: tercero.razonSocial ?? '',
+            emailTercero: tercero.emailTercero ?? null,
+        }) : buildVentaTercero(),
+        detalleVenta: (documento.detalleDsa ?? []).map(item => ({
+            idDetalleVenta: item.idDetalleDsa,
+            idVenta: item.idDsa,
+            registroVenta: item.registroDsa,
+            idProducto: item.idProducto,
+            codigoProducto: item.codigoProducto ?? '',
+            nombreProducto: item.nombreProducto ?? '',
+            cantidadVenta: item.cantidadDsa ?? 0,
+            precioUnitarioVenta: item.precioUnitarioDsa ?? 0,
+            precioTotalVenta: item.precioTotalDsa ?? 0,
+            porcentajeDescuentoVenta: item.porcentajeDescuentoDsa ?? 0,
+            descuentoVenta: item.descuentoDsa ?? 0,
+            totalVenta: item.totalDsa ?? 0,
+            costoUnitarioVenta: item.costoUnitarioDsa ?? 0,
+            costoTotalVenta: item.costoTotalDsa ?? 0,
+            porcentajeReteRenta: item.porcentajeReteRenta ?? 0,
+            baseReteRenta: item.baseReteRenta ?? 0,
+            reteRentaVenta: item.reteRentaDsa ?? 0,
+            porcentajeReteIca: item.porcentajeReteIca ?? 0,
+            baseReteIca: item.baseReteIca ?? 0,
+            reteIcaVenta: item.reteIcaDsa ?? 0,
+            porcentajeImpoConsumo: 0,
+            impoConsumoVenta: 0,
+            baseIvaVenta: 0,
+            porcentajeIvaVenta: 0,
+            ivaVenta: 0,
+            porcentajeReteIva: 0,
+            baseReteIvaVenta: 0,
+            reteIvaVenta: 0,
+            fechaGrabacionDetalleVenta: item.fechaGrabacionDetalleDsa ?? null,
+            idTipoProducto: 0,
+            cantidadNotaCredito: 0,
+            indNotaCredito: false,
+            idTerceroMandato: null,
+            idItemSector: null,
+            indicadorMuestra: false,
+            valorReferenciaUnidad: null,
+            valorReferenciaTotal: null,
+        })),
+        mediosPagoVenta: [],
+    };
+};
 
 const DocumentoSoporteMaster = () => {
     const navigate = useNavigate();
@@ -140,7 +259,7 @@ const DocumentoSoporteMaster = () => {
     const facturaDesdeTerceros = location.state?.from === 'terceros'
         ? location.state.factura as IVenta
         : null;
-    const [factura, setFactura] = useState<IVenta>(facturaDesdeTerceros ?? {
+    const [factura, setFactura] = useState<DocumentoSoporteForm>(facturaDesdeTerceros ?? {
         idVenta: 0,
         idTipoDocumento: 1,
         codigoDocumento: '',
@@ -169,6 +288,7 @@ const DocumentoSoporteMaster = () => {
         detalleVenta: [],
         mediosPagoVenta: []
     });
+    const [documentoSoporteCargado, setDocumentoSoporteCargado] = useState<IDocumentoSoporte | null>(null);
     const [selectedFactura, setSelectedFactura] = useState<IVenta | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('0');
@@ -252,6 +372,15 @@ const DocumentoSoporteMaster = () => {
     const selectedFormaPago = formasPago.find(
         forma => forma.idFormaPago === factura.idFormaPago
     );
+    const tipoDocumentoSeleccionado = tiposDocumento.find(
+        tipo => Number(factura.idTipoDocumentoExterno ?? 0) > 0
+            && Number(tipo.idTipoDocumentoExterno) === Number(factura.idTipoDocumentoExterno)
+    ) ?? tiposDocumento.find(
+        tipo => Number(tipo.idTipoDocumento) === Number(factura.idTipoDocumento)
+    );
+    const facturaValidadaDian = documentoSoporteCargado
+        ? documentoSoporteCargado.validadoDian === true
+        : factura.estadoDian === 'Validado DIAN';
     const esCredito = selectedFormaPago?.nombreFormaPago
         ?.trim()
         .toLowerCase() === 'crédito' || selectedFormaPago?.nombreFormaPago
@@ -361,7 +490,7 @@ const DocumentoSoporteMaster = () => {
         try {
             setTerceroError(null);
             setIsLoadingTerceros(true);
-            const data = await TerceroService.getAll();
+            const data = await TerceroService.getAll(undefined, 2);
             setTerceros(data);
         } catch (error) {
             console.error('Error:', error);
@@ -527,6 +656,39 @@ const DocumentoSoporteMaster = () => {
     }, []);
 
     useEffect(() => {
+        const idDsa = Number(location.state?.idDsa ?? location.state?.documentoSoporteId ?? 0);
+        if (!Number.isInteger(idDsa) || idDsa <= 0) return;
+
+        let cancelled = false;
+        const loadDocumentoSoporte = async () => {
+            try {
+                const data = await DocumentoSoporteService.getById(idDsa);
+                if (!data) {
+                    throw new Error(`No se encontró el documento soporte ${idDsa}`);
+                }
+                if (cancelled) return;
+
+                setDocumentoSoporteCargado(data);
+                setFactura(mapDocumentoSoporteToVentaView(data));
+                setSelectedFactura(null);
+                setFacturaModalData(null);
+            } catch (error) {
+                console.error('Error al cargar el documento soporte seleccionado:', error);
+                if (!cancelled) {
+                    toast.error('No se pudo cargar el documento soporte seleccionado.', {
+                        position: 'top-center',
+                    });
+                }
+            }
+        };
+
+        void loadDocumentoSoporte();
+        return () => {
+            cancelled = true;
+        };
+    }, [location.state]);
+
+    useEffect(() => {
         const selectedTipoDocumento = tiposDocumento.find(
             (tipoDocumento) =>
                 Number(tipoDocumento.idTipoDocumentoExterno) === Number(factura.idTipoDocumentoExterno) &&
@@ -660,6 +822,8 @@ const DocumentoSoporteMaster = () => {
             totalBaseIva: 0,
             totalIva: 0,
             totalVenta: 0,
+            fechaInicialServicio: null,
+            fechaFinalServicio: null,
             terceroVenta: buildVentaTercero({
                 idTercero: terceroDefault?.idTercero ?? 0,
                 idTipoDocumentoId: terceroDefault?.idTipoDocumentoId ?? 0,
@@ -676,6 +840,7 @@ const DocumentoSoporteMaster = () => {
             mediosPagoVenta: [],
         }));
         setSelectedFactura(null);
+        setDocumentoSoporteCargado(null);
         setShowFacturaModal(false);
         setFacturaModalData(null);
         setActivePaymentMethod('');
@@ -796,6 +961,7 @@ const DocumentoSoporteMaster = () => {
 
     const handleSelectVenta = async (documento: IDocumentoLista) => {
         const data = await VentaService.getById(documento.idVenta);
+        setDocumentoSoporteCargado(null);
         setSelectedFactura(data);
         setFactura(prev => ({
             ...prev,
@@ -820,12 +986,17 @@ const DocumentoSoporteMaster = () => {
             totalBaseIva: data?.totalBaseIva ?? 0,
             totalIva: data?.totalIva ?? 0,
             totalVenta: data?.totalVenta ?? 0,
+            fechaInicialServicio: null,
+            fechaFinalServicio: null,
             terceroVenta: data?.terceroVenta ? buildVentaTercero(data.terceroVenta) : buildVentaTercero(),
             detalleVenta: data?.detalleVenta ?? [],
             mediosPagoVenta: data?.mediosPagoVenta ?? [],
 
         }));
         setOpenDialog(false);
+        if (data?.estadoDian === 'Validado DIAN') {
+            setShowPayment(false);
+        }
         setShowFacturaModal(true);
         const dataPrint = await VentaService.printById(documento.idVenta);
         setFacturaModalData(dataPrint);
@@ -834,6 +1005,8 @@ const DocumentoSoporteMaster = () => {
     const DEFAULT_TIPO_DOC_NIT = 7; // idTipoDocumentoId = 7 para NIT (código 31)
 
     const handleSaveVenta = async (indBorrador: boolean) => {
+        if (facturaValidadaDian) return;
+
         const localISODate = getLocalDate();
 
         // 1. Normalizar cada ítem del detalle
@@ -975,31 +1148,27 @@ const DocumentoSoporteMaster = () => {
     const addToCart = (product: IProducto) => {
         setFactura(prev => {
             const detalleVentaActual = prev.detalleVenta ?? [];
-            const existingItem = detalleVentaActual.find(item => item.idProducto === Number(product.idProducto ?? 0));
+            const existingItemIndex = detalleVentaActual.findIndex(item =>
+                (Number(product.idProducto ?? 0) > 0 && item.idProducto === Number(product.idProducto))
+                || (Boolean(product.codigoProducto) && item.codigoProducto === product.codigoProducto)
+            );
 
-            if (product.idTipoProducto === 2) {
-                const nuevoDetalle = buildVentaDetalle(product, 1, detalleVentaActual.length + 1);
+            if (existingItemIndex !== -1) {
                 return {
                     ...prev,
-                    detalleVenta: [...detalleVentaActual, nuevoDetalle],
-                };
-            }
-
-            if (existingItem) {
-                return {
-                    ...prev,
-                    detalleVenta: detalleVentaActual.map(item =>
-                        item.idProducto === Number(product.idProducto ?? 0)
-                            ? {
-                                ...item,
-                                cantidadVenta: Number(item.cantidadVenta ?? 0) + 1,
-                            }
+                    detalleVenta: detalleVentaActual.map((item, index) =>
+                        index === existingItemIndex
+                            ? recalculateVentaDetalle(item, Number(item.cantidadVenta ?? 0) + 1)
                             : item
                     ),
                 };
             }
 
-            const nuevoDetalle = buildVentaDetalle(product, 1, detalleVentaActual.length + 1);
+            const siguienteRegistro = detalleVentaActual.reduce(
+                (maxRegistro, item) => Math.max(maxRegistro, Number(item.registroVenta) || 0),
+                0
+            ) + 1;
+            const nuevoDetalle = buildVentaDetalle(product, 1, siguienteRegistro);
             return {
                 ...prev,
                 detalleVenta: [...detalleVentaActual, nuevoDetalle],
@@ -1007,38 +1176,22 @@ const DocumentoSoporteMaster = () => {
         });
     };
 
-    const updateQuantity = (id: number, change: number) => {
+    const updateQuantity = (registroVenta: number, change: number) => {
         setFactura(prev => ({
             ...prev,
             detalleVenta: (prev.detalleVenta ?? []).map(item => {
-                if (item.idProducto === id) {
-                    const newQuantity = Number(item.cantidadVenta ?? 0) + change;
-                    const baseIvaVentaCalculada = parseFloat((newQuantity * Number(item.precioUnitarioVenta ?? 0) - (Number(item.porcentajeDescuentoVenta ?? 0) / 100)).toFixed(2));
-                    const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((Number(item.porcentajeIvaVenta ?? 0)) / 100)).toFixed(2));
-                    return {
-                        ...item,
-                        cantidadVenta: newQuantity,
-                        baseIvaVenta: baseIvaVentaCalculada,
-                        ivaVenta: ivaVentaCalculada,
-                        descuentoVenta: parseFloat(
-                            ((Number(item.precioUnitarioVenta ?? 0) * newQuantity) * ((Number(item.porcentajeDescuentoVenta ?? 0)) / 100)).toFixed(2)
-                        ),
-                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((Number(item.porcentajeReteIva ?? 0)) / 100)).toFixed(2)),
-                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((Number(item.porcentajeReteRenta ?? 0)) / 100)).toFixed(2)),
-                        baseReteRenta: baseIvaVentaCalculada,
-                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((Number(item.porcentajeReteIca ?? 0)) / 100)) / 1000).toFixed(2)),
-                    };
-                }
-                return item;
+                return item.registroVenta === registroVenta
+                    ? recalculateVentaDetalle(item, Number(item.cantidadVenta ?? 0) + change)
+                    : item;
             })
         }));
 
     };
 
-    const removeFromCart = (id: number) => {
+    const removeFromCart = (registroVenta: number) => {
         setFactura(prev => ({
             ...prev,
-            detalleVenta: (prev.detalleVenta ?? []).filter(item => item.idProducto !== id)
+            detalleVenta: (prev.detalleVenta ?? []).filter(item => item.registroVenta !== registroVenta)
         }));
     };
 
@@ -1063,15 +1216,20 @@ const DocumentoSoporteMaster = () => {
     // Cálculos
     const [montoIngresado, setMontoIngresado] = useState<number>(0);
     const [cambioEfectivo, setCambioEfectivo] = useState<number>(0);
-    const subtotal = factura.detalleVenta?.reduce((sum, item) => sum + (item.precioUnitarioVenta ?? 0) * (item.cantidadVenta ?? 0), 0);
+    const subtotal = factura.detalleVenta?.reduce((sum, item) => sum + ((item.precioUnitarioVenta ?? 0) * (item.cantidadVenta ?? 0)), 0);
     const discount = factura.detalleVenta?.reduce((descuento, item) => descuento + (item.descuentoVenta ?? 0), 0);
-    const tax = factura.detalleVenta?.reduce((iva, item) => iva + (item.ivaVenta ?? 0), 0);
-    const totalReteIva = factura.detalleVenta?.reduce((reteIva, item) => reteIva + (item.reteIvaVenta || 0), 0);
+
+    // Eliminamos el IVA y ReteIVA de los cálculos
+    const tax = 0;
+    const totalReteIva = 0;
+
     const totalReteRenta = factura.detalleVenta?.reduce((reteRenta, item) => reteRenta + (item.reteRentaVenta || 0), 0);
     const totalReteIca = factura.detalleVenta?.reduce((reteIca, item) => reteIca + (item.reteIcaVenta || 0), 0);
-    const total = (subtotal || 0) - (discount || 0) + (tax || 0) - (totalReteIva || 0) - (totalReteRenta || 0) - (totalReteIca || 0);
+
+    // Total final: Subtotal - Descuento - Retefuente - ReteICA
+    const total = (subtotal || 0) - (discount || 0) - (totalReteRenta || 0) - (totalReteIca || 0);
     const totalPagado = esCredito
-        ? total
+        ? 0
         : factura.mediosPagoVenta?.reduce((acc, curr) => acc + (curr.valorMedioPago || 0), 0) || 0;
     const saldoPendiente = Math.max(0, total - totalPagado);
     const esEfectivo = activePaymentMethod === '1';
@@ -1081,6 +1239,17 @@ const DocumentoSoporteMaster = () => {
     const cambioCalculado = efectivoAgregado ? cambioEfectivo : 0;
     const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + (item.cantidadVenta ?? 0), 0);
     const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
+    const handlePaymentModalChange = (open: boolean) => {
+        if (open && facturaValidadaDian) return;
+        setShowPayment(open);
+        if (!open) return;
+
+        const idMedioPago = tipoDocumentoSeleccionado?.idMedioPago;
+        setActivePaymentMethod(idMedioPago != null ? String(idMedioPago) : '');
+        if (factura.idFormaPago === 1) {
+            setMontoIngresado(total);
+        }
+    };
 
     return (
         <div className="h-screen bg-background flex flex-col overflow-hidden">
@@ -1101,10 +1270,15 @@ const DocumentoSoporteMaster = () => {
                             <span className="font-normal opacity-90 text-xs uppercase tracking-wider">Total:</span>
                             <span className="font-bold text-base">${formatCurrency(total)}</span>
                         </Badge>
+                        <Badge variant="outline" className="px-2.5 py-1 text-xs font-medium">
+                            Artículos: {totalItems ?? 0}
+                        </Badge>
 
-                        {selectedFactura && (
+                        {(selectedFactura || documentoSoporteCargado) && (
                             <Badge variant="outline" className="px-2.5 py-0.5 text-xs font-medium">
-                                {factura.estadoDian?.trim() || 'Pendiente DIAN'}
+                                {documentoSoporteCargado
+                                    ? facturaValidadaDian ? 'Validado DIAN' : 'Pendiente DIAN'
+                                    : factura.estadoDian?.trim() || 'Pendiente DIAN'}
                             </Badge>
                         )}
 
@@ -1513,6 +1687,32 @@ const DocumentoSoporteMaster = () => {
                                         })}
                                     />
                                 </div>
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-sm font-medium whitespace-nowrap">Fecha Inicial del Servicio:</Label>
+                                    <Input
+                                        type="date"
+                                        placeholder="Fecha Inicial del Servicio"
+                                        className="rounded border px-2 py-2 text-base bg-background flex-1"
+                                        value={factura.fechaInicialServicio || ''}
+                                        onChange={(e) => setFactura({
+                                            ...factura,
+                                            fechaInicialServicio: e.target.value
+                                        })}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-sm font-medium whitespace-nowrap">Fecha Final del Servicio:</Label>
+                                    <Input
+                                        type="date"
+                                        placeholder="Fecha Final del Servicio"
+                                        className="rounded border px-2 py-2 text-base bg-background flex-1"
+                                        value={factura.fechaFinalServicio || ''}
+                                        onChange={(e) => setFactura({
+                                            ...factura,
+                                            fechaFinalServicio: e.target.value
+                                        })}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1529,7 +1729,7 @@ const DocumentoSoporteMaster = () => {
                         ) : (
                             <div className="space-y-1.5">
                                 {(factura.detalleVenta ?? []).map(item => (
-                                    <Card key={item.idProducto} className="p-1">
+                                    <Card key={item.registroVenta} className="p-1">
                                         <div className="flex items-center justify-between">
                                             {/* Información del producto */}
                                             <div className="flex-1 min-w-0">
@@ -1603,8 +1803,9 @@ const DocumentoSoporteMaster = () => {
 
                                             {/* Contenedor para campos alineados */}
                                             <div className="flex items-end gap-2">
-                                                {/* Campos de descuento e IVA */}
+                                                {/* Campos de Descuento, Retefuente y Reteica */}
                                                 <div className="flex gap-2">
+                                                    {/* % Descuento */}
                                                     <div className="flex flex-col">
                                                         <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">% Descuento</span>
                                                         <input
@@ -1612,21 +1813,21 @@ const DocumentoSoporteMaster = () => {
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.porcentajeDescuentoVenta || ''}
                                                             onChange={(e) => {
-                                                                const baseIvaVentaCalculada = parseFloat(((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0) - (parseFloat(e.target.value) || 0) / 100).toFixed(2));
-                                                                const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
-                                                                const valorDescuento = parseFloat((((item.precioUnitarioVenta ?? 0) * (item.cantidadVenta ?? 0)) * ((parseFloat(e.target.value) || 0) / 100)).toFixed(2));
+                                                                const pctDesc = parseFloat(e.target.value) || 0;
+                                                                const baseCalculada = parseFloat(((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0) - pctDesc / 100).toFixed(2));
+                                                                const valorDescuento = parseFloat((((item.precioUnitarioVenta ?? 0) * (item.cantidadVenta ?? 0)) * (pctDesc / 100)).toFixed(2));
+
                                                                 setFactura(prev => ({
                                                                     ...prev,
                                                                     detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
                                                                                 ...detalleItem,
-                                                                                porcentajeDescuentoVenta: parseFloat(e.target.value) || 0,
+                                                                                porcentajeDescuentoVenta: pctDesc,
                                                                                 descuentoVenta: valorDescuento,
-                                                                                reteIvaVenta: parseFloat((ivaVentaCalculada * ((item.porcentajeReteIva || 0) / 100)).toFixed(2)),
-                                                                                reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
-                                                                                baseReteRenta: baseIvaVentaCalculada,
-                                                                                reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
+                                                                                reteRentaVenta: parseFloat((baseCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                                                                                baseReteRenta: baseCalculada,
+                                                                                reteIcaVenta: parseFloat(((baseCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
                                                                             }
                                                                             : detalleItem
                                                                     )
@@ -1637,6 +1838,8 @@ const DocumentoSoporteMaster = () => {
                                                             placeholder="0"
                                                         />
                                                     </div>
+
+                                                    {/* Valor Descuento */}
                                                     <div className="flex flex-col">
                                                         <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">Valor Descuento</span>
                                                         <input
@@ -1644,19 +1847,19 @@ const DocumentoSoporteMaster = () => {
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center"
                                                             value={item.descuentoVenta || ''}
                                                             onChange={(e) => {
-                                                                const baseIvaVentaCalculada = parseFloat(((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0) - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
-                                                                const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
+                                                                const valDesc = parseFloat(e.target.value) || 0;
+                                                                const baseCalculada = parseFloat(((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0) - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
+
                                                                 setFactura(prev => ({
                                                                     ...prev,
                                                                     detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
                                                                                 ...detalleItem,
-                                                                                descuentoVenta: parseFloat(e.target.value) || 0,
-                                                                                reteIvaVenta: parseFloat((ivaVentaCalculada * ((item.porcentajeReteIva || 0) / 100)).toFixed(2)),
-                                                                                reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
-                                                                                baseReteRenta: baseIvaVentaCalculada,
-                                                                                reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
+                                                                                descuentoVenta: valDesc,
+                                                                                reteRentaVenta: parseFloat((baseCalculada * ((item.porcentajeReteRenta || 0) / 100)).toFixed(2)),
+                                                                                baseReteRenta: baseCalculada,
+                                                                                reteIcaVenta: parseFloat(((baseCalculada * ((item.porcentajeReteIca || 0) / 100)) / 1000).toFixed(2)),
                                                                             }
                                                                             : detalleItem
                                                                     )
@@ -1665,20 +1868,28 @@ const DocumentoSoporteMaster = () => {
                                                             placeholder="0"
                                                         />
                                                     </div>
+
+                                                    {/* % RETEFUENTE */}
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">% IVA</span>
+                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">% Retefuente</span>
                                                         <input
                                                             type="number"
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.porcentajeIvaVenta || ''}
+                                                            value={item.porcentajeReteRenta || ''}
                                                             onChange={(e) => {
+                                                                const pctRete = parseFloat(e.target.value) || 0;
+                                                                const baseCalculada = ((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0)) - (item.descuentoVenta ?? 0);
+                                                                const valorRetefuente = parseFloat((baseCalculada * (pctRete / 100)).toFixed(2));
+
                                                                 setFactura(prev => ({
                                                                     ...prev,
                                                                     detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
                                                                             ? {
-                                                                                ...detalleItem, porcentajeIvaVenta: parseFloat(e.target.value) || 0,
-                                                                                ivaVenta: (Number(detalleItem.precioUnitarioVenta ?? 0) * Number(detalleItem.cantidadVenta ?? 0)) * ((parseFloat(e.target.value) || 0) / 100)
+                                                                                ...detalleItem,
+                                                                                porcentajeReteRenta: pctRete,
+                                                                                reteRentaVenta: valorRetefuente,
+                                                                                baseReteRenta: baseCalculada
                                                                             }
                                                                             : detalleItem
                                                                     )
@@ -1687,27 +1898,81 @@ const DocumentoSoporteMaster = () => {
                                                             min={0}
                                                             max={100}
                                                             placeholder="0"
-                                                            disabled
                                                         />
                                                     </div>
+
+                                                    {/* VALOR RETEFUENTE */}
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">Valor IVA</span>
+                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">Valor Retefuente</span>
                                                         <input
                                                             type="number"
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.ivaVenta || ''}
+                                                            value={item.reteRentaVenta || ''}
                                                             onChange={(e) => {
+                                                                const valRete = parseFloat(e.target.value) || 0;
                                                                 setFactura(prev => ({
                                                                     ...prev,
                                                                     detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.idProducto === item.idProducto
-                                                                            ? { ...detalleItem, ivaVenta: parseFloat(e.target.value) || 0 }
+                                                                            ? { ...detalleItem, reteRentaVenta: valRete }
                                                                             : detalleItem
                                                                     )
                                                                 }));
                                                             }}
                                                             placeholder="0"
-                                                            disabled
+                                                        />
+                                                    </div>
+
+                                                    {/* % RETEICA */}
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">% ReteICA</span>
+                                                        <input
+                                                            type="number"
+                                                            className="w-20 h-8 border rounded px-2 text-sm text-center"
+                                                            value={item.porcentajeReteIca || ''}
+                                                            onChange={(e) => {
+                                                                const pctIca = parseFloat(e.target.value) || 0;
+                                                                const baseCalculada = ((item.cantidadVenta ?? 0) * (item.precioUnitarioVenta ?? 0)) - (item.descuentoVenta ?? 0);
+                                                                // Cálculo estándar ReteICA (por mil): (base * pct) / 1000
+                                                                const valorReteIca = parseFloat(((baseCalculada * pctIca) / 1000).toFixed(2));
+
+                                                                setFactura(prev => ({
+                                                                    ...prev,
+                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
+                                                                        detalleItem.idProducto === item.idProducto
+                                                                            ? {
+                                                                                ...detalleItem,
+                                                                                porcentajeReteIca: pctIca,
+                                                                                reteIcaVenta: valorReteIca
+                                                                            }
+                                                                            : detalleItem
+                                                                    )
+                                                                }));
+                                                            }}
+                                                            min={0}
+                                                            placeholder="0"
+                                                        />
+                                                    </div>
+
+                                                    {/* VALOR RETEICA */}
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">Valor ReteICA</span>
+                                                        <input
+                                                            type="number"
+                                                            className="w-24 h-8 border rounded px-2 text-sm text-center"
+                                                            value={item.reteIcaVenta || ''}
+                                                            onChange={(e) => {
+                                                                const valIca = parseFloat(e.target.value) || 0;
+                                                                setFactura(prev => ({
+                                                                    ...prev,
+                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
+                                                                        detalleItem.idProducto === item.idProducto
+                                                                            ? { ...detalleItem, reteIcaVenta: valIca }
+                                                                            : detalleItem
+                                                                    )
+                                                                }));
+                                                            }}
+                                                            placeholder="0"
                                                         />
                                                     </div>
                                                 </div>
@@ -1723,36 +1988,25 @@ const DocumentoSoporteMaster = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => updateQuantity(item.idProducto ?? 0, -1)}
+                                                                onClick={() => updateQuantity(item.registroVenta, -1)}
                                                                 className="h-8 w-8 rounded-r-none"
                                                             >
                                                                 <Minus className="h-4 w-4" />
                                                             </Button>
                                                             <Input
                                                                 type="number"
+                                                                min={0}
                                                                 value={item.cantidadVenta ?? ''}
                                                                 onFocus={(e) => e.target.select()}
                                                                 onChange={(e) => {
                                                                     const value = e.target.value;
-                                                                    const newQuantity = value === '' ? 0 : parseFloat(value);
-                                                                    const baseIvaVentaCalculada = parseFloat((newQuantity * (item.precioUnitarioVenta ?? 0) - (item.porcentajeDescuentoVenta || 0) / 100).toFixed(2));
-                                                                    const ivaVentaCalculada = parseFloat((baseIvaVentaCalculada * ((item.porcentajeIvaVenta || 0) / 100)).toFixed(2));
-                                                                    if (newQuantity >= 0) {
+                                                                    const newQuantity = value === '' ? 0 : Number(value);
+                                                                    if (Number.isFinite(newQuantity)) {
                                                                         setFactura(prev => ({
                                                                             ...prev,
                                                                             detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
-                                                                                detalleItem.idProducto === item.idProducto
-                                                                                    ? {
-                                                                                        ...detalleItem,
-                                                                                        cantidadVenta: newQuantity,
-                                                                                        baseIvaVenta: baseIvaVentaCalculada,
-                                                                                        ivaVenta: ivaVentaCalculada,
-                                                                                        descuentoVenta: parseFloat(((Number(item.precioUnitarioVenta ?? 0) * newQuantity) * ((Number(item.porcentajeDescuentoVenta ?? 0)) / 100)).toFixed(2)),
-                                                                                        reteIvaVenta: parseFloat((ivaVentaCalculada * ((Number(item.porcentajeReteIva ?? 0)) / 100)).toFixed(2)),
-                                                                                        reteRentaVenta: parseFloat((baseIvaVentaCalculada * ((Number(item.porcentajeReteRenta ?? 0)) / 100)).toFixed(2)),
-                                                                                        baseReteRenta: baseIvaVentaCalculada,
-                                                                                        reteIcaVenta: parseFloat(((baseIvaVentaCalculada * ((Number(item.porcentajeReteIca ?? 0)) / 100)) / 1000).toFixed(2)),
-                                                                                    }
+                                                                                detalleItem.registroVenta === item.registroVenta
+                                                                                    ? recalculateVentaDetalle(detalleItem, newQuantity)
                                                                                     : detalleItem
                                                                             )
                                                                         }));
@@ -1763,7 +2017,7 @@ const DocumentoSoporteMaster = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => updateQuantity(item.idProducto ?? 0, 1)}
+                                                                onClick={() => updateQuantity(item.registroVenta, 1)}
                                                                 className="h-8 w-8 rounded-l-none"
                                                             >
                                                                 <Plus className="h-4 w-4" />
@@ -1781,7 +2035,7 @@ const DocumentoSoporteMaster = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            onClick={() => removeFromCart(item.idProducto ?? 0)}
+                                                            onClick={() => removeFromCart(item.registroVenta)}
                                                             className="text-destructive hover:text-destructive h-8 w-8"
                                                         >
                                                             <Trash className="h-4 w-4" />
@@ -1804,7 +2058,7 @@ const DocumentoSoporteMaster = () => {
                                 <div className="p-2 space-y-2">
                                     {/* Resumen en dos columnas */}
                                     <div className="grid grid-cols-2 gap-4">
-                                        {/* Primera columna - Subtotal, Descuento, IVA */}
+                                        {/* Primera columna - Subtotal y Descuento */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Subtotal</span>
@@ -1814,21 +2068,11 @@ const DocumentoSoporteMaster = () => {
                                                 <span className="text-muted-foreground">Descuento</span>
                                                 <span>${formatCurrency(discount)}</span>
                                             </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">IVA</span>
-                                                <span>${formatCurrency(tax)}</span>
-                                            </div>
                                         </div>
-
-                                        {/* Segunda columna - ReteFuente, ReteIVA, ReteICA */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">ReteFuente</span>
                                                 <span>${formatCurrency(totalReteRenta)}</span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">ReteIVA</span>
-                                                <span>${formatCurrency(totalReteIva)}</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">ReteICA</span>
@@ -1855,35 +2099,49 @@ const DocumentoSoporteMaster = () => {
                                         Guardar Borrador
                                     </Button>
                                     */}
-                                    {factura?.idVenta ? (
+                                    {facturaValidadaDian && !documentoSoporteCargado ? (
                                         <FacturaModal
                                             key={factura.idVenta}
                                             facturaData={facturaModalData ?? undefined}
-                                            triggerText="Imprimir"
-                                            triggerVariant="outline"
+                                            triggerText="Ver Factura"
+                                            triggerVariant="default"
+                                            triggerClassName="flex-1 h-full text-sm font-bold gap-2"
                                             idVenta={factura.idVenta}
                                             idMetodoDian={factura?.idMetodoDian || 0}
                                         />
-                                    ) : (
+                                    ) : documentoSoporteCargado ? (
                                         <Button
-                                            variant="outline"
+                                            variant={facturaValidadaDian ? "outline" : "default"}
                                             disabled
                                             className="flex-1 h-full text-sm font-bold"
                                             size="lg"
-                                            title="La factura aún no está disponible para imprimir"
+                                            title={facturaValidadaDian
+                                                ? "La impresión de documentos soporte requiere el endpoint PDF correspondiente"
+                                                : "El documento soporte cargado no se puede procesar desde el flujo de ventas"}
                                         >
-                                            <Printer className="h-4 w-4 mr-2" />
-                                            Imprimir
+                                            {facturaValidadaDian ? (
+                                                <>
+                                                    <Printer className="h-4 w-4 mr-2" />
+                                                    Imprimir Documento Soporte
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Check className="h-4 w-4 mr-2" />
+                                                    Procesar Documento Soporte
+                                                </>
+                                            )}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={() => handlePaymentModalChange(true)}
+                                            disabled={!(total > 0) || facturaValidadaDian}
+                                            className="flex-1 h-full text-sm font-bold"
+                                            size="lg"
+                                        >
+                                            <Check className="h-4 w-4 mr-2" />
+                                            Procesar Documento Soporte
                                         </Button>
                                     )}
-                                    <Button
-                                        onClick={() => setShowPayment(true)}
-                                        className="flex-1 h-full text-sm font-bold"
-                                        size="lg"
-                                    >
-                                        <Check className="h-4 w-4 mr-2" />
-                                        Procesar Venta
-                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -1982,7 +2240,7 @@ const DocumentoSoporteMaster = () => {
                 </div>
 
                 {/* Modal de Pago */}
-                <Dialog open={showPayment} onOpenChange={setShowPayment}>
+                <Dialog open={showPayment} onOpenChange={handlePaymentModalChange}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader className="text-center">
                             <DialogTitle className="text-xl mb-4">Seleccionar métodos y forma de pago</DialogTitle>
@@ -1992,14 +2250,17 @@ const DocumentoSoporteMaster = () => {
                             <Label className="mb-2 block text-sm font-medium">Forma de pago</Label>
                             <Select
                                 value={factura.idFormaPago?.toString() || ""}
+                                disabled={facturaValidadaDian}
                                 onValueChange={(value) => {
                                     const idForma = parseInt(value);
                                     const formaPago = formasPago.find(
                                         forma => forma.idFormaPago === idForma
                                     );
-                                    const esNuevaFormaCredito = ['crédito', 'credito'].includes(
-                                        formaPago?.nombreFormaPago?.trim().toLowerCase() ?? ''
-                                    );
+                                    const nombreNuevaFormaPago = formaPago?.nombreFormaPago?.trim().toLowerCase() ?? '';
+                                    const esNuevaFormaCredito = ['crédito', 'credito'].includes(nombreNuevaFormaPago);
+                                    const resetearPagos = idForma !== factura.idFormaPago
+                                        && nombreNuevaFormaPago !== 'contado';
+                                    const idMedioPagoPredeterminado = tipoDocumentoSeleccionado?.idMedioPago;
                                     const fechaDocumento = factura.fechaVenta || getLocalDate();
                                     const plazoDias = esNuevaFormaCredito
                                         ? Math.max(0, Number(factura.plazoDias ?? 30))
@@ -2012,13 +2273,15 @@ const DocumentoSoporteMaster = () => {
                                         fechaVencimiento: esNuevaFormaCredito
                                             ? addDaysToDate(fechaDocumento, plazoDias)
                                             : fechaDocumento,
-                                        mediosPagoVenta: esNuevaFormaCredito
-                                            ? []
-                                            : prev.mediosPagoVenta
+                                        mediosPagoVenta: resetearPagos ? [] : prev.mediosPagoVenta
                                     }));
-                                    setActivePaymentMethod('');
-                                    setMontoIngresado(esNuevaFormaCredito ? total : 0);
-                                    setCambioEfectivo(0);
+                                    if (resetearPagos || esNuevaFormaCredito) {
+                                        setCambioEfectivo(0);
+                                    }
+                                    setActivePaymentMethod(idMedioPagoPredeterminado != null
+                                        ? String(idMedioPagoPredeterminado)
+                                        : '');
+                                    setMontoIngresado(idForma === 1 ? total : 0);
                                 }}
                             >
                                 <SelectTrigger className="w-full">
@@ -2046,6 +2309,7 @@ const DocumentoSoporteMaster = () => {
                                         min={0}
                                         placeholder="0"
                                         value={factura.plazoDias ? String(factura.plazoDias) : ''}
+                                        disabled={facturaValidadaDian}
                                         onChange={(e) => {
                                             const val = e.target.value;
 
@@ -2090,7 +2354,11 @@ const DocumentoSoporteMaster = () => {
                                 <div className="grid grid-cols-12 gap-2 items-end">
                                     <div className="col-span-6">
                                         <Label className="mb-2 block text-xs font-medium">Método de pago</Label>
-                                        <Select value={activePaymentMethod} onValueChange={setActivePaymentMethod}>
+                                        <Select
+                                            value={activePaymentMethod}
+                                            onValueChange={setActivePaymentMethod}
+                                            disabled={facturaValidadaDian}
+                                        >
                                             <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Seleccionar..." />
                                             </SelectTrigger>
@@ -2110,6 +2378,7 @@ const DocumentoSoporteMaster = () => {
                                             type="number"
                                             placeholder="0"
                                             value={montoIngresado || ''}
+                                            disabled={facturaValidadaDian}
                                             onChange={(e) => {
                                                 setMontoIngresado(Number(e.target.value));
                                                 if (!esEfectivo) {
@@ -2122,6 +2391,7 @@ const DocumentoSoporteMaster = () => {
                                     <div className="col-span-2">
                                         <Button
                                             disabled={
+                                                facturaValidadaDian ||
                                                 !activePaymentMethod ||
                                                 montoIngresado <= 0 ||
                                                 saldoPendiente <= 0 ||
@@ -2207,6 +2477,10 @@ const DocumentoSoporteMaster = () => {
                                     <span className="text-xl font-bold">${formatCurrency(total)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm">
+                                    <span className="text-muted-foreground">Artículos</span>
+                                    <span>{totalItems ?? 0}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm">
                                     <span className="text-muted-foreground">Total Recibido</span>
                                     <span className="font-medium text-green-600">${formatCurrency(totalPagado)}</span>
                                 </div>
@@ -2228,7 +2502,7 @@ const DocumentoSoporteMaster = () => {
                         {/* Botones de acción */}
                         <DialogFooter className="flex space-x-2">
                             <Button
-                                disabled={!esCredito && saldoPendiente !== 0} // En crédito no se exige pago inmediato
+                                disabled={facturaValidadaDian || (!esCredito && saldoPendiente !== 0)} // En crédito no se exige pago inmediato
                                 onClick={() => {
                                     setShowPayment(false);
                                     handleSaveVenta(false);
@@ -2239,6 +2513,7 @@ const DocumentoSoporteMaster = () => {
                             </Button>
                             <Button
                                 variant="outline"
+                                disabled={facturaValidadaDian}
                                 onClick={() => setShowPayment(false)}
                             >
                                 Cancelar

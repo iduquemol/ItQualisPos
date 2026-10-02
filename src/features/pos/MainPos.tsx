@@ -415,7 +415,7 @@ const RetailPOS = () => {
         try {
             setTerceroError(null);
             setIsLoadingTerceros(true);
-            const data = await TerceroService.getAll();
+            const data = await TerceroService.getAll(undefined, 1);
             setTerceros(data);
         } catch (error) {
             console.error('Error:', error);
