@@ -1279,7 +1279,10 @@ export default function ItemsMaster() {
                                             <>
                                                 <td className="px-2 py-2">{item.codigoTributo}</td>
                                                 <td className="px-4 py-2">{item.nombreTributo}</td>
-                                                <td className="px-4 py-2">{item.nombreTarifa}</td>
+                                                <td className="px-4 py-2">
+                                                    <div>{item.nombreTarifa}</div>
+                                                    <div className="text-xs text-muted-foreground">Tarifa: {item.tarifa}%</div>
+                                                </td>
                                                 <td className="px-4 py-2 flex gap-2 items-center">
                                                     <button
                                                         className="text-blue-600 font-semibold flex items-center"

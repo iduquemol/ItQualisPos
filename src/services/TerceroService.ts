@@ -4,19 +4,30 @@ import { ITerceroProveedor } from "@/types/ITerceroProveedor";
 import { IConsultaTerceroExterna } from "@/types/IConsultaTerceroExterna";
 
 export const TerceroService = {
-    async getAll(): Promise<ITercero[]> {
+    getAll: async (idTercero?: number, tipoTercero?: number): Promise<ITercero[]> => {
         try {
-            const response = await fetch(
-                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.SUPPLIERS),
-                {
-                    headers: API_CONFIG.OPTIONS.headers,
-                    mode: 'cors',
-                    credentials: 'same-origin'
-                }
-            );
+            const queryParams = new URLSearchParams();
+            if (idTercero !== undefined && idTercero !== null) {
+                queryParams.append('idTercero', idTercero.toString());
+            }
+            if (tipoTercero !== undefined && tipoTercero !== null) {
+                queryParams.append('tipoTercero', tipoTercero.toString());
+            }
+
+            const queryString = queryParams.toString();
+            const baseUrl = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.SUPPLIERS);
+            const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+
+            const response = await fetch(url, {
+                headers: API_CONFIG.OPTIONS.headers,
+                mode: 'cors',
+                credentials: 'same-origin'
+            });
+
             if (!response.ok) {
                 throw new Error('Error al cargar terceros');
             }
+
             const data = await response.json();
             return data;
         } catch (error) {
@@ -84,7 +95,7 @@ export const TerceroService = {
     async delete(id: number): Promise<void> {
         try {
             const response = await fetch(
-                `${API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.SUPPLIERS)}/${id}`,                
+                `${API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.SUPPLIERS)}/${id}`,
                 {
                     method: "DELETE",
                     headers: {
@@ -92,7 +103,7 @@ export const TerceroService = {
                         "Content-Type": "application/json"
                     },
                     mode: 'cors',
-                    credentials: 'same-origin'                    
+                    credentials: 'same-origin'
                 }
             );
             if (!response.ok) {
@@ -104,8 +115,8 @@ export const TerceroService = {
             console.error('Error en TerceroService.delete:', error);
             throw error;
         }
-    },   
-    
+    },
+
     async search(query: string): Promise<ITercero[]> {
         try {
             const response = await fetch(
@@ -178,7 +189,7 @@ export const TerceroService = {
             throw error;
         }
     },
-    
-    
+
+
 
 };
