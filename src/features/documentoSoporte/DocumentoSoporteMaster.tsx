@@ -468,9 +468,7 @@ const DocumentoSoporteMaster = () => {
         try {
             setProductError(null);
             setIsLoadingProducts(true);
-            const data = await ProductoService.getProductosVentaByTercero(
-                numeroIdentificacion || factura.terceroVenta?.numeroIdentificacion || "0"
-            );
+            const data = await ProductoService.getProductosCompra();
 
             // 🔒 Filtramos duplicados por idProducto antes de guardar en el estado
             const uniqueProducts = Array.from(
