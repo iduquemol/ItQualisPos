@@ -33,10 +33,12 @@ export interface IDocumentoSoporte {
   idTipoDocumentoExterno?: number | null;
   fechaInicialServicio?: string | null;
   fechaFinalServicio?: string | null;
+
+  idMetodoDian: number | null;
   
   validadoDian?: boolean | null;
   fechaGrabacionDsa?: string | null;
 
-  terceroDsa?: IDocumentoSoporteTercero[];
+  terceroDsa?: IDocumentoSoporteTercero | null;
   detalleDsa?: IDetalleDocumentoSoporte[];
 }

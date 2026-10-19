@@ -20,4 +20,6 @@ export interface IDetalleDocumentoSoporte {
     reteIcaDsa?: number | null;
     nombreProducto?: string | null;
     fechaGrabacionDetalleDsa?: string | null;
+
+    idTipoProducto?: number;
 }
