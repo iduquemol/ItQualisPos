@@ -36,7 +36,7 @@ export interface IDocumentoSoporte {
 
   idMetodoDian: number | null;
   
-  validadoDian?: boolean | null;
+  estadoDian?: string | null;
   fechaGrabacionDsa?: string | null;
 
   terceroDsa?: IDocumentoSoporteTercero | null;

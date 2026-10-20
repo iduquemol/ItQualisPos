@@ -15,8 +15,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ParametrosVentasService } from "@/services/ParametrosVentaService";
+import { TipoDocumentoService } from "@/services/TipoDocumentoService";
 import { IParametrosVentaDefault } from "@/types/IParametrosVentaDefault";
 import { IParametrosVentas } from "@/types/IParametrosVenta";
+import { ITipoDocumento } from "@/types/ITipoDocumento";
 
 export default function ParametrosVentaMaster() {
   const navigate = useNavigate();
@@ -31,7 +33,7 @@ export default function ParametrosVentaMaster() {
     idListaPrecioDefault: null,
     idTipoRegimenClienteDefault: null,
     diasAceptacionTacita: 3,
-    ambienteEnvioDian: 1, // 1: Habilitación, 2: Producción
+    ambienteEnvioDian: 1, 
     idEnvironment: "",
     pinEnvironment: "",
     nombreFabricante: "",
@@ -44,6 +46,10 @@ export default function ParametrosVentaMaster() {
 
   // Datos para poblar los dropdowns
   const [dataDefaults, setDataDefaults] = useState<IParametrosVentaDefault | null>(null);
+  const [tiposDocumentoVenta, setTiposDocumentoVenta] = useState<ITipoDocumento[]>([]);
+  const [tiposDocumentoNotaCredito, setTiposDocumentoNotaCredito] = useState<ITipoDocumento[]>([]);
+  const [tipoDocumentoVentaSeleccionado, setTipoDocumentoVentaSeleccionado] = useState("");
+  const [tipoDocumentoNotaCreditoSeleccionado, setTipoDocumentoNotaCreditoSeleccionado] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Modales y mensajes
@@ -51,6 +57,12 @@ export default function ParametrosVentaMaster() {
   const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
+
+  const getTipoDocumentoExternoId = (tiposDocumento: ITipoDocumento[], idTipoDocumento?: number | null) => {
+    if (idTipoDocumento == null) return "";
+    return tiposDocumento.find((tipo) => Number(tipo.idTipoDocumento) === Number(idTipoDocumento))
+      ?.idTipoDocumentoExterno.toString() ?? "";
+  };
 
   const fetchParametrosDefaults = async () => {
     try {
@@ -69,6 +81,12 @@ export default function ParametrosVentaMaster() {
           idListaPrecioDefault: (data as any).listaPrecios?.[0]?.idListaPrecio ?? null,
           idTipoRegimenClienteDefault: (data as any).tipoRegimen?.[0]?.idTipoRegimen ?? null,
         }));
+        setTipoDocumentoVentaSeleccionado(
+          getTipoDocumentoExternoId(tiposDocumentoVenta, data.documentoVenta?.[0]?.idTipoDocumento)
+        );
+        setTipoDocumentoNotaCreditoSeleccionado(
+          getTipoDocumentoExternoId(tiposDocumentoNotaCredito, data.documentoNotaCredito?.[0]?.idTipoDocumento)
+        );
       }
     } catch (error) {
       console.error("Error al cargar parámetros por defecto:", error);
@@ -78,17 +96,61 @@ export default function ParametrosVentaMaster() {
     }
   };
 
+  const fetchTiposDocumentoVenta = async () => {
+    try {
+      const data = await TipoDocumentoService.getTiposVenta();
+      setTiposDocumentoVenta(data);
+    } catch (error) {
+      console.error("Error al cargar los tipos de documento de venta:", error);
+      toast.error("Error al cargar los tipos de documento de venta");
+    }
+  };
+
+  const fetchTiposDocumentoNotaCredito = async () => {
+    try {
+      const data = await TipoDocumentoService.getTiposDocumentoNotaCredito();
+      setTiposDocumentoNotaCredito(data);
+    } catch (error) {
+      console.error("Error al cargar los tipos de documento de nota crédito:", error);
+      toast.error("Error al cargar los tipos de documento de nota crédito");
+    }
+  };
+
   useEffect(() => {
     fetchParametrosDefaults();
+    fetchTiposDocumentoVenta();
+    fetchTiposDocumentoNotaCredito();
   }, []);
+
+  useEffect(() => {
+    if (!tipoDocumentoVentaSeleccionado && parametros.idTipoDocumentoDefault != null) {
+      setTipoDocumentoVentaSeleccionado(
+        getTipoDocumentoExternoId(tiposDocumentoVenta, parametros.idTipoDocumentoDefault)
+      );
+    }
+    if (!tipoDocumentoNotaCreditoSeleccionado && parametros.idTipoNotaCreditoDefault != null) {
+      setTipoDocumentoNotaCreditoSeleccionado(
+        getTipoDocumentoExternoId(tiposDocumentoNotaCredito, parametros.idTipoNotaCreditoDefault)
+      );
+    }
+  }, [
+    tiposDocumentoVenta,
+    tiposDocumentoNotaCredito,
+    parametros.idTipoDocumentoDefault,
+    parametros.idTipoNotaCreditoDefault,
+    tipoDocumentoVentaSeleccionado,
+    tipoDocumentoNotaCreditoSeleccionado,
+  ]);
 
   const handleNew = () => {
     if (dataDefaults) {
+      const idTipoDocumentoDefault = dataDefaults.documentoVenta?.[0]?.idTipoDocumento ?? null;
+      const idTipoNotaCreditoDefault = dataDefaults.documentoNotaCredito?.[0]?.idTipoDocumento ?? null;
       setParametros({
         idParametroVenta: 0,
         idTerceroDefault: dataDefaults.terceroVenta?.[0]?.idTercero ?? null,
-        idTipoDocumentoDefault: dataDefaults.documentoVenta?.[0]?.idTipoDocumento ?? null,
-        idTipoNotaCreditoDefault: dataDefaults.documentoNotaCredito?.[0]?.idTipoDocumento ?? null,
+        idTipoDocumentoDefault,
+        idTipoNotaCreditoDefault,
         idTipoCotizacionDefault: dataDefaults.documentoCotizacion?.[0]?.idTipoDocumento ?? null,
         idListaPrecioDefault: (dataDefaults as any).listaPrecios?.[0]?.idListaPrecio ?? null,
         idTipoRegimenClienteDefault: (dataDefaults as any).tipoRegimen?.[0]?.idTipoRegimen ?? null,
@@ -103,6 +165,12 @@ export default function ParametrosVentaMaster() {
         aplicaTopeReteRenta: false,
         aplicaTopeRetelca: false,
       });
+      setTipoDocumentoVentaSeleccionado(
+        getTipoDocumentoExternoId(tiposDocumentoVenta, idTipoDocumentoDefault)
+      );
+      setTipoDocumentoNotaCreditoSeleccionado(
+        getTipoDocumentoExternoId(tiposDocumentoNotaCredito, idTipoNotaCreditoDefault)
+      );
     }
     setFormError(null);
   };
@@ -155,9 +223,9 @@ export default function ParametrosVentaMaster() {
       {/* Header con Acciones */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Parámetros de Ventas</h2>
+          <h2 className="text-2xl font-bold">Parámetros del Sistema</h2>
           <p className="text-muted-foreground text-sm">
-            Configuración general, fiscal y DIAN por defecto para ventas
+            Configuración general, fiscal y DIAN
           </p>
         </div>
         <div className="flex gap-2">
@@ -258,18 +326,23 @@ export default function ParametrosVentaMaster() {
                   </label>
                   <select
                     className="w-full p-2 text-sm border rounded-md bg-background focus:ring-2 focus:ring-primary"
-                    value={parametros.idTipoDocumentoDefault ?? ""}
-                    onChange={(e) =>
-                      setParametros({
-                        ...parametros,
-                        idTipoDocumentoDefault: e.target.value ? Number(e.target.value) : null,
-                      })
-                    }
+                    value={tipoDocumentoVentaSeleccionado}
+                    onChange={(e) => {
+                      const selectedValue = e.target.value;
+                      const selectedTipoDocumento = tiposDocumentoVenta.find(
+                        (tipo) => String(tipo.idTipoDocumentoExterno) === selectedValue
+                      );
+                      setTipoDocumentoVentaSeleccionado(selectedValue);
+                      setParametros((previous) => ({
+                        ...previous,
+                        idTipoDocumentoDefault: selectedTipoDocumento?.idTipoDocumento ?? null,
+                      }));
+                    }}
                   >
                     <option value="">Seleccione un documento...</option>
-                    {dataDefaults?.documentoVenta?.map((d) => (
-                      <option key={d.idTipoDocumento} value={d.idTipoDocumento}>
-                        {d.nombreDocumento} ({d.codigoDocumento})
+                    {tiposDocumentoVenta.map((tipo) => (
+                      <option key={tipo.idTipoDocumentoExterno} value={tipo.idTipoDocumentoExterno}>
+                        {`${tipo.nombreTipoDocumentoExterno || ""} - ${tipo.codigoTipoDocumentoExterno || ""}`}
                       </option>
                     ))}
                   </select>
@@ -282,18 +355,23 @@ export default function ParametrosVentaMaster() {
                   </label>
                   <select
                     className="w-full p-2 text-sm border rounded-md bg-background focus:ring-2 focus:ring-primary"
-                    value={parametros.idTipoNotaCreditoDefault ?? ""}
-                    onChange={(e) =>
-                      setParametros({
-                        ...parametros,
-                        idTipoNotaCreditoDefault: e.target.value ? Number(e.target.value) : null,
-                      })
-                    }
+                    value={tipoDocumentoNotaCreditoSeleccionado}
+                    onChange={(e) => {
+                      const selectedValue = e.target.value;
+                      const selectedTipoDocumento = tiposDocumentoNotaCredito.find(
+                        (tipo) => String(tipo.idTipoDocumentoExterno) === selectedValue
+                      );
+                      setTipoDocumentoNotaCreditoSeleccionado(selectedValue);
+                      setParametros((previous) => ({
+                        ...previous,
+                        idTipoNotaCreditoDefault: selectedTipoDocumento?.idTipoDocumento ?? null,
+                      }));
+                    }}
                   >
                     <option value="">Seleccione nota crédito...</option>
-                    {dataDefaults?.documentoNotaCredito?.map((d) => (
-                      <option key={d.idTipoDocumento} value={d.idTipoDocumento}>
-                        {d.nombreDocumento} ({d.codigoDocumento})
+                    {tiposDocumentoNotaCredito.map((tipo) => (
+                      <option key={tipo.idTipoDocumentoExterno} value={tipo.idTipoDocumentoExterno}>
+                        {`${tipo.nombreTipoDocumentoExterno || ""} - ${tipo.codigoTipoDocumentoExterno || ""}`}
                       </option>
                     ))}
                   </select>
