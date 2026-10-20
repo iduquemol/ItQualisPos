@@ -851,7 +851,7 @@ const MainCreditNote = () => {
                                     <option value="">-- Seleccione --</option>
                                     {tiposDocumento.map((td) => (
                                         <option key={td.idTipoDocumentoExterno} value={td.idTipoDocumentoExterno}>
-                                            {td.nombreDocumento}
+                                            {`${td.nombreTipoDocumentoExterno || ""} - ${td.codigoTipoDocumentoExterno || ""}`}
                                         </option>
                                     ))}
                                 </select>

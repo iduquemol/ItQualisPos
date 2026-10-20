@@ -52,6 +52,9 @@ const getLocalDate = (date = new Date()): string => {
     return new Date(date.getTime() - offsetMs).toISOString().split('T')[0];
 };
 
+const normalizeDateInputValue = (value?: string | null): string | null =>
+    value ? value.split('T')[0] : null;
+
 const addDaysToDate = (date: string, days: number): string => {
     const result = new Date(`${date}T00:00:00`);
     result.setDate(result.getDate() + days);
@@ -224,7 +227,7 @@ const DocumentoSoporteMaster = () => {
         fechaInicialServicio: null,
         idMetodoDian: 5,
         fechaFinalServicio: null,
-        validadoDian: false,
+        estadoDian: null,
         fechaGrabacionDsa: null,
         terceroDsa: buildVentaTercero(),
         detalleDsa: [],
@@ -326,7 +329,7 @@ const DocumentoSoporteMaster = () => {
             : undefined
     );
 
-    const documentoSoporteValidadoDian = Boolean(documentoSoporte.validadoDian);
+    const documentoSoporteValidadoDian = documentoSoporte.estadoDian === 'Validado DIAN';
 
     const primerTercero = documentoSoporte.terceroDsa;
     const numeroIdentificacionTercero = primerTercero?.numeroIdentificacion?.trim() ?? '';
@@ -749,7 +752,7 @@ const DocumentoSoporteMaster = () => {
             fechaInicialServicio: null,
             fechaFinalServicio: null,
             idMetodoDian: null,
-            validadoDian: false,
+            estadoDian: null,
             fechaGrabacionDsa: null,
             terceroDsa: buildVentaTercero({
                 idTercero: terceroDefault?.idTercero ?? 0,
@@ -898,7 +901,7 @@ const DocumentoSoporteMaster = () => {
             idUsuario: data.idUsuario ?? null,
             idFormaPagoDsa: data.idFormaPagoDsa ?? 1,
             ordenReferenciaDsa: data.ordenReferenciaDsa ?? null,
-            fechaOrdenReferenciaDsa: data.fechaOrdenReferenciaDsa ?? null,
+            fechaOrdenReferenciaDsa: normalizeDateInputValue(data.fechaOrdenReferenciaDsa),
             observacionesDsa: data.observacionesDsa ?? null,
             totalRegistrosDsa: data.totalRegistrosDsa ?? 0,
             cantidadProductosDsa: data.cantidadProductosDsa ?? 0,
@@ -916,16 +919,16 @@ const DocumentoSoporteMaster = () => {
             totalReteIcaDsa: data.totalReteIcaDsa ?? 0,
             idTipoOperacionDian: data.idTipoOperacionDian ?? null,
             idTipoDocumentoExterno: data.idTipoDocumentoExterno ?? null,
-            fechaInicialServicio: data.fechaInicialServicio ?? null,
-            fechaFinalServicio: data.fechaFinalServicio ?? null,
+            fechaInicialServicio: normalizeDateInputValue(data.fechaInicialServicio),
+            fechaFinalServicio: normalizeDateInputValue(data.fechaFinalServicio),
             idMetodoDian: data.idMetodoDian ?? 2,
-            validadoDian: data.validadoDian ?? false,
+            estadoDian: data.estadoDian ?? null,
             fechaGrabacionDsa: data.fechaGrabacionDsa ?? null,
             terceroDsa: data.terceroDsa ? buildVentaTercero(data.terceroDsa) : buildVentaTercero(),
             detalleDsa: data.detalleDsa ?? [],
         }));
 
-        if (data.validadoDian) {
+        if (data.estadoDian === 'Validado DIAN') {
             setShowPayment(false);
         }
 
@@ -1077,7 +1080,7 @@ const DocumentoSoporteMaster = () => {
                     idUsuario: documentoCargado.idUsuario ?? null,
                     idFormaPagoDsa: documentoCargado.idFormaPagoDsa ?? 1,
                     ordenReferenciaDsa: documentoCargado.ordenReferenciaDsa ?? null,
-                    fechaOrdenReferenciaDsa: documentoCargado.fechaOrdenReferenciaDsa ?? null,
+                    fechaOrdenReferenciaDsa: normalizeDateInputValue(documentoCargado.fechaOrdenReferenciaDsa),
                     observacionesDsa: documentoCargado.observacionesDsa ?? null,
                     totalRegistrosDsa: documentoCargado.totalRegistrosDsa ?? 0,
                     cantidadProductosDsa: documentoCargado.cantidadProductosDsa ?? 0,
@@ -1095,9 +1098,9 @@ const DocumentoSoporteMaster = () => {
                     totalReteIcaDsa: documentoCargado.totalReteIcaDsa ?? 0,
                     idTipoOperacionDian: documentoCargado.idTipoOperacionDian ?? null,
                     idTipoDocumentoExterno: documentoCargado.idTipoDocumentoExterno ?? null,
-                    fechaInicialServicio: documentoCargado.fechaInicialServicio ?? null,
-                    fechaFinalServicio: documentoCargado.fechaFinalServicio ?? null,
-                    validadoDian: documentoCargado.validadoDian ?? null,
+                    fechaInicialServicio: normalizeDateInputValue(documentoCargado.fechaInicialServicio),
+                    fechaFinalServicio: normalizeDateInputValue(documentoCargado.fechaFinalServicio),
+                    estadoDian: documentoCargado.estadoDian ?? null,
                     fechaGrabacionDsa: documentoCargado.fechaGrabacionDsa ?? null,
                     terceroDsa: documentoCargado.terceroDsa
                         ? buildVentaTercero(documentoCargado.terceroDsa)
@@ -1441,6 +1444,7 @@ const DocumentoSoporteMaster = () => {
                                 <select
                                     className="rounded border px-3 py-2 text-sm bg-background w-80 font-bold"
                                     value={documentoSoporte.idTipoDocumentoExterno?.toString() ?? ''}
+                                    disabled={documentoSoporteValidadoDian}
                                     onChange={(e) => {
                                         const selectedId = Number(e.target.value);
                                         if (!selectedId) return;
@@ -1506,6 +1510,7 @@ const DocumentoSoporteMaster = () => {
                                 <select
                                     className="w-full rounded border px-2 py-2 text-sm bg-background w-42"
                                     value={documentoSoporte.terceroDsa?.idTipoDocumentoId ?? 0}
+                                    disabled={documentoSoporteValidadoDian}
                                     onChange={(e) => {
                                         const idTipo = Number.parseInt(e.target.value, 10) || 0;
                                         setDocumentoSoporte(prev => ({
@@ -1528,6 +1533,7 @@ const DocumentoSoporteMaster = () => {
                                     placeholder="Número de Identificación"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={documentoSoporte.terceroDsa?.numeroIdentificacion ?? ''}
+                                    disabled={documentoSoporteValidadoDian}
                                     onChange={(e) => {
                                         const value = e.target.value;
                                         const primerT = documentoSoporte.terceroDsa ?? buildVentaTercero();
@@ -1554,6 +1560,7 @@ const DocumentoSoporteMaster = () => {
                                     placeholder="Primer Nombre"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={documentoSoporte.terceroDsa?.primerNombre ?? ''}
+                                    disabled={documentoSoporteValidadoDian}
                                     onChange={(e) => setDocumentoSoporte(prev => ({
                                         ...prev,
                                         terceroDsa: buildVentaTercero({
@@ -1566,6 +1573,7 @@ const DocumentoSoporteMaster = () => {
                                     placeholder="Primer Apellido"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={documentoSoporte.terceroDsa?.primerApellido ?? ''}
+                                    disabled={documentoSoporteValidadoDian}
                                     onChange={(e) => setDocumentoSoporte(prev => ({
                                         ...prev,
                                         terceroDsa: buildVentaTercero({
@@ -1579,6 +1587,7 @@ const DocumentoSoporteMaster = () => {
                                     placeholder="Email"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={documentoSoporte.terceroDsa?.emailTercero ?? ''}
+                                    disabled={documentoSoporteValidadoDian}
                                     onChange={(e) => setDocumentoSoporte(prev => ({
                                         ...prev,
                                         terceroDsa: buildVentaTercero({
@@ -1591,6 +1600,7 @@ const DocumentoSoporteMaster = () => {
                                     placeholder="Razón Social"
                                     className="rounded border px-2 py-2 text-sm bg-background w-26"
                                     value={documentoSoporte.terceroDsa?.razonSocial ?? ''}
+                                    disabled={documentoSoporteValidadoDian}
                                     onChange={(e) => setDocumentoSoporte(prev => ({
                                         ...prev,
                                         terceroDsa: buildVentaTercero({
@@ -1602,7 +1612,7 @@ const DocumentoSoporteMaster = () => {
                             </div>
                             <Dialog open={openDialogTercero} onOpenChange={setOpenDialogTercero}>
                                 <DialogTrigger asChild>
-                                    <Button variant="outline" size="icon" title="Buscar cliente">
+                                    <Button variant="outline" size="icon" title="Buscar cliente" disabled={documentoSoporteValidadoDian}>
                                         <Search className="w-8 h-8" />
                                     </Button>
                                 </DialogTrigger>
@@ -1669,6 +1679,7 @@ const DocumentoSoporteMaster = () => {
                                         crearTercero: (documentoSoporte.terceroDsa?.idTercero ?? 0) === 0
                                     }
                                 })}
+                                disabled={documentoSoporteValidadoDian}
                             >
                                 <FileText className="w-5 h-5" />
                             </Button>
@@ -1689,6 +1700,7 @@ const DocumentoSoporteMaster = () => {
                                         ...prev,
                                         observacionesDsa: e.target.value
                                     }))}
+                                    disabled={documentoSoporteValidadoDian}
                                 />
                             </div>
 
@@ -1705,6 +1717,7 @@ const DocumentoSoporteMaster = () => {
                                             ...prev,
                                             ordenReferenciaDsa: e.target.value
                                         }))}
+                                        disabled={documentoSoporteValidadoDian}
                                     />
                                 </div>
 
@@ -1719,6 +1732,7 @@ const DocumentoSoporteMaster = () => {
                                             ...prev,
                                             fechaOrdenReferenciaDsa: e.target.value
                                         }))}
+                                        disabled={documentoSoporteValidadoDian}
                                     />
                                 </div>
 
@@ -1729,6 +1743,7 @@ const DocumentoSoporteMaster = () => {
                                         type="date"
                                         className="rounded border px-2 py-2 text-base bg-background flex-1"
                                         value={documentoSoporte.fechaInicialServicio || ''}
+                                        disabled={documentoSoporteValidadoDian}
                                         onChange={(e) => setDocumentoSoporte(prev => ({
                                             ...prev,
                                             fechaInicialServicio: e.target.value
@@ -1743,6 +1758,7 @@ const DocumentoSoporteMaster = () => {
                                         type="date"
                                         className="rounded border px-2 py-2 text-base bg-background flex-1"
                                         value={documentoSoporte.fechaFinalServicio || ''}
+                                        disabled={documentoSoporteValidadoDian}
                                         onChange={(e) => setDocumentoSoporte(prev => ({
                                             ...prev,
                                             fechaFinalServicio: e.target.value
@@ -1880,6 +1896,7 @@ const DocumentoSoporteMaster = () => {
                                                             type="number"
                                                             min={0}
                                                             value={item.cantidadDsa ?? ''}
+                                                            disabled={documentoSoporteValidadoDian}
                                                             onFocus={(e) => e.target.select()}
                                                             onChange={(e) => {
                                                                 const value = e.target.value;
@@ -1900,6 +1917,7 @@ const DocumentoSoporteMaster = () => {
                                                         <input
                                                             type="number"
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center bg-background"
+                                                            disabled={documentoSoporteValidadoDian}
                                                             value={item.porcentajeDescuentoDsa || ''}
                                                             onChange={(e) => {
                                                                 const pctDesc = parseFloat(e.target.value) || 0;
@@ -1934,6 +1952,7 @@ const DocumentoSoporteMaster = () => {
                                                         <input
                                                             type="number"
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center bg-background"
+                                                            disabled={documentoSoporteValidadoDian}
                                                             value={item.descuentoDsa || ''}
                                                             onChange={(e) => {
                                                                 const valDesc = parseFloat(e.target.value) || 0;
@@ -1965,6 +1984,7 @@ const DocumentoSoporteMaster = () => {
                                                             type="number"
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center bg-background"
                                                             value={item.porcentajeReteRenta || ''}
+                                                            disabled={documentoSoporteValidadoDian}
                                                             onChange={(e) => {
                                                                 const pctRete = parseFloat(e.target.value) || 0;
                                                                 const baseCalculada = item.totalDsa ?? (((item.cantidadDsa ?? 0) * (item.precioUnitarioDsa ?? 0)) - (item.descuentoDsa ?? 0));
@@ -1990,6 +2010,7 @@ const DocumentoSoporteMaster = () => {
                                                             type="number"
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center bg-background"
                                                             value={item.reteRentaDsa || ''}
+                                                            disabled={documentoSoporteValidadoDian}
                                                             onChange={(e) => {
                                                                 const valRete = parseFloat(e.target.value) || 0;
                                                                 updateDetailItem(item.registroDsa, current => ({ ...current, reteRentaDsa: valRete }));
@@ -2007,6 +2028,7 @@ const DocumentoSoporteMaster = () => {
                                                             min={0}
                                                             className="w-20 h-8 border rounded px-2 text-sm text-center bg-background"
                                                             value={item.porcentajeReteIca || ''}
+                                                            disabled={documentoSoporteValidadoDian}
                                                             onChange={(e) => {
                                                                 const rawValue = e.target.value;
                                                                 const pctIca = rawValue === '' ? 0 : parseFloat(rawValue);
@@ -2031,6 +2053,7 @@ const DocumentoSoporteMaster = () => {
                                                             type="number"
                                                             className="w-24 h-8 border rounded px-2 text-sm text-center bg-background"
                                                             value={item.reteIcaDsa || ''}
+                                                            disabled={documentoSoporteValidadoDian}
                                                             onChange={(e) => {
                                                                 const valIca = parseFloat(e.target.value) || 0;
                                                                 updateDetailItem(item.registroDsa, current => ({ ...current, reteIcaDsa: valIca }));

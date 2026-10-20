@@ -36,7 +36,7 @@ const menuGroups = [
       { label: "Notas Crédito", icon: FileText, path: "/credit-notes" },
       { label: "Documentos Soporte", icon: FileCog, path: "/documento-soporte" },
       { label: "Tipos de Documentos", icon: FileText, path: "/documentos-externos" },
-      { label: "Parámetros de Venta", icon: SlidersHorizontal, path: "/parametros-venta" },
+      { label: "Parámetros del Sistema", icon: SlidersHorizontal, path: "/parametros-venta" },
     ],
   },
   {
