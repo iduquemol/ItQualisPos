@@ -38,6 +38,7 @@ export interface INotaCredito {
   plazoDias?: number | null;
   fechaVencimiento?: string | null;
   idTipoDocumentoExterno?: number | null;
+  idMetodoDian?: number | null;
   detalleNotaCredito: INotaCreditoDetalle[] | null;
 
   codigoDocumento?: string | null;

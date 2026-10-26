@@ -23,6 +23,7 @@ import UsersPage from './pages/UsersPage';
 import UnidadesDeMedidaPage from './pages/UnidadesDeMedidaPage';
 import ListasPreciosPage from './pages/listasPreciosPage';
 import DocumentoSoportePage from './pages/DocumentoSoporte';
+import AlmacenesPage from './pages/AlmacenesPage';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -146,6 +147,12 @@ function App() {
                     path="/documento-soporte"
                     element={
                         isAuthenticated ? <AppLayout><DocumentoSoportePage /></AppLayout> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/almacenes"
+                    element={
+                        isAuthenticated ? <AppLayout><AlmacenesPage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route

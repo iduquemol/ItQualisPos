@@ -175,17 +175,20 @@ const MainCreditNote = () => {
 
         const idTipoDocumentoExterno = Number(selectedTipoDocumento.idTipoDocumentoExterno);
         const prefijoConsecutivo = selectedTipoDocumento.prefijoConsecutivo ?? '';
+        const idMetodoDian = selectedTipoDocumento.idMetodoDian ?? null;
         if (
             notaCredito.idTipoDocumentoExterno !== idTipoDocumentoExterno ||
-            notaCredito.prefijoNotaCredito !== prefijoConsecutivo
+            notaCredito.prefijoNotaCredito !== prefijoConsecutivo ||
+            notaCredito.idMetodoDian !== idMetodoDian
         ) {
             setNotaCredito((previous) => ({
                 ...previous,
                 idTipoDocumentoExterno,
                 prefijoNotaCredito: prefijoConsecutivo,
+                idMetodoDian,
             }));
         }
-    }, [tiposDocumento, notaCredito.idTipoDocumento, notaCredito.idTipoDocumentoExterno, notaCredito.prefijoNotaCredito]);
+    }, [tiposDocumento, notaCredito.idTipoDocumento, notaCredito.idTipoDocumentoExterno, notaCredito.prefijoNotaCredito, notaCredito.idMetodoDian]);
 
 
 
@@ -842,7 +845,8 @@ const MainCreditNote = () => {
                                             ...previous,
                                             idTipoDocumento: selectedTipoDocumento.idTipoDocumento,
                                             idTipoDocumentoExterno: selectedTipoDocumento.idTipoDocumentoExterno,
-                                            prefijoNotaCredito: selectedTipoDocumento.prefijoConsecutivo ?? ''
+                                            prefijoNotaCredito: selectedTipoDocumento.prefijoConsecutivo ?? '',
+                                            idMetodoDian: selectedTipoDocumento.idMetodoDian ?? null
                                         }));
                                     }}
                                     disabled={isLoadingTiposDocumento}

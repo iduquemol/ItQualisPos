@@ -37,6 +37,8 @@ import { SucursalService } from "@/services/SucursalService";
 import { IRoles } from "@/types/IRoles";
 import { IVendedores } from "@/types/IVendedores";
 import { ISucursales } from "@/types/ISucursales";
+import { IAlmacen } from "@/types/IAlmacen";
+import { AlmacenesService } from "@/services/AlmacenesService";
 
 export default function UsersMaster() {
   const navigate = useNavigate();
@@ -50,6 +52,7 @@ export default function UsersMaster() {
     emailUsuario: "",
     idVendedor: null,
     idSucursalUsuario: null,
+    idAlmacen: null,
     fechaGrabacionUsuario: null,
   });
 
@@ -65,6 +68,7 @@ export default function UsersMaster() {
   const [rolesList, setRolesList] = useState<IRoles[]>([]);
   const [vendedoresList, setVendedoresList] = useState<IVendedores[]>([]);
   const [sucursalesList, setSucursalesList] = useState<ISucursales[]>([]);
+  const [almacenesList, setAlmacenesList] = useState<IAlmacen[]>([]);
 
   const fetchUsuarios = async () => {
     try {
@@ -83,14 +87,16 @@ export default function UsersMaster() {
 
   const fetchCombosData = async () => {
     try {
-      const [rolesData, vendedoresData, sucursalesData] = await Promise.all([
+      const [rolesData, vendedoresData, sucursalesData, almacenesData] = await Promise.all([
         RolService.getAll(),
         VendedorService.getAll(),
         SucursalService.getAll(),
+        AlmacenesService.getAll(),
       ]);
       setRolesList(rolesData || []);
       setVendedoresList(vendedoresData || []);
       setSucursalesList(sucursalesData || []);
+      setAlmacenesList(almacenesData || []);
     } catch (error) {
       toast.error("Error al cargar los datos de los selectores (Roles/Vendedores/Sucursales)");
     }
@@ -115,6 +121,7 @@ export default function UsersMaster() {
       emailUsuario: "",
       idVendedor: null,
       idSucursalUsuario: null,
+      idAlmacen: null,
       fechaGrabacionUsuario: null,
     });
     setFormError(null);
@@ -392,6 +399,30 @@ export default function UsersMaster() {
               {sucursalesList.map((s) => (
                 <option key={s.idSucursal} value={s.idSucursal}>
                   {s.nombreSucursal}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Almacén
+            </label>
+            <select
+              value={usuario.idAlmacen ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setUsuario({
+                  ...usuario,
+                  idAlmacen: val ? Number(val) : null,
+                });
+              }}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">-- Sin Almacén Asignado --</option>
+              {almacenesList.map((a) => (
+                <option key={a.idAlmacen} value={a.idAlmacen}>
+                  {a.nombreAlmacen}
                 </option>
               ))}
             </select>
