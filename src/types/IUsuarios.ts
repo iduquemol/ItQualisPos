@@ -6,5 +6,6 @@ export interface IUsuarios {
   emailUsuario: string;
   idVendedor?: number | null;
   idSucursalUsuario?: number | null;
+  idAlmacen?: number | null;
   fechaGrabacionUsuario?: Date | string | null;
 }

@@ -61,6 +61,7 @@ const menuGroups = [
     icon: Building2,
     children: [
       { label: "Empresas", icon: Building2, path: "/empresas" },
+      { label: "Almacenes", icon: Building2, path: "/almacenes" },
       { label: "Resoluciones", icon: FileCheck2, path: "/resoluciones" },
       { label: "Actividades ICA", icon: Landmark, path: "/actividades-ica" },
       { label: "Sucursales", icon: GitBranch, path: "/sucursales" },

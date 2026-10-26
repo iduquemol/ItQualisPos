@@ -61,6 +61,7 @@ export const API_CONFIG = {
         VENDEDORES: '/vendedores',
         USUARIOS: '/usuarios',
         ROLES: '/roles',
+        ALMACENES: '/almacenes',
 
     },
     getUrl: (endpoint: string) => {
