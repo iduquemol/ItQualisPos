@@ -1,0 +1,50 @@
+import { INotaDebitoDetalle } from "./INotaDebitoDetalle";
+
+export interface INotaDebito {
+  idNotaDebito: number | null;
+  idTipoDocumento: number;
+  numeroNotaDebito: number | null;
+  prefijoNotaDebito: string | null;
+  idTerceroNotaDebito: number;
+  fechaNotaDebito: string | null;
+  idPuntoVenta?: number | null;
+  idUsuario: number | null;
+  idVenta: number | null;
+  idConceptoCorreccionNota: number | null;
+  observaciones?: string | null;
+  totalRegistros: number | null;
+  cantidadProductos: number | null;
+  totalPrecio: number | null;
+  totalDescuento: number | null;
+  totalBaseIva: number | null;
+  totalIva: number | null;
+  totalNotaDebito?: number | null; 
+  totalVenta?: number | null;       
+  idConceptoCorreccionDian?: number | null;
+  cufe?: string | null;
+  firmaDigital?: string | null;
+  fechaHoraAutorizacion?: string | null;
+  idResponseDian?: number | null;
+  fechaGrabacionNotaDebito?: string | null;
+  totalBaseRetelva?: number | null;
+  totalRetelva?: number | null;
+  totalBaseReteRenta?: number | null;
+  totalReteRenta?: number | null;
+  totalBaseRetelca?: number | null;
+  totalRetelca?: number | null;
+  idTipoOperacionDian?: number | null;
+  idResolucion?: number | null;
+  idFormaPago?: number | null;
+  plazoDias?: number | null;
+  fechaVencimiento?: string | null;
+  idTipoDocumentoExterno?: number | null;
+  validadoDian?: boolean | null;
+  idMetodoDian?: number | null;
+  detalleNotaDebito: INotaDebitoDetalle[] | null;
+
+  codigoDocumento?: string | null;
+  nombreDocumento?: string | null;
+  conceptoNotaDebito?: number | null;
+  numeroIdentificacionTerceroNotaDebito?: string | null;
+  nombreTerceroNotaDebito?: string | null;
+}

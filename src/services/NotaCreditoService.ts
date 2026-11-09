@@ -3,8 +3,6 @@ import { INotaCredito } from "@/types/INotaCredito";
 import { IParametrosVentaDefault } from "@/types/IParametrosVentaDefault";
 import { IPrintVenta } from "@/types/IPrintVenta";
 import { IResponseVenta } from "@/types/IResponseVenta";
-import { ITerceroDefault } from "@/types/ITerceroDefault";
-import { ITipoDocumentoDefault } from "@/types/ITipoDocumentoDefault";
 import { IVenta } from "@/types/IVenta";
 
 export const NotaCreditoService = {
@@ -73,12 +71,12 @@ export const NotaCreditoService = {
             );
             //console.log(response.url);
             if (!response.ok) {
-                throw new Error('Error al imprimir venta por ID');
+                throw new Error('Error al imprimir nota crédito por ID');
             }
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error('Error en VentaService.printById:', error);
+            console.error('Error en NotaCreditoService.printById:', error);
             throw error;
         }
     },
@@ -125,7 +123,7 @@ export const NotaCreditoService = {
             const data = await response.json();
             return data;
         } catch (error) {
-            console.error('Error en VentaService.getParametrosVentaDefault:', error);
+            console.error('Error en NotaCreditoService.getParametrosVentaDefault:', error);
             throw error;
         }
     }

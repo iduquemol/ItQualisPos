@@ -34,6 +34,7 @@ const menuGroups = [
       { label: "Ventas", icon: Receipt, path: "/pos" },
       { label: "Cotizaciones", icon: ScrollText, path: "/estimates" },
       { label: "Notas Crédito", icon: FileText, path: "/credit-notes" },
+      { label: "Notas Débito", icon: FileText, path: "/debit-notes" },
       { label: "Documentos Soporte", icon: FileCog, path: "/documento-soporte" },
       { label: "Tipos de Documentos", icon: FileText, path: "/documentos-externos" },
       { label: "Parámetros del Sistema", icon: SlidersHorizontal, path: "/parametros-venta" },
