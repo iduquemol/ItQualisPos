@@ -3,4 +3,5 @@ export interface IResponseVenta {
     idFactura: number;
     numeroDocumentoDian: string;  
     idNotaCredito: number;  
+    idNotaDebito?: number;
 }

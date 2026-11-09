@@ -1,293 +1,292 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Clock, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+    Check,
+    FileText,
+    Minus,
+    Package,
+    Plus,
+    Search,
+    ShoppingCart,
+    Trash,
+    X,
+    type LucideIcon,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-import Tesseract from 'tesseract.js';
+import {
+    Card,
+    CardContent,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoriasService } from '@/services/CategoryService';
+import { CotizacionService } from '@/services/CotizacionService';
+import { ParametrosVentasService } from '@/services/ParametrosVentaService';
 import { ProductoService } from '@/services/ProductoService';
 import { TerceroService } from '@/services/TerceroService';
-import { ICategorias } from '@/types/ICategorias';
-import { IProducto } from '@/types/IProducto';
-import { ITercero } from '@/types/ITercero';
-import { ITipoDocumento } from '@/types/ITipoDocumento';
 import { TipoDocumentoService } from '@/services/TipoDocumentoService';
-import { ITipoDocumentoIdentidad } from '@/types/ITipoDocumentoIdentidad';
 import { TipoDocumentoIdentidadService } from '@/services/TipoDocumentoIdentidadService';
-import { IVenta } from '@/types/IVenta';
-import { IVentaDetalle } from '@/types/IVentaDetalle';
-import { IVentaTercero } from '@/types/IVentaTercero';
-import { IDocumentoLista } from '@/types/IDocumentoLista';
-import { DocumentoListaService } from '@/services/DocumentoListaService';
-import { VentaService } from '@/services/VentaService';
-import { toast } from "sonner";
-import { ITerceroDefault } from '@/types/ITerceroDefault';
-import { IVentaMedioPago } from '@/types/IVentaMedioPago';
-import FacturaModal from '../reports/FacturaModal';
-import { ICotizacion } from '@/types/ICotizacion';
-import { IParametrosVentaDefault } from '@/types/IParametrosVentaDefault';
-import { CotizacionService } from '@/services/CotizacionService';
-import {Package, type LucideIcon } from "lucide-react";
 import { CATEGORY_ICONS, iconMap } from '@/types/ICategoryIcons';
-
+import type { ICategorias } from '@/types/ICategorias';
+import type { ICotizacion } from '@/types/ICotizacion';
+import type { ICotizacionTercero } from '@/types/ICotizacionTercero';
+import type { ICotizacionDetalle } from '@/types/ICotizacionDetalle';
+import type { IProducto } from '@/types/IProducto';
+import type { ITercero } from '@/types/ITercero';
+import type { ITipoDocumento } from '@/types/ITipoDocumento';
+import type { ITipoDocumentoIdentidad } from '@/types/ITipoDocumentoIdentidad';
 
 type PosCategory = ICategorias & { icon: LucideIcon };
 
+const getLocalDate = (): string => {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+    return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+};
+
+const roundCurrency = (amount: number): number =>
+    Number(amount.toFixed(2));
+
 const resolveCategoryIcon = (iconId?: string | null): LucideIcon => {
-  if (!iconId) return Package;
+    if (!iconId) return Package;
 
-  const normalizedIconId = iconId.trim().toLowerCase();
-  const categoryIcon = CATEGORY_ICONS.find(
-    ({ id }) => id.toLowerCase() === normalizedIconId
-  );
+    const normalizedIconId = iconId.trim().toLowerCase();
+    const categoryIcon = CATEGORY_ICONS.find(
+        ({ id }) => id.toLowerCase() === normalizedIconId
+    );
 
-  return categoryIcon?.icon ?? iconMap[iconId.trim()] ?? Package;
+    return categoryIcon?.icon ?? iconMap[iconId.trim()] ?? Package;
+};
+
+const buildCotizacionTercero = (
+    tercero: Partial<ICotizacionTercero> | null | undefined = null
+): ICotizacionTercero => ({
+    idTercero: tercero?.idTercero ?? 0,
+    idTipoDocumentoId: tercero?.idTipoDocumentoId ?? 0,
+    digitoVerificacion: tercero?.digitoVerificacion ?? null,
+    numeroIdentificacion: tercero?.numeroIdentificacion ?? '',
+    primerNombre: tercero?.primerNombre ?? '',
+    primerApellido: tercero?.primerApellido ?? '',
+    razonSocial: tercero?.razonSocial ?? '',
+    emailTercero: tercero?.emailTercero ?? null,
+});
+
+const createEmptyCotizacion = (
+    tercero: Partial<ICotizacionTercero> | null = null,
+    idTipoDocumento = 7
+): ICotizacion => ({
+    idCotizacion: 0,
+    idTipoDocumento,
+    codigoDocumento: '',
+    nombreDocumento: null,
+    numeroCotizacion: 0,
+    prefijoCotizacion: '',
+    fechaCotizacion: getLocalDate(),
+    esBorrador: false,
+    idUsuario: 1,
+    totalRegistros: 0,
+    cantidadProductos: 0,
+    totalPrecio: 0,
+    totalDescuento: 0,
+    totalBaseIva: 0,
+    totalIva: 0,
+    totalCotizacion: 0,
+    observaciones: '',
+    terceroCotizacion: buildCotizacionTercero(tercero),
+    detalleCotizacion: [],
+});
+
+const buildCotizacionDetalle = (
+    product: IProducto,
+    registroCotizacion: number
+): ICotizacionDetalle => {
+    const price = Number(product.precioUnitario ?? product.precioPos ?? 0);
+
+    return recalculateCotizacionDetalle({
+        idDetalleCotizacion: 0,
+        idCotizacion: 0,
+        registroCotizacion,
+        idProducto: Number(product.idProducto ?? 0),
+        codigoProducto: product.codigoProducto ?? '',
+        nombreProducto: product.nombreProducto ?? '',
+        cantidadCotizacion: 1,
+        precioUnitarioCotizacion: price,
+        precioTotalCotizacion: price,
+        porcentajeDescuentoCotizacion: 0,
+        descuentoCotizacion: 0,
+        porcentajeImpoConsumo: Number(product.porcentajeImpoConsumo ?? 0),
+        impoConsumoCotizacion: 0,
+        baseIvaCotizacion: price,
+        porcentajeIvaCotizacion: Number(product.porcentajeIva ?? 0),
+        ivaCotizacion: 0,
+        totalCotizacion: 0,
+        costoUnitarioCotizacion: 0,
+        costoTotalCotizacion: 0,
+        porcentajeReteIva: Number(product.porcentajeReteIva ?? 0),
+        baseReteIvaCotizacion: 0,
+        reteIvaCotizacion: 0,
+        porcentajeReteRenta: Number(product.porcentajeReteRenta ?? 0),
+        baseReteRenta: 0,
+        reteRentaCotizacion: 0,
+        porcentajeReteIca: Number(product.porcentajeReteIca ?? 0),
+        baseReteIcaCotizacion: 0,
+        reteIcaCotizacion: 0,
+        idTipoProducto: Number(product.idTipoProducto ?? 0),
+        indicadorMuestra: false,
+    });
+};
+
+const recalculateCotizacionDetalle = (
+    detail: ICotizacionDetalle
+): ICotizacionDetalle => {
+    const quantity = Math.max(0, Number(detail.cantidadCotizacion ?? 0));
+    const unitPrice = Math.max(0, Number(detail.precioUnitarioCotizacion ?? 0));
+    const grossAmount = quantity * unitPrice;
+    const discountPercent = Math.min(
+        100,
+        Math.max(0, Number(detail.porcentajeDescuentoCotizacion ?? 0))
+    );
+    const discount = Math.min(
+        grossAmount,
+        Math.max(0, Number(detail.descuentoCotizacion ?? 0))
+    );
+    const taxBase = grossAmount - discount;
+    const taxPercent = Math.max(0, Number(detail.porcentajeIvaCotizacion ?? 0));
+    const consumptionPercent = Math.max(
+        0,
+        Number(detail.porcentajeImpoConsumo ?? 0)
+    );
+    const tax = roundCurrency(taxBase * taxPercent / 100);
+    const consumption = roundCurrency(grossAmount * consumptionPercent / 100);
+
+    return {
+        ...detail,
+        cantidadCotizacion: quantity,
+        precioTotalCotizacion: roundCurrency(grossAmount),
+        porcentajeDescuentoCotizacion: discountPercent,
+        descuentoCotizacion: roundCurrency(discount),
+        baseIvaCotizacion: roundCurrency(taxBase),
+        ivaCotizacion: tax,
+        impoConsumoCotizacion: consumption,
+        totalCotizacion: roundCurrency(taxBase + tax + consumption),
+        baseReteIvaCotizacion: roundCurrency(tax),
+        reteIvaCotizacion: roundCurrency(
+            tax * Number(detail.porcentajeReteIva ?? 0) / 100
+        ),
+        baseReteRenta: roundCurrency(taxBase),
+        reteRentaCotizacion: roundCurrency(
+            taxBase * Number(detail.porcentajeReteRenta ?? 0) / 100
+        ),
+        baseReteIcaCotizacion: roundCurrency(taxBase),
+        reteIcaCotizacion: roundCurrency(
+            taxBase * Number(detail.porcentajeReteIca ?? 0) / 1000
+        ),
+    };
 };
 
 const MainEstimate = () => {
     const navigate = useNavigate();
-    const [cotizacion, setCotizacion] = useState<ICotizacion>({
-        idCotizacion: 0,
-        idTipoDocumento: 7,
-        codigoDocumento: '',
-        nombreDocumento: null,
-        numeroCotizacion: 0,
-        prefijoCotizacion: '',
-        fechaCotizacion: '',
-        idUsuario: 1,
-        totalRegistros: 0,
-        cantidadProductos: 0,
-        totalPrecio: 0,
-        totalDescuento: 0,
-        totalBaseIva: 0,
-        totalIva: 0,
-        totalCotizacion: 0,
-        terceroCotizacion: {
-            idTercero: null,
-            idTipoDocumentoId: 0,
-            digitoVerificacion: null,
-            numeroIdentificacion: null,
-            primerNombre: null,
-            primerApellido: null,
-            razonSocial: null,
-            telefonoTercero: null,
-            direccionTercero: null,
-            idMunicipio: 0,
-            emailTercero: null,
-            idTipoPersona: null
-        },
-        detalleCotizacion: []
-
-    });
-    const [selectedFactura, setSelectedFactura] = useState<IVenta | null>(null);
-    const [factura, setFactura] = useState<IVenta>({
-        idVenta: null,
-        idTipoDocumento: 0,
-        codigoDocumento: '',
-        nombreDocumento: null,
-        idMetodoDian: null,
-        idFormaPago: null,
-        numeroVenta: null,
-        prefijoVenta: '',
-        fechaVenta: '',
-        esBorrador: false,
-        idPuntoVenta: null,
-        idUsuario: null,
-        totalRegistros: 0,
-        cantidadProductos: 0,
-        totalPrecio: 0,
-        totalDescuento: 0,
-        totalBaseIva: 0,
-        totalIva: 0,
-        totalVenta: 0,
-        observaciones: null,
-        ordenReferencia: null,
-        fechaOrdenReferencia: null,
-        terceroVenta: null,
-        detalleVenta: [],
-        mediosPagoVenta: [],
-    });
+    const location = useLocation();
+    const cotizacionDesdeTerceros = location.state?.from === 'terceros'
+        ? location.state.cotizacion as ICotizacion
+        : null;
+    const [cotizacion, setCotizacion] = useState<ICotizacion>(
+        cotizacionDesdeTerceros ?? createEmptyCotizacion()
+    );
+    const [idTerceroDefault, setIdTerceroDefault] = useState<number | null>(null);
+    const [cotizaciones, setCotizaciones] = useState<ICotizacion[]>([]);
+    const [searchDocumento, setSearchDocumento] = useState("");
+    const [openDialog, setOpenDialog] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('0');
-    const [showPayment, setShowPayment] = useState(false);
-    const [activePaymentMethod, setActivePaymentMethod] = useState('');
-    const [customerDiscount, setCustomerDiscount] = useState('0');
-    const [terceroInfo, setTerceroInfo] = useState<ITercero>({
-        
-        idTercero: 1,
-        idTipoDocumentoId: 7,
-        nombreTipoDocumentoId: "CC",
-        digitoVerificacion: "7",
-        numeroIdentificacion: "222222222222",
-        primerNombre: "Consumidor",
-        segundoNombre: "",
-        primerApellido: "",
-        segundoApellido: "",
-        razonSocial: "",
-        telefonoTercero: "",
-        direccionTercero: "",
-        emailTercero: 'iduque2001@hotmail.com',
-        idDepartamento: 0,
-        nombreDepartamento: 'Bogota',
-        idMunicipio: 0,
-        nombreMunicipio: 'Bogota',
-        terceroActivo: true,
-        terceroCliente: true,
-        tercerosEmpleado: true,
-        terceroProveedor: true,
-        terceroGeneral: true,
-        idTipoRegimen: 0,
-        idListaPreciosTercero: 0,
-        retenedorIva: false,
-        retenedorRenta: false,
-        retenedorIca: false,
-        declaraRenta: false,
-        tarifaIca: 0,
-        idCodigoPostal: null,
-        registroMercantil: null,
-        responsabilidadesTerceros: [],
-    });
-    const [showCustomer, setShowCustomer] = useState(false);
-    const [barcodeInput, setBarcodeInput] = useState('');
-    const [loyaltyPoints, setLoyaltyPoints] = useState(0);
-    const [showScanner, setShowScanner] = useState(false);
-    const [showOCR, setShowOCR] = useState(false);
-    const [categories, setCategories] = useState<PosCategory[]>([]);
-    const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-    const [categoryError, setCategoryError] = useState<string | null>(null);
-    const [products, setProducts] = useState<IProducto[]>([]);
-    const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-    const [productError, setProductError] = useState<string | null>(null);
-    const [terceros, setTerceros] = useState<ITercero[]>([]);
-    const [isLoadingTerceros, setIsLoadingTerceros] = useState(true);
-    const [terceroError, setTerceroError] = useState<string | null>(null);
-    const [tiposDocumento, setTiposDocumento] = useState<ITipoDocumento[]>([]);
-    const [isLoadingTiposDocumento, setIsLoadingTiposDocumento] = useState(true);
-    const [tipoDocumentoError, setTipoDocumentoError] = useState<string | null>(null);
-    const [tiposDocumentoIdentidad, setTiposDocumentoIdentidad] = useState<ITipoDocumentoIdentidad[]>([]);
-    const [isLoadingTipos, setIsLoadingTipos] = useState(true);
-    const [tipoError, setTipoError] = useState<string | null>(null);
-    const [documentosLista, setDocumentoLista] = useState<IDocumentoLista[]>([]);
-    const [isLoadingDocumentoLista, setIsLoadingDocumentoLista] = useState(true);
-    const [documentoListaError, setDocumentoListaError] = useState<string | null>(null);
-    const [parametrosVentaDefault, setParametrosVentaDefault] = useState<IParametrosVentaDefault | null>(null);
-    const [isLoadingTerceroDefault, setIsLoadingTerceroDefault] = useState(true);
-    const [terceroDefaultError, setTerceroDefaultError] = useState<string | null>(null);
-    const [openDialog, setOpenDialog] = useState(false);
+    const [searchTercero, setSearchTercero] = useState('');
     const [openDialogTercero, setOpenDialogTercero] = useState(false);
-    const [searchDocumento, setSearchDocumento] = useState("");
-    const [barcodeBuffer, setBarcodeBuffer] = useState<string>('');
-    const [lastKeyTime, setLastKeyTime] = useState<number>(0);
-    const [showFacturaModal, setShowFacturaModal] = useState(false);
-    const [facturaModalData, setFacturaModalData] = useState<any>(null);
-    const [searchTercero, setSearchTercero] = useState("");
-    const [vendedorSeleccionado, setVendedorSeleccionado] = useState(1);
-
-    const BARCODE_DELAY = 50;
-
-    const paymentMethods = [
-        { id: '1', name: 'Efectivo', icon: DollarSign, color: 'bg-green-500' },
-        { id: '2', name: 'Nequi', icon: CreditCard, color: 'bg-blue-500' },
-        { id: '3', name: 'Daviplata', icon: Zap, color: 'bg-purple-500' },
-        { id: '4', name: 'Tarjeta Débito', icon: Zap, color: 'bg-purple-500' },
-        { id: '5', name: 'Tarjeta Crédito', icon: Zap, color: 'bg-purple-500' },
-        { id: '6', name: 'Bonos', icon: Zap, color: 'bg-purple-500' },
-        { id: '7', name: 'Vales', icon: Zap, color: 'bg-purple-500' },
-        { id: '8', name: 'Otro', icon: Zap, color: 'bg-purple-500' },
-    ];
-
-    const [vendedores, setVendedores] = useState<any[]>([
-        { id: 1, nombre: "Administrador" },
-        { id: 2, nombre: "Vendedor 1" },
-        { id: 3, nombre: "Vendedor 2" },
-    ]);
+    const [categories, setCategories] = useState<PosCategory[]>([]);
+    const [products, setProducts] = useState<IProducto[]>([]);
+    const [terceros, setTerceros] = useState<ITercero[]>([]);
+    const [tiposDocumento, setTiposDocumento] = useState<ITipoDocumento[]>([]);
+    const [tiposDocumentoIdentidad, setTiposDocumentoIdentidad] =
+        useState<ITipoDocumentoIdentidad[]>([]);
+    const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+    const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+    const [isLoadingTerceros, setIsLoadingTerceros] = useState(true);
+    const [isLoadingCotizaciones, setIsLoadingCotizaciones] = useState(true);
+    const [isLoadingTiposDocumento, setIsLoadingTiposDocumento] =
+        useState(true);
+    const [isLoadingTiposIdentidad, setIsLoadingTiposIdentidad] =
+        useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [categoryError, setCategoryError] = useState<string | null>(null);
+    const [productError, setProductError] = useState<string | null>(null);
+    const [terceroError, setTerceroError] = useState<string | null>(null);
+    const [cotizacionError, setCotizacionError] = useState<string | null>(null);
+    const [tipoDocumentoError, setTipoDocumentoError] = useState<string | null>(
+        null
+    );
+    const [tipoIdentidadError, setTipoIdentidadError] = useState<string | null>(
+        null
+    );
+    const barcodeBuffer = useRef('');
+    const lastBarcodeKeyTime = useRef(0);
 
     const fetchCategories = async () => {
         try {
-                    setCategoryError(null);
-                    setIsLoadingCategories(true);
-                    const data = await CategoriasService.getAll();
-                    const categoriesWithIcons = data.map((category) => ({
-                        ...category,
-                        icon: resolveCategoryIcon(category.iconoCategoria),
-                    }));
-                    setCategories([
-                        { idCategoria: 0, codigoCategoria: 'all', nombreCategoria: 'Todo', iconoCategoria: 'Package', icon: Package },
-                        ...categoriesWithIcons
-                    ]);
-        } catch (error) {
-            console.error('Error:', error);
-            setCategoryError('Error al cargar las categorías');
-            // Categorías por defecto en caso de error
+            setCategoryError(null);
+            setIsLoadingCategories(true);
+            const data = await CategoriasService.getAll();
             setCategories([
-                // ... otras categorías por defecto
+                {
+                    idCategoria: 0,
+                    codigoCategoria: 'all',
+                    nombreCategoria: 'Todo',
+                    iconoCategoria: 'Package',
+                    icon: Package,
+                },
+                ...data.map((category) => ({
+                    ...category,
+                    icon: resolveCategoryIcon(category.iconoCategoria),
+                })),
             ]);
+        } catch (error) {
+            console.error('Error al cargar categorías:', error);
+            setCategoryError('Error al cargar las categorías');
         } finally {
             setIsLoadingCategories(false);
         }
     };
 
-    const fetchTiposDocumento = async () => {
-        try {
-            setTipoDocumentoError(null);
-            setIsLoadingTiposDocumento(true);
-            const data = await TipoDocumentoService.getAll();
-            setTiposDocumento([
-                ...data
-            ]);
-        } catch (error) {
-            console.error('Error:', error);
-            setTipoDocumentoError('Error al cargar los tipos de documento');
-            // Tipos de documento por defecto en caso de error
-            setTiposDocumento([]);
-        } finally {
-            setIsLoadingTiposDocumento(false);
-        }
-    };
-
-    const fetchTipoDocumentoIdentidad = async () => {
-        try {
-            setTipoError(null);
-            setIsLoadingTipos(true);
-            const data = await TipoDocumentoIdentidadService.getAll();
-            setTiposDocumentoIdentidad([
-                {
-                    idTipoDocumentoId: 0, nombreTipoDocumentoId: "Seleccione un tipo de documento", codigoTipoDocumentoId: "0",
-                    observacionTipoDocumentoId: null
-                }, // Tipo de documento por defecto
-                ...data
-            ]);
-        } catch (error) {
-            console.error('Error:', error);
-            setTipoError('Error al cargar los tipos de documento');
-            // Tipos de documento por defecto en caso de error
-            setTiposDocumentoIdentidad([
-                { idTipoDocumentoId: 0, nombreTipoDocumentoId: "Seleccione un tipo de documento", codigoTipoDocumentoId: "0", observacionTipoDocumentoId: null },
-            ]);
-        } finally {
-            setIsLoadingTipos(false);
-        }
-    };
-
-    const fetchProducts = async () => {
+    const fetchProducts = async (
+        numeroIdentificacion = cotizacion.terceroCotizacion?.numeroIdentificacion || '0'
+    ) => {
         try {
             setProductError(null);
             setIsLoadingProducts(true);
-            const data = await ProductoService.getProductosVentaByTercero(cotizacion.terceroCotizacion?.numeroIdentificacion || "0");
+            const data =
+                await ProductoService.getProductosVentaByTercero(numeroIdentificacion);
             setProducts(data);
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error al cargar productos para cotización:', error);
             setProductError('Error al cargar los productos');
         } finally {
             setIsLoadingProducts(false);
@@ -298,546 +297,553 @@ const MainEstimate = () => {
         try {
             setTerceroError(null);
             setIsLoadingTerceros(true);
-            const data = await TerceroService.getAll();
-            setTerceros(data);
+            setTerceros(await TerceroService.getAll());
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error al cargar terceros:', error);
             setTerceroError('Error al cargar los terceros');
         } finally {
             setIsLoadingTerceros(false);
         }
     };
 
-    const fetchDocumentoLista = async () => {
+    const fetchCotizaciones = async () => {
         try {
-            setDocumentoListaError(null);
-            setIsLoadingDocumentoLista(true);
-            const data = await DocumentoListaService.getAll();
-            setDocumentoLista(data);
+            setCotizacionError(null);
+            setIsLoadingCotizaciones(true);
+            setCotizaciones(await CotizacionService.getAll());
         } catch (error) {
-            console.error('Error:', error);
-            setDocumentoListaError('Error al cargar los documentos de la lista');
+            console.error('Error al cargar cotizaciones:', error);
+            setCotizacionError('Error al cargar las cotizaciones');
         } finally {
-            setIsLoadingDocumentoLista(false);
+            setIsLoadingCotizaciones(false);
         }
     };
 
-    const fetchParametrosVentaDefault = async () => {
+    const fetchTiposDocumento = async () => {
         try {
-            setParametrosVentaDefault(null);
-            setIsLoadingTerceroDefault(true);
-            const data = await VentaService.getParametrosVentaDefault();
-            //console.log('Terceros por defecto cargado:', data);
-            setParametrosVentaDefault(data);
-            setCotizacion({
-                ...cotizacion,
-                idTipoDocumento: data.documentoCotizacion[0].idTipoDocumento,
-                terceroCotizacion: {
-                    idTercero: data.terceroVenta[0].idTercero,
-                    idTipoDocumentoId: data.terceroVenta[0].idTipoDocumentoId,
-                    numeroIdentificacion: data.terceroVenta[0].numeroIdentificacion,
-                    primerNombre: data.terceroVenta[0].primerNombre,
-                    primerApellido: data.terceroVenta[0].primerApellido,
-                    razonSocial: data.terceroVenta[0].razonSocial,
-                    emailTercero: data.terceroVenta[0].emailTercero,
-                    telefonoTercero: "",
-                    direccionTercero: "",
-                    idMunicipio: 0,
-                    idTipoPersona: null,
-                    digitoVerificacion: null,
-                }
-            });
+            setTipoDocumentoError(null);
+            setIsLoadingTiposDocumento(true);
+            setTiposDocumento(
+                await TipoDocumentoService.getTiposDocumentoCotizacion()
+            );
         } catch (error) {
-            console.error('Error:', error);
-            setTerceroDefaultError('Error al cargar el tercero por defecto');
-            setParametrosVentaDefault({
-                terceroVenta: [
-                    {
-                        idTercero: 0,
-                        idTipoDocumentoId: 0,
-                        nombreTipoDocumentoId: "0",
-                        numeroIdentificacion: "",
-                        primerNombre: "",
-                        primerApellido: "",
-                        razonSocial: "",
-                        emailTercero: ""
-                    }
-                ],
-                documentoVenta: [
-                    {
-                        idTipoDocumento: 0,
-                        codigoDocumento: "0",
-                        nombreDocumento: "0",
-                        idTipoDocumentoE: 0,
-                        idFormaPago: 0,
-                        nombreFormaPago: "0",
-                        idMetodoDian: 0,
-                        nombreMetodo: "0",
-                        ordenTipoDocumento: 0,
-                        tipoDocumentoActivo: false,
-                    }
-                ],
-                documentoNotaCredito: [
-                    {
-                        idTipoDocumento: 0,
-                        codigoDocumento: "0",
-                        nombreDocumento: "0",
-                        idTipoDocumentoE: 0,
-                        idFormaPago: 0,
-                        nombreFormaPago: "0",
-                        idMetodoDian: 0,
-                        nombreMetodo: "0",
-                        ordenTipoDocumento: 0,
-                        tipoDocumentoActivo: false,
-                    }
-                ],
-                documentoCotizacion: [
-                    {
-                        idTipoDocumento: 0,
-                        codigoDocumento: "0",
-                        nombreDocumento: "0",
-                        idTipoDocumentoE: 0,
-                        idFormaPago: 0,
-                        nombreFormaPago: "0",
-                        idMetodoDian: 0,
-                        nombreMetodo: "0",
-                        ordenTipoDocumento: 0,
-                        tipoDocumentoActivo: false,
-                    }
-                ]
-            });
+            console.error('Error al cargar tipos de documento:', error);
+            setTipoDocumentoError('Error al cargar los tipos de documento');
         } finally {
-            setIsLoadingTerceroDefault(false);
+            setIsLoadingTiposDocumento(false);
+        }
+    };
+
+    const fetchTiposDocumentoIdentidad = async () => {
+        try {
+            setTipoIdentidadError(null);
+            setIsLoadingTiposIdentidad(true);
+            const data = await TipoDocumentoIdentidadService.getAll();
+            setTiposDocumentoIdentidad([
+                {
+                    idTipoDocumentoId: 0,
+                    nombreTipoDocumentoId: 'Seleccione un tipo de documento',
+                    codigoTipoDocumentoId: '0',
+                    observacionTipoDocumentoId: null,
+                },
+                ...data,
+            ]);
+        } catch (error) {
+            console.error('Error al cargar tipos de identificación:', error);
+            setTipoIdentidadError('Error al cargar los tipos de documento');
+        } finally {
+            setIsLoadingTiposIdentidad(false);
+        }
+    };
+
+    const fetchParametrosDefault = async () => {
+        try {
+            const data = await ParametrosVentasService.getDefault();
+            const defaultThird = data.terceroVenta[0];
+            const defaultDocument = data.documentoCotizacion[0];
+            const third = buildCotizacionTercero(defaultThird);
+            setIdTerceroDefault(defaultThird?.idTercero ?? null);
+            if (!cotizacionDesdeTerceros) {
+                setCotizacion((current) => ({
+                    ...current,
+                    idTipoDocumento:
+                        defaultDocument?.idTipoDocumento ?? current.idTipoDocumento,
+                    codigoDocumento: defaultDocument?.codigoDocumento ?? '',
+                    nombreDocumento: defaultDocument?.nombreDocumento ?? null,
+                    terceroCotizacion: third,
+                }));
+            }
+
+            return cotizacionDesdeTerceros?.terceroCotizacion?.numeroIdentificacion
+                || third.numeroIdentificacion
+                || '0';
+        } catch (error) {
+            console.error('Error al cargar parámetros para cotización:', error);
+            toast.error('No fue posible cargar los datos predeterminados');
+            return cotizacionDesdeTerceros?.terceroCotizacion?.numeroIdentificacion
+                || '0';
         }
     };
 
     const initializeComponent = async () => {
-        await Promise.all([
+        const [, , , , , numeroIdentificacion] = await Promise.all([
             fetchCategories(),
-            fetchTipoDocumentoIdentidad(),
-            fetchParametrosVentaDefault(),
+            fetchTiposDocumentoIdentidad(),
             fetchTiposDocumento(),
-            fetchDocumentoLista(),
-            fetchProducts(),
-            fetchTerceros()
+            fetchTerceros(),
+            fetchCotizaciones(),
+            fetchParametrosDefault(),
         ]);
-    };
-
-    const playBeep = (success: boolean) => {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        const audioContext = new AudioContextClass();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.frequency.setValueAtTime(success ? 1000 : 400, audioContext.currentTime);
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.1);
+        await fetchProducts(numeroIdentificacion);
     };
 
     useEffect(() => {
-        initializeComponent();
+        void initializeComponent();
     }, []);
 
-    // Manejo de eventos del teclado para escaneo de código de barras
     useEffect(() => {
-        const handleKeyPress = (e: KeyboardEvent) => {
-            const currentTime = new Date().getTime();
-            const timeDiff = currentTime - lastKeyTime;
+        const selectedDocument = tiposDocumento.find(
+            (document) =>
+                Number(document.idTipoDocumentoExterno) ===
+                Number(cotizacion.idTipoDocumentoExterno)
+        ) ?? tiposDocumento.find(
+            (document) =>
+                Number(document.idTipoDocumento) ===
+                Number(cotizacion.idTipoDocumento)
+        );
+        if (!selectedDocument) return;
 
-            // Si es entrada del scanner (caracteres vienen rápido)
-            if (timeDiff < BARCODE_DELAY) {
-                setBarcodeBuffer(prev => prev + e.key);
-            } else {
-                // Nueva secuencia de caracteres
-                setBarcodeBuffer(e.key);
+        const prefijoConsecutivo = selectedDocument.prefijoConsecutivo ?? '';
+        if (
+            cotizacion.idTipoDocumentoExterno !== selectedDocument.idTipoDocumentoExterno ||
+            cotizacion.prefijoCotizacion !== prefijoConsecutivo
+        ) {
+            setCotizacion((current) => ({
+                ...current,
+                idTipoDocumento: selectedDocument.idTipoDocumento,
+                idTipoDocumentoExterno: selectedDocument.idTipoDocumentoExterno,
+                codigoDocumento: selectedDocument.codigoDocumento ?? '',
+                nombreDocumento: selectedDocument.nombreDocumento ?? null,
+                prefijoCotizacion: prefijoConsecutivo,
+            }));
+        }
+    }, [
+        tiposDocumento,
+        cotizacion.idTipoDocumento,
+        cotizacion.idTipoDocumentoExterno,
+        cotizacion.prefijoCotizacion,
+    ]);
+
+    const addToCart = (product: IProducto) => {
+        setCotizacion((current) => {
+            const existing = current.detalleCotizacion.find(
+                (detail) => detail.idProducto === product.idProducto
+            );
+
+            if (existing) {
+                return {
+                    ...current,
+                    detalleCotizacion: current.detalleCotizacion.map((detail) =>
+                        detail.idProducto === product.idProducto
+                            ? recalculateCotizacionDetalle({
+                                ...detail,
+                                cantidadCotizacion:
+                                    Number(detail.cantidadCotizacion ?? 0) + 1,
+                            })
+                            : detail
+                    ),
+                };
             }
 
-            setLastKeyTime(currentTime);
+            return {
+                ...current,
+                detalleCotizacion: [
+                    ...current.detalleCotizacion,
+                    buildCotizacionDetalle(
+                        product,
+                        current.detalleCotizacion.length + 1
+                    ),
+                ],
+            };
+        });
+    };
 
-            // Si detecta Enter, procesa el código
-            if (e.key === 'Enter' && barcodeBuffer) {
-                const product = products.find(p => p.codigoBarras === barcodeBuffer);
+    useEffect(() => {
+        const handleBarcodeKeypress = (event: KeyboardEvent) => {
+            const now = Date.now();
+            if (event.key === 'Enter') {
+                const barcode = barcodeBuffer.current;
+                barcodeBuffer.current = '';
+                if (!barcode) return;
+
+                const product = products.find(
+                    (item) => item.codigoBarras === barcode
+                );
                 if (product) {
                     addToCart(product);
-                    playBeep(true);
                 } else {
-                    console.log('Producto no encontrado:', barcodeBuffer);
-                    playBeep(false);
+                    console.warn('Producto no encontrado:', barcode);
                 }
-                setBarcodeBuffer('');
+                return;
             }
+
+            if (event.key.length !== 1) return;
+            barcodeBuffer.current =
+                now - lastBarcodeKeyTime.current < 50
+                    ? barcodeBuffer.current + event.key
+                    : event.key;
+            lastBarcodeKeyTime.current = now;
         };
 
-        window.addEventListener('keypress', handleKeyPress);
-        return () => window.removeEventListener('keypress', handleKeyPress);
-    }, [barcodeBuffer, lastKeyTime, products]);
+        window.addEventListener('keypress', handleBarcodeKeypress);
+        return () =>
+            window.removeEventListener('keypress', handleBarcodeKeypress);
+    }, [products]);
 
-    // Filtrar productos
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = product.nombreProducto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.codigoProducto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.codigoBarras ? product.codigoBarras.includes(searchTerm) : false);
-        const matchesCategory = parseInt(selectedCategory) === 0 || product.idCategoria === parseInt(selectedCategory);
+    const updateDetail = (
+        productId: number | null | undefined,
+        updates: Partial<ICotizacionDetalle>
+    ) => {
+        setCotizacion((current) => ({
+            ...current,
+            detalleCotizacion: current.detalleCotizacion.map((detail) => {
+                if (detail.idProducto !== productId) return detail;
+
+                const next = { ...detail, ...updates };
+                const grossAmount =
+                    Number(next.precioUnitarioCotizacion ?? 0) *
+                    Number(next.cantidadCotizacion ?? 0);
+
+                const discountPercentChanged =
+                    Object.prototype.hasOwnProperty.call(
+                        updates,
+                        'porcentajeDescuentoCotizacion'
+                    );
+                const discountAmountChanged =
+                    Object.prototype.hasOwnProperty.call(
+                        updates,
+                        'descuentoCotizacion'
+                    );
+
+                if (discountPercentChanged) {
+                    next.descuentoCotizacion =
+                        grossAmount *
+                        Number(next.porcentajeDescuentoCotizacion ?? 0) /
+                        100;
+                } else if (discountAmountChanged) {
+                    next.porcentajeDescuentoCotizacion =
+                        grossAmount > 0
+                            ? Number(next.descuentoCotizacion ?? 0) /
+                            grossAmount *
+                            100
+                            : 0;
+                } else if (
+                    Object.prototype.hasOwnProperty.call(
+                        updates,
+                        'cantidadCotizacion'
+                    ) ||
+                    Object.prototype.hasOwnProperty.call(
+                        updates,
+                        'precioUnitarioCotizacion'
+                    )
+                ) {
+                    next.descuentoCotizacion =
+                        grossAmount *
+                        Number(next.porcentajeDescuentoCotizacion ?? 0) /
+                        100;
+                }
+
+                return recalculateCotizacionDetalle(next);
+            }),
+        }));
+    };
+
+    const updateQuantity = (productId: number | null | undefined, change: number) => {
+        const detail = cotizacion.detalleCotizacion.find(
+            (item) => item.idProducto === productId
+        );
+        if (!detail) return;
+
+        updateDetail(productId, {
+            cantidadCotizacion: Math.max(
+                0,
+                Number(detail.cantidadCotizacion ?? 0) + change
+            ),
+        });
+    };
+
+    const removeFromCart = (productId: number | null | undefined) => {
+        setCotizacion((current) => ({
+            ...current,
+            detalleCotizacion: current.detalleCotizacion.filter(
+                (item) => item.idProducto !== productId
+            ),
+        }));
+    };
+
+    const updateTercero = (updates: Partial<ICotizacionTercero>) => {
+        const identificationChanged =
+            Object.prototype.hasOwnProperty.call(
+                updates,
+                'numeroIdentificacion'
+            ) && updates.idTercero === undefined;
+        setCotizacion((current) => ({
+            ...current,
+            idTerceroCotizacion: identificationChanged
+                ? null
+                : updates.idTercero ??
+                current.terceroCotizacion?.idTercero ??
+                null,
+            terceroCotizacion: {
+                ...buildCotizacionTercero(current.terceroCotizacion),
+                ...updates,
+                ...(identificationChanged ? { idTercero: 0 } : {}),
+            },
+        }));
+    };
+
+    const handleSelectTercero = (tercero: ITercero) => {
+        updateTercero({
+            idTercero: tercero.idTercero ?? 0,
+            idTipoDocumentoId: tercero.idTipoDocumentoId ?? 0,
+            digitoVerificacion: tercero.digitoVerificacion ?? null,
+            numeroIdentificacion: tercero.numeroIdentificacion ?? '',
+            primerNombre: tercero.primerNombre ?? '',
+            primerApellido: tercero.primerApellido ?? '',
+            razonSocial: tercero.razonSocial ?? '',
+            emailTercero: tercero.emailTercero ?? null,
+        });
+        setOpenDialogTercero(false);
+        void fetchProducts(tercero.numeroIdentificacion || '0');
+    };
+
+    const handleSearchTercero = (numeroIdentificacion: string) => {
+        const tercero = terceros.find(
+            (item) => item.numeroIdentificacion === numeroIdentificacion
+        );
+        if (tercero) handleSelectTercero(tercero);
+    };
+
+    const handleNewCotizacion = () => {
+        setCotizacion((current) => ({
+            ...createEmptyCotizacion(
+                current.terceroCotizacion,
+                current.idTipoDocumento
+            ),
+            idTipoDocumentoExterno: current.idTipoDocumentoExterno,
+            codigoDocumento: current.codigoDocumento,
+            nombreDocumento: current.nombreDocumento,
+            prefijoCotizacion: current.prefijoCotizacion,
+        }));
+        setSearchTerm('');
+        setSelectedCategory('0');
+    };
+
+    const formatCurrency = (amount: number | null | undefined): string =>
+        Number(amount ?? 0).toLocaleString('es-CO', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+    const subtotal = cotizacion.detalleCotizacion.reduce(
+        (sum, item) =>
+            sum +
+            Number(item.precioUnitarioCotizacion ?? 0) *
+            Number(item.cantidadCotizacion ?? 0),
+        0
+    );
+    const discount = cotizacion.detalleCotizacion.reduce(
+        (sum, item) => sum + Number(item.descuentoCotizacion ?? 0),
+        0
+    );
+    const tax = cotizacion.detalleCotizacion.reduce(
+        (sum, item) => sum + Number(item.ivaCotizacion ?? 0),
+        0
+    );
+    const consumption = cotizacion.detalleCotizacion.reduce(
+        (sum, item) => sum + Number(item.impoConsumoCotizacion ?? 0),
+        0
+    );
+    const total = cotizacion.detalleCotizacion.reduce(
+        (sum, item) => sum + Number(item.totalCotizacion ?? 0),
+        0
+    );
+    const totalItems = cotizacion.detalleCotizacion.reduce(
+        (sum, item) => sum + Number(item.cantidadCotizacion ?? 0),
+        0
+    );
+
+    const filteredProducts = products.filter((product) => {
+        const search = searchTerm.toLowerCase();
+        const matchesSearch =
+            (product.nombreProducto ?? '').toLowerCase().includes(search) ||
+            (product.codigoProducto ?? '').toLowerCase().includes(search) ||
+            (product.codigoBarras ?? '').toLowerCase().includes(search);
+        const matchesCategory =
+            selectedCategory === '0' ||
+            Number(product.idCategoria) === Number(selectedCategory);
         return matchesSearch && matchesCategory;
     });
 
-    const handleSelectTercero = (terc: ITercero) => {
-        setFactura({
-            ...factura,
-            terceroVenta: {
-                idTercero: terc.idTercero,
-                idTipoDocumentoId: terc.idTipoDocumentoId,
-                digitoVerificacion: terc.digitoVerificacion ?? null,
-                numeroIdentificacion: terc.numeroIdentificacion,
-                primerNombre: terc.primerNombre ?? null,
-                primerApellido: terc.primerApellido ?? null,
-                razonSocial: terc.razonSocial ?? null,
-                telefonoTercero: terc.telefonoTercero ?? null,
-                direccionTercero: terc.direccionTercero ?? null,
-                idMunicipio: terc.idMunicipio,
-                emailTercero: terc.emailTercero ?? null,
-                idTipoPersona: 1
-            }
-        });
-        setOpenDialogTercero(false);
-    };
+    const filteredCotizaciones = cotizaciones.filter((document) => {
+        const query = searchDocumento.trim().toLowerCase();
+        return [
+            document.numeroCotizacion?.toString(),
+            document.terceroCotizacion?.numeroIdentificacion,
+            document.terceroCotizacion?.razonSocial,
+            document.terceroCotizacion?.primerNombre,
+            document.terceroCotizacion?.primerApellido,
+            `${document.terceroCotizacion?.primerNombre ?? ''} ${document.terceroCotizacion?.primerApellido ?? ''}`,
+        ].some((value) =>
+            (value ?? '').toLowerCase().includes(query)
+        );
+    });
 
-    const handleNew = async () => {
-        await initializeComponent();
-        setCotizacion({
-            ...cotizacion,
-            idCotizacion: 0,
-            idTipoDocumento: cotizacion.idTipoDocumento || 7,
-            codigoDocumento: '',
-            nombreDocumento: null,
-            numeroCotizacion: 0,
-            prefijoCotizacion: '',
-            fechaCotizacion: '',
-            idUsuario: 1,
-            totalRegistros: 0,
-            cantidadProductos: 0,
-            totalPrecio: 0,
-            totalDescuento: 0,
-            totalBaseIva: 0,
-            totalIva: 0,
-            totalCotizacion: 0,
-            terceroCotizacion: {
-                idTercero: cotizacion.terceroCotizacion?.idTercero || null,
-                idTipoDocumentoId: cotizacion.terceroCotizacion?.idTipoDocumentoId || 0,
-                digitoVerificacion: null,
-                numeroIdentificacion: cotizacion.terceroCotizacion?.numeroIdentificacion || null,
-                primerNombre: cotizacion.terceroCotizacion?.primerNombre || null,
-                primerApellido: cotizacion.terceroCotizacion?.primerApellido || null,
-                razonSocial: cotizacion.terceroCotizacion?.razonSocial || null,
-                telefonoTercero: null,
-                direccionTercero: null,
-                idMunicipio: 0,
-                emailTercero: cotizacion.terceroCotizacion?.emailTercero || null,
-                idTipoPersona: null
-            },
-            detalleCotizacion: [],
-        });
-        setActivePaymentMethod('');
-    };
-
-    // Manejo de eventos para buscar tercero por número de identificación
-    const handleSearchTercero = (numeroIdentificacion: string) => {
-        const tercero = terceros.find(t => t.numeroIdentificacion === numeroIdentificacion);
-        if (tercero) {
-            setFactura({
-                ...factura,
-                terceroVenta: {
-                    idTercero: tercero.idTercero ?? 0,
-                    idTipoDocumentoId: tercero.idTipoDocumentoId ?? 7,
-                    digitoVerificacion: tercero.digitoVerificacion ?? null,
-                    numeroIdentificacion: tercero.numeroIdentificacion ?? null,
-                    primerNombre: tercero.primerNombre ?? null,
-                    primerApellido: tercero.primerApellido ?? null,
-                    razonSocial: tercero.razonSocial ?? null,
-                    telefonoTercero: tercero.telefonoTercero ?? null,
-                    direccionTercero: tercero.direccionTercero ?? null,
-                    idMunicipio: tercero.idMunicipio ?? 0,
-                    emailTercero: tercero.emailTercero ?? null,
-                    idTipoPersona: null
-                }
-            });
-        } else {
-
+    const handleSaveCotizacion = async () => {
+        const idCotizacion = cotizacion.idCotizacion;
+        const isEditing = idCotizacion !== null && idCotizacion > 0;
+        if (!cotizacion.detalleCotizacion.length) {
+            toast.error('Agregue al menos un producto a la cotización');
+            return;
         }
-    };
+        if (!cotizacion.idTipoDocumento) {
+            toast.error('Seleccione el tipo de documento de la cotización');
+            return;
+        }
 
-    const handleSelectVenta = async (documento: IDocumentoLista) => {
-        const data = await VentaService.getById(documento.idVenta);
-        setSelectedFactura(data);
-        setFactura({
-            ...factura,
-            idVenta: data?.idVenta ?? null,
-            idTipoDocumento: data?.idTipoDocumento ?? 0,
-            codigoDocumento: data?.codigoDocumento ?? '',
-            nombreDocumento: data?.nombreDocumento ?? null,
-            numeroVenta: data?.numeroVenta ?? null,
-            prefijoVenta: data?.prefijoVenta ?? '',
-            fechaVenta: data?.fechaVenta ?? '',
-            idPuntoVenta: data?.idPuntoVenta ?? null,
-            idUsuario: data?.idUsuario ?? null,
-            totalRegistros: data?.totalRegistros ?? 0,
-            cantidadProductos: data?.cantidadProductos ?? 0,
-            totalPrecio: data?.totalPrecio ?? 0,
-            totalDescuento: data?.totalDescuento ?? 0,
-            totalBaseIva: data?.totalBaseIva ?? 0,
-            totalIva: data?.totalIva ?? 0,
-            totalVenta: data?.totalVenta ?? 0,
-            terceroVenta: data?.terceroVenta ?? {
-                idTercero: null,
-                idTipoDocumentoId: 0,
-                digitoVerificacion: null,
-                numeroIdentificacion: null,
-                primerNombre: null,
-                primerApellido: null,
-                razonSocial: null,
-                telefonoTercero: null,
-                direccionTercero: null,
-                idMunicipio: 0,
-                emailTercero: null,
-                idTipoPersona: null
-            },
-            detalleVenta: data?.detalleVenta ?? [],
-            mediosPagoVenta: data?.mediosPagoVenta ?? [],
-
-        });
-        setOpenDialog(false);
-    };
-
-    const handleSaveVenta = async () => {
-        const todayLocal = new Date();
-        const offsetMs = todayLocal.getTimezoneOffset() * 60 * 1000;
-        const localISODate = new Date(todayLocal.getTime() - offsetMs).toISOString().split('T')[0];
-        const updatedCotizacion = {
+        const payload: ICotizacion = {
             ...cotizacion,
-            fechaCotizacion: localISODate,
+            idCotizacion: isEditing ? idCotizacion : cotizacion.idCotizacion,
+            fechaCotizacion: getLocalDate(),
+            idTerceroCotizacion:
+                cotizacion.terceroCotizacion?.idTercero || null,
+            totalRegistros: cotizacion.detalleCotizacion.length,
+            cantidadProductos: totalItems,
+            totalPrecio: subtotal,
+            totalDescuento: discount,
+            totalBaseIva: subtotal - discount,
+            totalIva: tax,
+            totalCotizacion: total,
+            detalleCotizacion: cotizacion.detalleCotizacion.map((item) => ({
+                ...item,
+                totalCotizacion: Number(item.totalCotizacion ?? 0),
+            })),
         };
+
         try {
-            if (updatedCotizacion.idCotizacion) {
-                // Actualizar cotización existente
-                //await VentaService.update(cotizacion);
-                console.log("Cotizacion actualizada:", cotizacion);
-                toast.success("Cotizacion actualizada correctamente", {
-                    position: "top-center",
-                });
+            setIsSaving(true);
+            let savedCotizacion: ICotizacion;
+            let successMessage: string;
+
+            if (isEditing) {
+                const result = await CotizacionService.update(payload);
+                savedCotizacion = { ...payload, idCotizacion };
+                successMessage =
+                    `${result.message || 'Cotización actualizada correctamente'} ${idCotizacion}`;
             } else {
-                console.log("Cotizacion a guardar:", updatedCotizacion);
-                const result = await CotizacionService.create(updatedCotizacion);
-                console.log("Cotizacion guardada:", result);
-                toast.success(
-                    result.message + " " + result.idCotizacion,
-                    {
-                        position: "top-center",
-                    }
-                );
-                const facturaId = result.idFactura ?? result.idCotizacion ?? 0;
-                const data = await VentaService.getById(facturaId);
-                setSelectedFactura(data);
-                setFactura({
-                    ...factura,
-                    idVenta: data?.idVenta ?? null,
-                    idTipoDocumento: data?.idTipoDocumento ?? 0,
-                    codigoDocumento: data?.codigoDocumento ?? '',
-                    nombreDocumento: data?.nombreDocumento ?? null,
-                    numeroVenta: data?.numeroVenta ?? null,
-                    prefijoVenta: data?.prefijoVenta ?? '',
-                    fechaVenta: data?.fechaVenta ?? '',
-                    idPuntoVenta: data?.idPuntoVenta ?? null,
-                    idUsuario: data?.idUsuario ?? null,
-                    totalRegistros: data?.totalRegistros ?? 0,
-                    cantidadProductos: data?.cantidadProductos ?? 0,
-                    totalPrecio: data?.totalPrecio ?? 0,
-                    totalDescuento: data?.totalDescuento ?? 0,
-                    totalBaseIva: data?.totalBaseIva ?? 0,
-                    totalIva: data?.totalIva ?? 0,
-                    totalVenta: data?.totalVenta ?? 0,
-                    terceroVenta: data?.terceroVenta ?? {
-                        idTercero: null,
-                        idTipoDocumentoId: 0,
-                        digitoVerificacion: null,
-                        numeroIdentificacion: null,
-                        primerNombre: null,
-                        primerApellido: null,
-                        razonSocial: null,
-                        telefonoTercero: null,
-                        direccionTercero: null,
-                        idMunicipio: 0,
-                         emailTercero: null,
-                         idTipoPersona: null
-                     },
-                     detalleVenta: data?.detalleVenta ?? [],
-                     mediosPagoVenta: data?.mediosPagoVenta ?? [],
-
-                });
-                 const dataPrint = await VentaService.printById(facturaId);
-                 setFacturaModalData(dataPrint);
-                 setShowFacturaModal(true);
+                const result = await CotizacionService.create(payload);
+                savedCotizacion = {
+                    ...payload,
+                    idCotizacion: result.idCotizacion,
+                };
+                successMessage =
+                    `${result.message || 'Cotización guardada correctamente'} ${result.idCotizacion}`;
             }
-            await fetchProducts();
+
+            setCotizaciones((current) => [
+                savedCotizacion,
+                ...current.filter(
+                    (item) => item.idCotizacion !== savedCotizacion.idCotizacion
+                ),
+            ]);
+            toast.success(successMessage, { position: 'top-center' });
+            handleNewCotizacion();
         } catch (error) {
-            console.error('Error al guardar la cotizacion:', error);
+            console.error(
+                `Error al ${isEditing ? 'actualizar' : 'guardar'} la cotización:`,
+                error
+            );
+            toast.error(
+                isEditing
+                    ? 'No fue posible actualizar la cotización'
+                    : 'No fue posible guardar la cotización'
+            );
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    // Funciones del carrito
-    const addToCart = (product: IProducto) => {
-
-        const existingItem = cotizacion.detalleCotizacion?.find(item => item.idProducto === product.idProducto);
-        if (existingItem) {
-            // Si el producto ya está en el carrito, incrementa la cantidad
-            setCotizacion({
-                ...cotizacion,
-                detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(item =>
-                    item.idProducto === product.idProducto
-                        ? { ...item, cantidadCotizacion: item.cantidadCotizacion + 1 }
-                        : item
-                )
-            });
-        } else {
-            setCotizacion({
-                ...cotizacion,
-                detalleCotizacion: [
-                    ...(cotizacion.detalleCotizacion || []),
-                    {
-                        idDetalleCotizacion: 0, // Asignar un ID único si es necesario
-                        registroCotizacion: (cotizacion.detalleCotizacion ? cotizacion.detalleCotizacion.length : 0) + 1,
-                        idProducto: product.idProducto ?? 0,
-                        codigoProducto: product.codigoProducto,
-                        nombreProducto: product.nombreProducto,
-                        precioUnitarioCotizacion: product.precioUnitario,
-                        cantidadCotizacion: 1.0,
-                        descuentoCotizacion: 0, // Asignar descuento si es necesario
-                        ivaCotizacion: parseFloat((product.precioUnitario * ((product.porcentajeIva || 0) / 100)).toFixed(2)),
-                        totalCotizacion: 0,
-                        costoUnitarioCotizacion: 0,
-                        costoTotalCotizacion: 0, // Asignar costo si es necesario
-                        porcentajeIvaCotizacion: product.porcentajeIva || 0,
-                        porcentajeDescuentoCotizacion: 0
-                    }
-                ]
-            });
-        }
-    };
-
-    const updateQuantity = (id: number, change: number) => {
-        setCotizacion({
-            ...cotizacion,
-            detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(item => {
-                if (item.idProducto === id) {
-                    const newQuantity = item.cantidadCotizacion + change;
-                    return {
-                        ...item,
-                        cantidadCotizacion: newQuantity,
-                        ivaCotizacion: parseFloat(
-                            ((item.precioUnitarioCotizacion * newQuantity - item.descuentoCotizacion) * ((item.porcentajeIvaCotizacion || 0) / 100)).toFixed(2)
-                        ),
-                        descuentoCotizacion: parseFloat(
-                            ((item.precioUnitarioCotizacion * newQuantity) * ((item.porcentajeDescuentoCotizacion || 0) / 100)).toFixed(2)
-                        ),
-                    };
-                }
-                return item;
-            })
-        });
-
-    };
-
-    const removeFromCart = (id: number) => {
-        // Elimina el producto del carrito
-        setCotizacion({
-            ...cotizacion,
-            detalleCotizacion: cotizacion.detalleCotizacion ? cotizacion.detalleCotizacion.filter(item => item.idProducto !== id) : []
-        });
-    };
-
-    const formatCurrency = (amount: number | null | undefined): string => {
-        // Si el monto es nulo o indefinido, retorna "0.00"
-        if (amount === null || amount === undefined) {
-            return '0.00';
-        }
-
-        // Si el monto es un número
+    const handleSelectCotizacion = async (documento: ICotizacion) => {
         try {
-            return amount.toLocaleString('es-CO', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+            const data = await CotizacionService.getById(
+                documento.idCotizacion ?? 0
+            );
+            if (!data) {
+                toast.error('No se encontró la cotización');
+                return;
+            }
+
+            setCotizacion((current) => ({
+                ...current,
+                ...data,
+                idCotizacion: data.idCotizacion ?? documento.idCotizacion ?? 0,
+                idTipoDocumento: data.idTipoDocumento ?? current.idTipoDocumento,
+                idTipoDocumentoExterno:
+                    data.idTipoDocumentoExterno ??
+                    documento.idTipoDocumentoExterno ??
+                    current.idTipoDocumentoExterno,
+                codigoDocumento: data.codigoDocumento ?? current.codigoDocumento,
+                nombreDocumento: data.nombreDocumento ?? current.nombreDocumento,
+                prefijoCotizacion:
+                    data.prefijoCotizacion ?? documento.prefijoCotizacion ?? '',
+                fechaCotizacion:
+                    data.fechaCotizacion?.split('T')[0] ??
+                    documento.fechaCotizacion ??
+                    '',
+                terceroCotizacion: buildCotizacionTercero(
+                    data.terceroCotizacion ?? documento.terceroCotizacion
+                ),
+                detalleCotizacion: data.detalleCotizacion ?? [],
+            }));
+            setOpenDialog(false);
+            setSearchDocumento('');
         } catch (error) {
-            console.error('Error formatting currency:', error);
-            return '0.00';
+            console.error('Error al cargar la cotización:', error);
+            toast.error('No fue posible cargar la cotización');
         }
     };
-
-    // Cálculos
-    const subtotal = (cotizacion.detalleCotizacion ?? []).reduce((sum, item) => sum + (item.precioUnitarioCotizacion * item.cantidadCotizacion), 0);
-    const discount = (cotizacion.detalleCotizacion ?? []).reduce((descuento, item) => descuento + (item.descuentoCotizacion || 0), 0);
-    const tax = (cotizacion.detalleCotizacion ?? []).reduce((iva, item) => iva + (item.ivaCotizacion || 0), 0);
-    // const loyaltyDiscount = customerInfo.loyalty ? subtotal * 0.05 : 0; // 5% descuento por lealtad
-    const total = subtotal - discount + tax;
-    const totalItems = cotizacion.detalleCotizacion?.reduce((sum, item) => sum + item.cantidadCotizacion, 0);
-    const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
 
     return (
         <div className="h-screen bg-background flex flex-col overflow-hidden">
-            {/* Panel Superior */}
-            <div className="w-full border-b bg-card p-1">
-                <div className="flex items-center justify-between">
-                    {/* Lado izquierdo - Logo y título */}
-                    <div className="flex items-center space-x-4 mb-2">
-                        <div className="bg-primary p-3 rounded-lg">
-                            <Package className="h-6 w-6 text-primary-foreground" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold">Astil</h1>
-                            <p className="text-sm text-muted-foreground">Sistema de Punto de Venta</p>
-                        </div>
-                    </div>
-
-                    {/* Centro - Total de la cotización */}
-                    <div className="flex items-center space-x-4 mb-2">
-                        <Badge className="flex items-center gap-2 px-4 py-2 text-lg bg-orange-500 text-white">
-                            <span className="font-medium">Cotización</span>
+            <div className="w-full border-b bg-card px-4 py-2.5 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-wide text-foreground">
+                        Cotización
+                    </h1>
+                    <div className="flex items-center gap-3">
+                        <Badge className="flex items-center gap-2 px-3.5 py-1 text-sm bg-primary text-primary-foreground shadow-sm">
+                            <span className="font-normal opacity-90 text-xs uppercase tracking-wider">
+                                Total:
+                            </span>
+                            <span className="font-bold text-base">
+                                ${formatCurrency(total)}
+                            </span>
                         </Badge>
-                        <Badge className="flex items-center gap-2 px-4 py-2 text-lg bg-primary text-primary-foreground">
-                            {/* <DollarSign className="w-5 h-5" /> */}
-                            <span className="font-medium">Total:</span>
-                            <span className="font-bold text-xl">${formatCurrency(total)}</span>
-                        </Badge>
-                    </div>
-
-                    {/* Lado derecho - Reloj */}
-                    <div className="flex items-center space-x-4 mb-2">
-                        {showFacturaModal && (
-                            <FacturaModal
-                                idVenta={(factura?.idVenta ?? selectedFactura?.idVenta) ?? 0}
-                                facturaData={facturaModalData}
-                                triggerText="Imprimir Factura"
-                                triggerVariant="secondary"
-                                idMetodoDian={factura?.idMetodoDian || 0}
-                            />
-                        )}
+                        
                         <Button
                             variant="default"
                             size="icon"
-                            title="Nueva factura"
-                            onClick={() => handleNew()}
-                            className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                            title="Nueva cotización"
+                            onClick={handleNewCotizacion}
+                            className="h-9 w-9 shadow-sm"
                         >
-                            <Plus className="w-5 h-5" />
+                            <Plus className="h-4 w-4" />
                         </Button>
+
                         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                             <DialogTrigger asChild>
-                                <Button variant="outline" size="icon" title="Buscar documento">
-                                    <Search className="w-5 h-5" />
+                                <Button variant="outline" size="icon" title="Buscar documento" className="h-9 w-9">
+                                    <Search className="w-4 h-4" />
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-4xl">
@@ -847,7 +853,7 @@ const MainEstimate = () => {
                                 {/* Input de búsqueda */}
                                 <Input
                                     className="mb-4"
-                                    placeholder="Buscar por número de documento, nombre cliente o número identificación"
+                                    placeholder="Buscar por número de cotización o datos del tercero"
                                     value={searchDocumento}
                                     onChange={e => setSearchDocumento(e.target.value)}
                                 />
@@ -863,108 +869,114 @@ const MainEstimate = () => {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {documentosLista
-                                                .filter(
-                                                    doc =>
-                                                        doc.numeroDocumento?.toLowerCase().includes(searchDocumento.toLowerCase()) ||
-                                                        doc.nombreCliente?.toLowerCase().includes(searchDocumento.toLowerCase()) ||
-                                                        doc.numeroIdentificacion?.toString().includes(searchDocumento.toLowerCase()) ||
-                                                        doc.documento?.toLowerCase().includes(searchDocumento.toLowerCase())
-                                                )
-                                                .map((doc) => (
+                                            {filteredCotizaciones.map((doc) => (
                                                     <TableRow
-                                                        key={doc.idVenta}
+                                                        key={doc.idCotizacion}
                                                         className="cursor-pointer hover:bg-primary/10"
-                                                        onClick={() => handleSelectVenta(doc)}
+                                                        onClick={() => handleSelectCotizacion(doc)}
                                                     >
-                                                        <TableCell>{doc.documento}</TableCell>
-                                                        <TableCell>{doc.numeroDocumento}</TableCell>
-                                                        <TableCell>{doc.numeroIdentificacion}</TableCell>
-                                                        <TableCell>{doc.nombreCliente}</TableCell>
-                                                        <TableCell>{doc.totalVenta}</TableCell>
+                                                        <TableCell>
+                                                            {doc.nombreDocumento ?? doc.codigoDocumento}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {doc.prefijoCotizacion ?? ''}
+                                                            {doc.numeroCotizacion}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {doc.terceroCotizacion?.numeroIdentificacion ?? ''}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {doc.terceroCotizacion?.razonSocial ||
+                                                                `${doc.terceroCotizacion?.primerNombre ?? ''} ${doc.terceroCotizacion?.primerApellido ?? ''}`.trim() ||
+                                                                'Sin cliente'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {formatCurrency(doc.totalCotizacion)}
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                         </TableBody>
                                     </Table>
-                                    {isLoadingProducts && (
+                                    {isLoadingCotizaciones && (
                                         <div className="text-center text-muted-foreground py-4">Cargando...</div>
                                     )}
-                                    {productError && (
-                                        <div className="text-center text-red-500 py-4">{productError}</div>
+                                    {cotizacionError && (
+                                        <div className="text-center text-red-500 py-4">{cotizacionError}</div>
+                                    )}
+                                    {!isLoadingCotizaciones &&
+                                        !cotizacionError &&
+                                        cotizaciones.length === 0 && (
+                                            <div className="py-4 text-center text-muted-foreground">
+                                                No hay cotizaciones para mostrar
+                                            </div>
+                                        )}
+                                    {!isLoadingCotizaciones &&
+                                        !cotizacionError &&
+                                        cotizaciones.length > 0 &&
+                                        filteredCotizaciones.length === 0 && (
+                                            <div className="py-4 text-center text-muted-foreground">
+                                                No se encontraron cotizaciones
+                                            </div>
                                     )}
                                 </div>
                             </DialogContent>
                         </Dialog>
-                        {/* Select de vendedor */}
-                        <div className="flex items-center space-x-2">
-                            <Label htmlFor="vendedor-select" className="text-sm font-medium whitespace-nowrap">
-                                Vendedor:
-                            </Label>
-                            <Select
-                                value={vendedorSeleccionado.toString()}
-                                onValueChange={(value) => setVendedorSeleccionado(parseInt(value))}
-                            >
-                                <SelectTrigger className="w-36" id="vendedor-select">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {vendedores.map(vendedor => (
-                                        <SelectItem key={vendedor.id} value={vendedor.id.toString()}>
-                                            {vendedor.nombre}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <Badge className="flex items-center gap-1 px-2 py-1 text-base bg-primary text-primary-foreground">
-                            <User className="w-4 h-4 mr-1" />
-                            Administrador
-                        </Badge>
-                        <Clock className="h-5 w-5" />
-                        <span>{new Date().toLocaleTimeString()}</span>
+
                         <Button
-                            variant="default"
+                            variant="destructive"
                             size="icon"
                             title="Salir"
-                            onClick={() => {
-                                navigate('/main-menu');
-                            }}
-                            className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                            onClick={() => navigate('/main-menu')}
+                            className="h-9 w-9 shadow-sm"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
             </div>
 
             <div className="flex flex-1 overflow-hidden">
-
-                {/* Panel Izquierdo - Carrito (70%) */}
-                <div className="w-[70%] flex flex-col h-[calc(100vh-80px)]">
-                    {/* Header del Carrito */}
+                <div className="w-[70%] flex flex-col min-h-0">
                     <div className="p-3 border-b h-[60px] shrink-0">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-4">
-                                <h2 className="text-sm font-normal">Tipo de documento</h2>
+                                <h2 className="text-sm font-normal">
+                                    Tipo de documento
+                                </h2>
                                 <select
-                                    className="rounded border px-3 py-2 text-sm bg-background w-48"
-                                    value={cotizacion.idTipoDocumento}
-                                    onChange={(e) => {
-                                        const selectedId = parseInt(e.target.value);
-                                        console.log(selectedId);
-                                        const selectedTipoDocumento = tiposDocumento.find(td => td.idTipoDocumento === selectedId);
-                                        setCotizacion({
-                                            ...cotizacion,
-                                            idTipoDocumento: selectedId,
-                                            codigoDocumento: selectedTipoDocumento?.codigoDocumento || '',
-                                            nombreDocumento: selectedTipoDocumento?.nombreDocumento || null
-                                        });
+                                    id="tipo-documento-cotizacion"
+                                    className="rounded border px-3 py-2 text-sm bg-background w-50 font-bold"
+                                    value={cotizacion.idTipoDocumentoExterno?.toString() ?? ''}
+                                    disabled={isLoadingTiposDocumento || !!cotizacion.idCotizacion}
+                                    onChange={(event) => {
+                                        const idTipoDocumentoExterno = Number(event.target.value);
+                                        const selectedDocument = tiposDocumento.find(
+                                            (item) =>
+                                                Number(item.idTipoDocumentoExterno) ===
+                                                idTipoDocumentoExterno
+                                        );
+                                        if (!selectedDocument) return;
+
+                                        setCotizacion((current) => ({
+                                            ...current,
+                                            idTipoDocumento: selectedDocument.idTipoDocumento,
+                                            idTipoDocumentoExterno:
+                                                selectedDocument.idTipoDocumentoExterno,
+                                            codigoDocumento:
+                                                selectedDocument.codigoDocumento ?? '',
+                                            nombreDocumento:
+                                                selectedDocument.nombreDocumento ?? null,
+                                            prefijoCotizacion:
+                                                selectedDocument.prefijoConsecutivo ?? '',
+                                        }));
                                     }}
-                                    required
                                 >
-                                    {tiposDocumento.map(td => (
-                                        <option key={td.idTipoDocumento} value={td.idTipoDocumento}>
-                                            {td.nombreDocumento} ({td.codigoDocumento})
+                                    {tiposDocumento.map((document) => (
+                                        <option
+                                            key={document.idTipoDocumentoExterno}
+                                            value={document.idTipoDocumentoExterno ?? ''}
+                                        >
+                                            {`${document.nombreTipoDocumentoExterno || document.nombreDocumento || 'Documento'} - ${document.codigoTipoDocumentoExterno || document.codigoDocumento || document.idTipoDocumento}`}
                                         </option>
                                     ))}
                                 </select>
@@ -973,365 +985,502 @@ const MainEstimate = () => {
                                     type="text"
                                     className="rounded border px-3 py-2 text-sm bg-background w-20"
                                     value={cotizacion.prefijoCotizacion ?? ''}
-                                    onChange={(e) => setCotizacion({ ...cotizacion, prefijoCotizacion: e.target.value })}
                                     readOnly
+                                    aria-label="Prefijo de cotización"
                                 />
                                 <h2 className="text-sm font-normal">Número</h2>
                                 <input
                                     type="text"
                                     className="rounded border px-3 py-2 text-sm bg-background w-28"
-                                                                value={cotizacion.numeroCotizacion ?? ''}
-                                                                onChange={(e) => setCotizacion({ ...cotizacion, numeroCotizacion: e.target.value === '' ? null : parseInt(e.target.value) })}
+                                    value={cotizacion.numeroCotizacion || ''}
                                     readOnly
+                                    aria-label="Número de cotización"
                                 />
                                 <h2 className="text-sm font-normal">Fecha</h2>
                                 <input
                                     type="date"
-                                    className="rounded border px-3 py-2 text-sm bg-background w-30"
-                                    value={new Date().toISOString().split('T')[0]}
-                                    onChange={(e) => setCotizacion({ ...cotizacion, fechaCotizacion: e.target.value })}
+                                    className="rounded border px-3 py-2 text-sm bg-background w-25"
+                                    value={cotizacion.fechaCotizacion || getLocalDate()}
                                     readOnly
+                                    aria-label="Fecha de cotización"
                                 />
                             </div>
-
-                            <Badge className="bg-primary text-primary-foreground">
-                                {totalItems}
-                            </Badge>
                         </div>
+                        {tipoDocumentoError && (
+                            <p className="mt-2 text-sm text-destructive">
+                                {tipoDocumentoError}
+                            </p>
+                        )}
                     </div>
 
-                    {/* Panel de Cliente */}
-
-                    <div className="border-b bg-muted/50">
-                        <div className="flex items-center gap-2 ml-3 mt-2 mb-2 mr-2">
-                            <h2 className="text-sm font-normal">Cliente</h2>
-                            <div className="grid grid-cols-5 gap-1">
+                    <div className="shrink-0 border-b bg-muted/50 p-3">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-sm font-medium whitespace-nowrap">
+                                Cliente
+                            </h2>
+                            <div className="grid flex-1 grid-cols-6 gap-1">
                                 <select
-                                    className="w-full rounded border px-2 py-2 text-sm bg-background w-42"
-                                    value={cotizacion.terceroCotizacion?.idTipoDocumentoId ?? 0}
-                                        onChange={(e) => setCotizacion({ ...cotizacion, terceroCotizacion: { ...(cotizacion.terceroCotizacion ?? {} as any), idTipoDocumentoId: parseInt(e.target.value) } })}
-                                    required
+                                    className="w-full rounded border px-2 py-2 text-sm bg-background"
+                                    value={
+                                        cotizacion.terceroCotizacion?.idTipoDocumentoId ?? 0
+                                    }
+                                    onChange={(event) =>
+                                        updateTercero({
+                                            idTipoDocumentoId:
+                                                Number.parseInt(event.target.value, 10) || 0,
+                                        })
+                                    }
                                 >
-                                    {tiposDocumentoIdentidad.map(cat => (
-                                        <option key={cat.idTipoDocumentoId} value={cat.idTipoDocumentoId}>
-                                            {cat.nombreTipoDocumentoId} ({cat.codigoTipoDocumentoId})
+                                    {tiposDocumentoIdentidad.map((item) => (
+                                        <option
+                                            key={item.idTipoDocumentoId}
+                                            value={item.idTipoDocumentoId}
+                                        >
+                                            {item.nombreTipoDocumentoId} (
+                                            {item.codigoTipoDocumentoId})
                                         </option>
                                     ))}
                                 </select>
                                 <Input
-                                    placeholder="Número de Identificación"
-                                    className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={cotizacion.terceroCotizacion?.numeroIdentificacion || ''}
-                                        onChange={(e) => {
-                                        const value = e.target.value;
-                                        setCotizacion({
-                                            ...cotizacion,
-                                            terceroCotizacion: {
-                                                ...(cotizacion.terceroCotizacion ?? {} as any),
-                                                numeroIdentificacion: value
-                                            }
-                                        });
-                                        // Buscar tercero después de un pequeño delay para evitar muchas búsquedas
-                                        if (value.length >= 3) {
-                                            handleSearchTercero(value);
-                                        }
+                                    placeholder="Número de identificación"
+                                    className="rounded border px-2 py-2 text-sm bg-background"
+                                    value={
+                                        cotizacion.terceroCotizacion?.numeroIdentificacion ?? ''
+                                    }
+                                    onChange={(event) => {
+                                        const value = event.target.value;
+                                        updateTercero({ numeroIdentificacion: value });
+                                        if (value.length >= 3) handleSearchTercero(value);
                                     }}
-                                    onFocus={(e) => e.target.select()}
-                                    onBlur={(e) => {
-                                        // Búsqueda al perder el foco
-                                        if (e.target.value) {
-                                            handleSearchTercero(e.target.value);
+                                    onBlur={(event) => {
+                                        if (event.target.value) {
+                                            handleSearchTercero(event.target.value);
                                         }
                                     }}
                                 />
                                 <Input
-                                    placeholder="Primer Nombre"
-                                    className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={cotizacion.terceroCotizacion?.primerNombre || ''}
-                                    onChange={(e) => setCotizacion({
-                                        ...cotizacion,
-                                        terceroCotizacion: {
-                                            ...(cotizacion.terceroCotizacion ?? {} as any),
-                                            primerNombre: e.target.value
-                                        }
-                                    })}
+                                    placeholder="Primer nombre"
+                                    className="rounded border px-2 py-2 text-sm bg-background"
+                                    value={cotizacion.terceroCotizacion?.primerNombre ?? ''}
+                                    onChange={(event) =>
+                                        updateTercero({ primerNombre: event.target.value })
+                                    }
                                 />
                                 <Input
-                                    placeholder="Primer Apellido"
-                                    className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={cotizacion.terceroCotizacion?.primerApellido || ''}
-                                    onChange={(e) => setCotizacion({
-                                        ...cotizacion,
-                                        terceroCotizacion: {
-                                            ...(cotizacion.terceroCotizacion ?? {} as any),
-                                            primerApellido: e.target.value
-                                        }
-                                    })}
+                                    placeholder="Primer apellido"
+                                    className="rounded border px-2 py-2 text-sm bg-background"
+                                    value={cotizacion.terceroCotizacion?.primerApellido ?? ''}
+                                    onChange={(event) =>
+                                        updateTercero({ primerApellido: event.target.value })
+                                    }
                                 />
                                 <Input
                                     type="email"
                                     placeholder="Email"
-                                    className="rounded border px-2 py-2 text-sm bg-background w-26"
-                                    value={cotizacion.terceroCotizacion?.emailTercero || ''}
-                                    onChange={(e) => setCotizacion({
-                                        ...cotizacion,
-                                        terceroCotizacion: {
-                                            ...(cotizacion.terceroCotizacion ?? {} as any),
-                                            emailTercero: e.target.value
-                                        }
-                                    })}
+                                    className="rounded border px-2 py-2 text-sm bg-background"
+                                    value={cotizacion.terceroCotizacion?.emailTercero ?? ''}
+                                    onChange={(event) =>
+                                        updateTercero({ emailTercero: event.target.value })
+                                    }
+                                />
+                                <Input
+                                    placeholder="Razón Social"
+                                    className="rounded border px-2 py-2 text-sm bg-background"
+                                    value={cotizacion.terceroCotizacion?.razonSocial ?? ''}
+                                    onChange={(event) =>
+                                        updateTercero({ razonSocial: event.target.value })
+                                    }
                                 />
                             </div>
-                            <Dialog open={openDialogTercero} onOpenChange={setOpenDialogTercero}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="icon" title="Buscar cliente">
-                                        <Search className="w-8 h-8" />
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-4xl">
-                                    <DialogHeader>
-                                        <DialogTitle>Buscar cliente</DialogTitle>
-                                    </DialogHeader>
-                                    {/* Input de búsqueda */}
-                                    <Input
-                                        className="mb-4"
-                                        placeholder="Buscar por número o nombre o apellido o razon social..."
-                                        value={searchTercero}
-                                        onChange={e => setSearchTercero(e.target.value)}
-                                    />
-                                    <div className="overflow-x-auto max-h-[400px]">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Número Identificación</TableHead>
-                                                    <TableHead>Primer Nombre</TableHead>
-                                                    <TableHead>Primer Apellido</TableHead>
-                                                    <TableHead>Razón Social</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {terceros
-                                                    .filter(
-                                                        cliente =>
-                                                            cliente.numeroIdentificacion?.toLowerCase().includes(searchTercero.toLowerCase()) ||
-                                                            cliente.razonSocial?.toLowerCase().includes(searchTercero.toLowerCase()) ||
-                                                            cliente.primerNombre?.toLowerCase().includes(searchTercero.toLowerCase()) ||
-                                                            cliente.primerApellido?.toLowerCase().includes(searchTercero.toLowerCase())
-                                                    )
-                                                    .map((cliente) => (
-                                                        <TableRow
-                                                            key={cliente.idTercero}
-                                                            className="cursor-pointer hover:bg-primary/10"
-                                                            onClick={() => handleSelectTercero(cliente)}
-                                                        >
-                                                            <TableCell>{cliente.numeroIdentificacion}</TableCell>
-                                                            <TableCell>{cliente.primerNombre}</TableCell>
-                                                            <TableCell>{cliente.primerApellido}</TableCell>
-                                                            <TableCell>{cliente.razonSocial}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                            </TableBody>
-                                        </Table>
-                                        {isLoadingTerceros && (
-                                            <div className="text-center text-muted-foreground py-4">Cargando...</div>
-                                        )}
-                                        {terceroError && (
-                                            <div className="text-center text-red-500 py-4">{terceroError}</div>
-                                        )}
-                                    </div>
-                                </DialogContent>
+                            <Dialog
+                                open={openDialogTercero}
+                                onOpenChange={setOpenDialogTercero}
+                            >
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            title="Buscar cliente"
+                                        >
+                                            <Search className="h-4 w-4" />
+                                            <span className="sr-only">Buscar cliente</span>
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-4xl">
+                                        <DialogHeader>
+                                            <DialogTitle>Buscar cliente</DialogTitle>
+                                        </DialogHeader>
+                                        <Input
+                                            className="mb-2"
+                                            placeholder="Buscar por número, nombre o razón social..."
+                                            value={searchTercero}
+                                            onChange={(event) =>
+                                                setSearchTercero(event.target.value)
+                                            }
+                                        />
+                                        <div className="max-h-[400px] overflow-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Número identificación</TableHead>
+                                                        <TableHead>Primer nombre</TableHead>
+                                                        <TableHead>Primer apellido</TableHead>
+                                                        <TableHead>Razón social</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {terceros
+                                                        .filter((tercero) => {
+                                                            const query =
+                                                                searchTercero.toLowerCase();
+                                                            return [
+                                                                tercero.numeroIdentificacion,
+                                                                tercero.primerNombre,
+                                                                tercero.primerApellido,
+                                                                tercero.razonSocial,
+                                                            ].some((value) =>
+                                                                (value ?? '')
+                                                                    .toLowerCase()
+                                                                    .includes(query)
+                                                            );
+                                                        })
+                                                        .map((tercero) => (
+                                                            <TableRow
+                                                                key={tercero.idTercero}
+                                                                className="cursor-pointer hover:bg-primary/10"
+                                                                onClick={() =>
+                                                                    handleSelectTercero(tercero)
+                                                                }
+                                                            >
+                                                                <TableCell>
+                                                                    {tercero.numeroIdentificacion}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {tercero.primerNombre}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {tercero.primerApellido}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {tercero.razonSocial}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                </TableBody>
+                                            </Table>
+                                            {isLoadingTerceros && (
+                                                <p className="py-4 text-center text-muted-foreground">
+                                                    Cargando clientes...
+                                                </p>
+                                            )}
+                                            {terceroError && (
+                                                <p className="py-4 text-center text-destructive">
+                                                    {terceroError}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </DialogContent>
                             </Dialog>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                title="Diligenciar información ampliada del tercero"
+                                onClick={() => navigate('/terceros', {
+                                    state: {
+                                        from: 'estimate',
+                                        cotizacion,
+                                        crearTercero:
+                                            !cotizacion.terceroCotizacion?.idTercero ||
+                                            cotizacion.terceroCotizacion.idTercero === idTerceroDefault
+                                    }
+                                })}
+                            >
+                                <FileText className="w-5 h-5" />
+                            </Button>
                         </div>
-
+                        {tipoIdentidadError && (
+                            <p className="mt-2 text-sm text-destructive">
+                                {tipoIdentidadError}
+                            </p>
+                        )}
                     </div>
 
+                    <div className="shrink-0 border-b bg-muted/50">
+                        <div className="ml-3 mr-2 mt-2 mb-2">
+                            <div className="grid w-full grid-cols-[2fr_1fr_1fr] gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Label
+                                        htmlFor="observaciones-cotizacion"
+                                        className="whitespace-nowrap text-sm font-medium"
+                                    >
+                                        Observaciones:
+                                    </Label>
+                                    <Input
+                                        id="observaciones-cotizacion"
+                                        placeholder="Observaciones"
+                                        className="flex-1 rounded border bg-background px-2 py-2 text-base"
+                                        value={cotizacion.observaciones ?? ''}
+                                        onChange={(event) =>
+                                            setCotizacion((current) => ({
+                                                ...current,
+                                                observaciones: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Label
+                                        htmlFor="orden-referencia-cotizacion"
+                                        className="whitespace-nowrap text-sm font-medium"
+                                    >
+                                        Orden Ref:
+                                    </Label>
+                                    <Input
+                                        id="orden-referencia-cotizacion"
+                                        placeholder="Orden Referencia"
+                                        className="flex-1 rounded border bg-background px-2 py-2 text-base"
+                                        value={cotizacion.ordenReferencia ?? ''}
+                                        onChange={(event) =>
+                                            setCotizacion((current) => ({
+                                                ...current,
+                                                ordenReferencia: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Label
+                                        htmlFor="fecha-orden-referencia-cotizacion"
+                                        className="whitespace-nowrap text-sm font-medium"
+                                    >
+                                        Fecha Ref:
+                                    </Label>
+                                    <Input
+                                        id="fecha-orden-referencia-cotizacion"
+                                        type="date"
+                                        placeholder="Fecha Orden Referencia"
+                                        className="flex-1 rounded border bg-background px-2 py-2 text-base"
+                                        value={cotizacion.fechaOrdenReferencia?.split('T')[0] ?? ''}
+                                        onChange={(event) =>
+                                            setCotizacion((current) => ({
+                                                ...current,
+                                                fechaOrdenReferencia: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                    {/* Items del Carrito */}
-                    <div className="flex-1 overflow-y-auto p-4 min-h-[300px]">
-                        {(cotizacion.detalleCotizacion ?? []).length === 0 ? (
+                    <div className="flex-1 min-h-0 overflow-y-auto p-3">
+                        {!cotizacion.detalleCotizacion.length ? (
                             <div className="text-center py-12">
                                 <div className="text-6xl mb-4">🛒</div>
                                 <p className="text-muted-foreground font-medium">Carrito vacío</p>
                                 <p className="text-sm text-muted-foreground mt-1">Escanea o selecciona productos</p>
                             </div>
                         ) : (
-                            <div className="space-y-1.5">
-                                {(cotizacion.detalleCotizacion ?? []).map(item => (
-                                    <Card key={item.idProducto} className="p-1">
-                                        <div className="flex items-center justify-between">
-                                            {/* Información del producto */}
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-medium text-sm truncate">{item.nombreProducto}</h4>
-                                                <div className="flex items-center space-x-2 mt-1">
-                                                    <Badge variant="outline" className="text-xs">{item.codigoProducto}</Badge>
-                                                    <span className="text-sm text-muted-foreground">${formatCurrency(item.precioUnitarioCotizacion)}</span>
+                            <div className="space-y-2">
+                                {cotizacion.detalleCotizacion.map((item) => (
+                                    <Card
+                                        key={item.idProducto}
+                                        className="p-3"
+                                    >
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex items-center gap-3 w-full min-w-0 px-2">
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-xs h-9 px-3 flex items-center bg-background"
+                                                >
+                                                    {item.codigoProducto || 'Sin código'}
+                                                </Badge>
+                                                <div className="min-w-0 flex-1">
+                                                    {item.idTipoProducto === 2 ? (
+                                                        <Input
+                                                            value={item.nombreProducto ?? ''}
+                                                            onChange={(event) =>
+                                                                updateDetail(item.idProducto, {
+                                                                    nombreProducto: event.target.value,
+                                                                })
+                                                            }
+                                                            className="max-w-xl text-sm font-medium"
+                                                            placeholder="Nombre del producto"
+                                                        />
+                                                    ) : (
+                                                        <h3 className="truncate text-sm font-medium">
+                                                            {item.nombreProducto}
+                                                        </h3>
+                                                    )}
                                                 </div>
                                             </div>
-
-                                            {/* Contenedor para campos alineados */}
-                                            <div className="flex items-end gap-2">
-                                                {/* Campos de descuento e IVA */}
-                                                <div className="flex gap-2">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">% Descuento</span>
-                                                        <input
-                                                            type="number"
-                                                            className="w-20 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.porcentajeDescuentoCotizacion || ''}
-                                                            onChange={(e) => {
-                                                                const valorDescuento = parseFloat(((item.precioUnitarioCotizacion * item.cantidadCotizacion) * ((parseFloat(e.target.value) || 0) / 100)).toFixed(2));
-                                                                setCotizacion({
-                                                                    ...cotizacion,
-                                                                    detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
-                                                                        detalleItem.idProducto === item.idProducto
-                                                                            ? {
-                                                                                ...detalleItem,
-                                                                                porcentajeDescuentoCotizacion: parseFloat(e.target.value) || 0,
-                                                                                descuentoCotizacion: valorDescuento
-                                                                            }
-                                                                            : detalleItem
-                                                                    )
-                                                                });
-                                                            }}
-                                                            min={0}
-                                                            max={100}
-                                                            placeholder="0"
-                                                        />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">Valor Descuento</span>
-                                                        <input
-                                                            type="number"
-                                                            className="w-24 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.descuentoCotizacion || ''}
-                                                            onChange={(e) => {
-                                                                setCotizacion({
-                                                                    ...cotizacion,
-                                                                    detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
-                                                                        detalleItem.idProducto === item.idProducto
-                                                                            ? { ...detalleItem, descuentoCotizacion: parseFloat(e.target.value) || 0 }
-                                                                            : detalleItem
-                                                                    )
-                                                                });
-                                                            }}
-                                                            placeholder="0"
-                                                        />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">% IVA</span>
-                                                        <input
-                                                            type="number"
-                                                            className="w-20 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.porcentajeIvaCotizacion || ''}
-                                                            onChange={(e) => {
-                                                                setCotizacion({
-                                                                    ...cotizacion,
-                                                                    detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
-                                                                        detalleItem.idProducto === item.idProducto
-                                                                            ? {
-                                                                                ...detalleItem, porcentajeIvaCotizacion: parseFloat(e.target.value) || 0,
-                                                                                ivaCotizacion: (detalleItem.precioUnitarioCotizacion * detalleItem.cantidadCotizacion) * ((parseFloat(e.target.value) || 0) / 100)
-                                                                            }
-                                                                            : detalleItem
-                                                                    )
-                                                                });
-                                                            }}
-                                                            min={0}
-                                                            max={100}
-                                                            placeholder="0"
-                                                            disabled
-                                                        />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-medium mb-1 whitespace-nowrap text-center">Valor IVA</span>
-                                                        <input
-                                                            type="number"
-                                                            className="w-24 h-8 border rounded px-2 text-sm text-center"
-                                                            value={item.ivaCotizacion || ''}
-                                                            onChange={(e) => {
-                                                                setCotizacion({
-                                                                    ...cotizacion,
-                                                                    detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
-                                                                        detalleItem.idProducto === item.idProducto
-                                                                            ? { ...detalleItem, ivaCotizacion: parseFloat(e.target.value) || 0 }
-                                                                            : detalleItem
-                                                                    )
-                                                                });
-                                                            }}
-                                                            placeholder="0"
-                                                            disabled
-                                                        />
-                                                    </div>
+                                            <div className="flex flex-wrap items-end justify-between gap-2 w-full px-2">
+                                                <div className="flex flex-col">
+                                                    <span className="mb-1 text-center text-xs font-bold">
+                                                        Precio
+                                                    </span>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        value={item.precioUnitarioCotizacion ?? ''}
+                                                        onFocus={(event) =>
+                                                            event.target.select()
+                                                        }
+                                                        onChange={(event) =>
+                                                            updateDetail(item.idProducto, {
+                                                                precioUnitarioCotizacion:
+                                                                    Number(event.target.value) || 0,
+                                                            })
+                                                        }
+                                                        className="h-8 w-28 bg-background text-center text-sm text-muted-foreground"
+                                                        placeholder="Precio"
+                                                    />
                                                 </div>
-
-                                                {/* Separador visual */}
-                                                <div className="w-px h-8 bg-border"></div>
-
-                                                {/* Controles de cantidad, precio y eliminar */}
-                                                <div className="flex items-end gap-2">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-bold mb-1 text-center">Cantidad</span>
-                                                        <div className="flex items-center">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => updateQuantity(item.idProducto, -1)}
-                                                                className="h-8 w-8 rounded-r-none"
-                                                            >
-                                                                <Minus className="h-4 w-4" />
-                                                            </Button>
-                                                            <Input
-                                                                type="number"
-                                                                value={item.cantidadCotizacion}
-                                                                onFocus={(e) => e.target.select()}
-                                                                onChange={(e) => {
-                                                                    const value = e.target.value;
-                                                                    const newQuantity = value === '' ? 0 : parseFloat(value);
-                                                                    if (newQuantity >= 0) {
-                                                                        setCotizacion({
-                                                                            ...cotizacion,
-                                                                            detalleCotizacion: (cotizacion.detalleCotizacion ?? []).map(detalleItem =>
-                                                                                detalleItem.idProducto === item.idProducto
-                                                                                    ? {
-                                                                                        ...detalleItem,
-                                                                                        cantidadCotizacion: newQuantity,
-                                                                                        ivaCotizacion: parseFloat(((item.precioUnitarioCotizacion * newQuantity - item.descuentoCotizacion) * ((item.porcentajeIvaCotizacion || 0) / 100)).toFixed(2)),
-                                                                                        descuentoCotizacion: parseFloat(((item.precioUnitarioCotizacion * newQuantity) * ((item.porcentajeDescuentoCotizacion || 0) / 100)).toFixed(2)),
-                                                                                    }
-                                                                                    : detalleItem
-                                                                            )
-                                                                        });
-                                                                    }
-                                                                }}
-                                                                className="w-16 h-8 text-center rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                            />
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => updateQuantity(item.idProducto, 1)}
-                                                                className="h-8 w-8 rounded-l-none"
-                                                            >
-                                                                <Plus className="h-4 w-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-bold mb-1 whitespace-nowrap text-center">Valor Total</span>
-                                                        <span className="font-bold text-primary min-w-[80px] text-right h-8 flex items-center justify-end">
-                                                            ${formatCurrency((item.precioUnitarioCotizacion * item.cantidadCotizacion) - item.descuentoCotizacion + item.ivaCotizacion)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-bold mb-1 text-transparent">Eliminar</span>
+                                                <div className="flex flex-wrap items-end gap-2">
+                                                <div className="flex flex-col">
+                                                    <label className="mb-1 text-center text-xs">
+                                                        % Descuento
+                                                    </label>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        max={100}
+                                                        className="h-8 w-20 text-center"
+                                                        value={
+                                                            item.porcentajeDescuentoCotizacion ?? 0
+                                                        }
+                                                        onChange={(event) =>
+                                                            updateDetail(item.idProducto, {
+                                                                porcentajeDescuentoCotizacion:
+                                                                    Number(event.target.value) || 0,
+                                                            })
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <label className="mb-1 text-center text-xs">
+                                                        Valor descuento
+                                                    </label>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        className="h-8 w-24 text-center"
+                                                        value={Number(
+                                                            item.descuentoCotizacion ?? 0
+                                                        ).toFixed(2)}
+                                                        onChange={(event) =>
+                                                            updateDetail(item.idProducto, {
+                                                                descuentoCotizacion:
+                                                                    Number(event.target.value) || 0,
+                                                            })
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <label className="mb-1 text-center text-xs">
+                                                        % IVA
+                                                    </label>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        className="h-8 w-20 text-center"
+                                                        value={item.porcentajeIvaCotizacion ?? 0}
+                                                        onChange={(event) =>
+                                                            updateDetail(item.idProducto, {
+                                                                porcentajeIvaCotizacion:
+                                                                    Number(event.target.value) || 0,
+                                                            })
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <label className="mb-1 text-center text-xs">
+                                                        Valor IVA
+                                                    </label>
+                                                    <Input
+                                                        type="number"
+                                                        className="h-8 w-24 text-center"
+                                                        value={Number(
+                                                            item.ivaCotizacion ?? 0
+                                                        ).toFixed(2)}
+                                                        readOnly
+                                                    />
+                                                </div>
+                                                <div className="h-8 w-px bg-border" />
+                                                <div className="flex flex-col">
+                                                    <span className="mb-1 text-center text-xs font-bold">
+                                                        Cantidad
+                                                    </span>
+                                                    <div className="flex items-center">
                                                         <Button
-                                                            variant="ghost"
+                                                            type="button"
+                                                            variant="outline"
                                                             size="sm"
-                                                            onClick={() => removeFromCart(item.idProducto)}
-                                                            className="text-destructive hover:text-destructive h-8 w-8"
+                                                            className="h-8 w-8 rounded-r-none"
+                                                            onClick={() =>
+                                                                updateQuantity(
+                                                                    item.idProducto,
+                                                                    -1
+                                                                )
+                                                            }
                                                         >
-                                                            <Trash className="h-4 w-4" />
+                                                            <Minus className="h-4 w-4" />
+                                                        </Button>
+                                                        <Input
+                                                            type="number"
+                                                            min={0}
+                                                            value={
+                                                                item.cantidadCotizacion ?? 0
+                                                            }
+                                                            onFocus={(event) =>
+                                                                event.target.select()
+                                                            }
+                                                            onChange={(event) =>
+                                                                updateDetail(item.idProducto, {
+                                                                    cantidadCotizacion:
+                                                                        Number(event.target.value) ||
+                                                                        0,
+                                                                })
+                                                            }
+                                                            className="h-8 w-16 rounded-none text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 w-8 rounded-l-none"
+                                                            onClick={() =>
+                                                                updateQuantity(
+                                                                    item.idProducto,
+                                                                    1
+                                                                )
+                                                            }
+                                                        >
+                                                            <Plus className="h-4 w-4" />
                                                         </Button>
                                                     </div>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="mb-1 text-center text-xs font-bold">
+                                                        Valor total
+                                                    </span>
+                                                    <span className="flex h-8 min-w-20 items-center justify-end font-bold text-primary">
+                                                        ${formatCurrency(
+                                                            item.totalCotizacion
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    title="Eliminar producto"
+                                                    onClick={() =>
+                                                        removeFromCart(item.idProducto)
+                                                    }
+                                                >
+                                                    <Trash className="h-4 w-4 text-destructive" />
+                                                </Button>
                                                 </div>
                                             </div>
                                         </div>
@@ -1341,141 +1490,159 @@ const MainEstimate = () => {
                         )}
                     </div>
 
-                    {/* Panel de Totales y Pago */}
-                    {(cotizacion.detalleCotizacion ?? []).length > 0 && (
-                        <div className="border-t flex flex-col h-[400px]" >
-                            <div className="h-[100px] overflow-y-auto">
-
-                                {/* Totales */}
-                                <div className="p-2 space-y-2">
-                                    {/* Resumen */}
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Subtotal</span>
-                                            <span>${formatCurrency(subtotal)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Descuento</span>
-                                            <span>${formatCurrency(discount)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">IVA</span>
-                                            <span>${formatCurrency(tax)}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div className="shrink-0 border-t bg-background p-3">
+                        <div className="mb-3 grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Subtotal</span>
+                                <span>${formatCurrency(subtotal)}</span>
                             </div>
-
-                            {/* Botón de Pago */}
-                            <div className="h-[60px] p-4 border-t bg-background">
-                                <Button
-                                    onClick={handleSaveVenta}
-                                    className="w-full h-[40px] text-lg font-bold"
-                                    size="lg"
-                                >
-                                    <Check className="h-5 w-5 mr-2" />
-                                    Guardar cotización
-                                </Button>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Descuento</span>
+                                <span>${formatCurrency(discount)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">IVA</span>
+                                <span>${formatCurrency(tax)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">
+                                    Impuesto al consumo
+                                </span>
+                                <span>${formatCurrency(consumption)}</span>
+                            </div>
+                            <div className="col-span-2 flex justify-between border-t pt-2 font-bold">
+                                <span>Total cotización</span>
+                                <span>${formatCurrency(total)}</span>
                             </div>
                         </div>
-                    )}
+                        <Button
+                            type="button"
+                            onClick={handleSaveCotizacion}
+                            disabled={
+                                isSaving ||
+                                !cotizacion.detalleCotizacion.length
+                            }
+                            className="h-10 w-full text-lg font-bold"
+                            size="lg"
+                        >
+                            <Check className="mr-2 h-5 w-5" />
+                            {isSaving
+                                ? cotizacion.idCotizacion
+                                    ? 'Actualizando...'
+                                    : 'Guardando...'
+                                : cotizacion.idCotizacion
+                                    ? 'Actualizar Cotización'
+                                    : 'Guardar Cotización'}
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Panel Derecho - Productos (30%) */}
-                <div className="w-[30%] border-l bg-card flex flex-col">
-                    {/* Header */}
+                <div className="flex w-[30%] flex-col border-l bg-card">
                     <div className="border-b p-4">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 placeholder="Buscar por nombre, código..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 w-full"
+                                onChange={(event) => setSearchTerm(event.target.value)}
+                                className="w-full pl-10"
                             />
                         </div>
-
                     </div>
-
-
-                    {/* Categorías */}
-                    <div className="border-b p-2 h-[80px]">
-                        <Tabs value={selectedCategory.toString()} onValueChange={setSelectedCategory} className="w-full">
-                            <TabsList className="flex flex-wrap gap-1 h-full">
+                    <div className="h-20 border-b p-2">
+                        <Tabs
+                            value={selectedCategory}
+                            onValueChange={setSelectedCategory}
+                            className="w-full"
+                        >
+                            <TabsList className="flex h-full flex-wrap gap-1">
                                 {categories.map((category, index) => {
-                                    // Garantizamos que la variable empiece por mayúscula para que React la trate como componente JSX
-                                    const RenderIcon = category.icon || resolveCategoryIcon(category.iconoCategoria) || Package;
-
+                                    const CategoryIcon =
+                                        category.icon ||
+                                        resolveCategoryIcon(category.iconoCategoria);
                                     return (
                                         <TabsTrigger
                                             key={category.idCategoria ?? index}
-                                            value={category.idCategoria?.toString() ?? ""}
+                                            value={
+                                                category.idCategoria?.toString() ?? '0'
+                                            }
                                             disabled={isLoadingCategories}
-                                            className="flex items-center space-x-1 px-2 py-1 flex-1 min-w-[calc(33.33%-4px)]"
+                                            className="flex min-w-[calc(33.33%-4px)] flex-1 items-center space-x-1 px-2 py-1"
                                         >
-                                            <RenderIcon className="h-4 w-4 shrink-0" />
-                                            <span className="text-sm">{category.nombreCategoria}</span>
+                                            <CategoryIcon className="h-4 w-4 shrink-0" />
+                                            <span className="text-sm">
+                                                {category.nombreCategoria}
+                                            </span>
                                         </TabsTrigger>
                                     );
                                 })}
                             </TabsList>
                         </Tabs>
                     </div>
-
-                    {/* Grid de Productos */}
-                    <div className="flex-1 p-4 overflow-y-auto">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {filteredProducts.map(product => (
+                    <div className="flex-1 overflow-y-auto p-4">
+                        {isLoadingProducts && (
+                            <p className="py-4 text-center text-muted-foreground">
+                                Cargando productos...
+                            </p>
+                        )}
+                        {productError && (
+                            <p className="py-4 text-center text-destructive">
+                                {productError}
+                            </p>
+                        )}
+                        {categoryError && (
+                            <p className="py-2 text-center text-destructive">
+                                {categoryError}
+                            </p>
+                        )}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            {filteredProducts.map((product) => (
                                 <Card
                                     key={product.idProducto}
-                                    className={`cursor-pointer transition-all hover:shadow-lg ${((product.stockActualProducto ?? 0) <= 0) ? 'border-destructive/50' : ''
+                                    className={`cursor-pointer transition-all hover:shadow-lg ${(product.stockActualProducto ?? 0) <= 0
+                                            ? 'border-destructive/50'
+                                            : ''
                                         }`}
                                     onClick={() => addToCart(product)}
                                 >
                                     <CardHeader className="pb-2">
-                                        <div className="flex justify-between items-start">
-                                            <Badge variant="secondary" className="text-xs">
-                                                {product.codigoProducto}
-                                            </Badge>
-                                            {/* {product.stockActualProducto !== null && product.stockActualProducto <= 0 && (
-                                                <AlertTriangle className="h-4 w-4 text-destructive" />
-                                            )} */}
-                                        </div>
+                                        <Badge
+                                            variant="secondary"
+                                            className="w-fit text-xs"
+                                        >
+                                            {product.codigoProducto}
+                                        </Badge>
                                     </CardHeader>
-
-                                    <CardContent className="text-center space-y-2">
-                                        {/* <div className="text-4xl mb-2">{product.image}</div> */}
-                                        <CardTitle className="text-sm leading-tight line-clamp-2">
+                                    <CardContent className="space-y-2 text-center">
+                                        <CardTitle className="line-clamp-2 text-sm leading-tight">
                                             {product.nombreProducto}
                                         </CardTitle>
-                                        {/* <CardDescription className="text-xs">{product.brand}</CardDescription> */}
-                                        {/* {product.size && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Talla {product.size}
-                                            </Badge>
-                                        )} */}
                                     </CardContent>
-
                                     <CardFooter className="flex flex-col space-y-2 pt-2">
                                         <div className="text-lg font-bold text-primary">
-                                            ${formatCurrency(product.precioPos)}
+                                            ${formatCurrency(
+                                                product.precioPos ??
+                                                product.precioUnitario
+                                            )}
                                         </div>
-                                            <Badge
-                                                variant={(product.stockActualProducto ?? 0) > 0 ? "secondary" : "destructive"}
-                                                className="text-xs"
-                                            >
-                                                Stock: {product.stockActualProducto ?? 0}
-                                            </Badge>
+                                        <Badge
+                                            variant={
+                                                (product.stockActualProducto ?? 0) > 0
+                                                    ? 'secondary'
+                                                    : 'destructive'
+                                            }
+                                            className="text-xs"
+                                        >
+                                            Stock: {product.stockActualProducto ?? 0}
+                                        </Badge>
                                     </CardFooter>
                                 </Card>
                             ))}
                         </div>
                     </div>
                 </div>
-
             </div>
-
-        </div >
+        </div>
     );
 };
 

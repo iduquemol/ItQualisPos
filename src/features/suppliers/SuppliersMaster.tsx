@@ -30,27 +30,32 @@ export default function SuppliersMaster() {
     const navigate = useNavigate();
     const location = useLocation();
     const vieneDesdePos = location.state?.from === "pos";
-    const terceroDesdePos = location.state?.factura?.terceroVenta;
-    const crearTerceroDesdePos = location.state?.crearTercero === true;
+    const vieneDesdeEstimate = location.state?.from === "estimate";
+    const terceroDesdeOrigen = vieneDesdePos
+        ? location.state.factura?.terceroVenta
+        : vieneDesdeEstimate
+            ? location.state.cotizacion?.terceroCotizacion
+            : undefined;
+    const crearTerceroDesdeOrigen = location.state?.crearTercero === true;
     const [search, setSearch] = useState("");
     // Estado para los campos iniciales del tercero
     const [tercero, setTercero] = useState<ITercero>({
-        idTercero: crearTerceroDesdePos ? null : terceroDesdePos?.idTercero ?? null,
-        idTipoDocumentoId: terceroDesdePos?.idTipoDocumentoId ?? 0,
+        idTercero: crearTerceroDesdeOrigen ? null : terceroDesdeOrigen?.idTercero ?? null,
+        idTipoDocumentoId: terceroDesdeOrigen?.idTipoDocumentoId ?? 0,
         nombreTipoDocumentoId: "",
-        digitoVerificacion: terceroDesdePos?.digitoVerificacion ?? "",
-        numeroIdentificacion: terceroDesdePos?.numeroIdentificacion ?? "",
-        primerNombre: terceroDesdePos?.primerNombre ?? "",
+        digitoVerificacion: terceroDesdeOrigen?.digitoVerificacion ?? "",
+        numeroIdentificacion: terceroDesdeOrigen?.numeroIdentificacion ?? "",
+        primerNombre: terceroDesdeOrigen?.primerNombre ?? "",
         segundoNombre: "",
-        primerApellido: terceroDesdePos?.primerApellido ?? "",
+        primerApellido: terceroDesdeOrigen?.primerApellido ?? "",
         segundoApellido: "",
-        razonSocial: terceroDesdePos?.razonSocial ?? "",
-        telefonoTercero: terceroDesdePos?.telefonoTercero ?? null,
-        direccionTercero: terceroDesdePos?.direccionTercero ?? "",
-        emailTercero: terceroDesdePos?.emailTercero ?? "",
+        razonSocial: terceroDesdeOrigen?.razonSocial ?? "",
+        telefonoTercero: terceroDesdeOrigen?.telefonoTercero ?? null,
+        direccionTercero: terceroDesdeOrigen?.direccionTercero ?? "",
+        emailTercero: terceroDesdeOrigen?.emailTercero ?? "",
         idDepartamento: 0,
         nombreDepartamento: null,
-        idMunicipio: terceroDesdePos?.idMunicipio ?? 0,
+        idMunicipio: terceroDesdeOrigen?.idMunicipio ?? 0,
         nombreMunicipio: null,
         terceroActivo: true,
         terceroCliente: false,
@@ -883,6 +888,15 @@ export default function SuppliersMaster() {
                         size="icon"
                         title="Salir"
                         onClick={() => {
+                            if (vieneDesdeEstimate) {
+                                navigate('/estimates', {
+                                    state: {
+                                        from: 'terceros',
+                                        cotizacion: location.state.cotizacion
+                                    }
+                                });
+                                return;
+                            }
                             if (vieneDesdePos) {
                                 navigate('/pos', {
                                     state: { from: 'terceros', factura: location.state.factura }

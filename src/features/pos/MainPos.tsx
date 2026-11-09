@@ -1353,7 +1353,7 @@ const RetailPOS = () => {
                                     readOnly
                                 />
                             </div>
-                            
+
                             {/* Indicador de Escaneo */}
                             {/* {barcodeBuffer && (
                                 <div className="flex items-center space-x-2 bg-background/80 backdrop-blur-sm p-2 rounded-lg border shadow-lg">
@@ -1610,83 +1610,92 @@ const RetailPOS = () => {
                         ) : (
                             <div className="space-y-1.5">
                                 {(factura.detalleVenta ?? []).map(item => (
-                                    <Card key={item.idProducto} className="p-1">
-                                        <div className="flex items-center justify-between">
-                                            {/* Información del producto */}
-                                            <div className="flex-1 min-w-0">
-                                                {item.idTipoProducto === 2 ? (
-                                                    <Input
-                                                        value={item.nombreProducto ?? ''}
-                                                        disabled={facturaValidadaDian}
-                                                        onChange={(e) => {
-                                                            setFactura({
-                                                                ...factura,
-                                                                detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
-                                                                    detalleItem.registroVenta === item.registroVenta
-                                                                        ? { ...detalleItem, nombreProducto: e.target.value }
-                                                                        : detalleItem
-                                                                )
-                                                            });
-                                                        }}
-                                                        className="font-medium text-sm max-w-xl"
-                                                        placeholder="Nombre del producto"
-                                                    />
-                                                ) : (
-                                                    <h4 className="font-medium text-sm truncate">{item.nombreProducto}</h4>
-                                                )}
-                                                <div className="flex items-center space-x-2 mt-1">
-                                                    <Badge variant="outline" className="text-xs">{item.codigoProducto}</Badge>
+                                    <Card key={item.idProducto} className="p-3">
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex items-center gap-3 w-full min-w-0 px-2">
+                                                <Badge variant="outline" className="text-xs h-9 px-3 flex items-center bg-background">
+                                                    {item.codigoProducto || 'Sin código'}
+                                                </Badge>
+                                                <div className="flex-1 min-w-0">
                                                     {item.idTipoProducto === 2 ? (
                                                         <Input
-                                                            type="number"
-                                                            value={item.precioUnitarioVenta || ''}
+                                                            value={item.nombreProducto ?? ''}
                                                             disabled={facturaValidadaDian}
                                                             onChange={(e) => {
-                                                                setFactura(prev => ({
-                                                                    ...prev,
-                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
+                                                                setFactura({
+                                                                    ...factura,
+                                                                    detalleVenta: (factura.detalleVenta ?? []).map(detalleItem =>
                                                                         detalleItem.registroVenta === item.registroVenta
-                                                                            ? { ...detalleItem, precioUnitarioVenta: parseFloat(e.target.value) || 0 }
+                                                                            ? { ...detalleItem, nombreProducto: e.target.value }
                                                                             : detalleItem
                                                                     )
-                                                                }));
+                                                                });
                                                             }}
-                                                            className="text-sm text-muted-foreground w-24"
-                                                            placeholder="Precio"
-                                                            min={0}
-                                                            onFocus={(e) => e.target.select()}
+                                                            className="font-medium text-sm max-w-xl"
+                                                            placeholder="Nombre del producto"
                                                         />
                                                     ) : (
-                                                        <span className="text-sm text-muted-foreground">${formatCurrency(item.precioUnitarioVenta)}</span>
+                                                        <h4 className="font-medium text-sm truncate">{item.nombreProducto}</h4>
                                                     )}
-                                                    <div className="flex items-center space-x-1">
-                                                        <Checkbox
-                                                            id={`muestra-${item.registroVenta}`}
-                                                            checked={item.indicadorMuestra || false}
-                                                            disabled={facturaValidadaDian}
-                                                            onCheckedChange={(checked) => {
-                                                                setFactura(prev => ({
-                                                                    ...prev,
-                                                                    detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
-                                                                        detalleItem.registroVenta === item.registroVenta
-                                                                            ? { ...detalleItem, indicadorMuestra: checked as boolean }
-                                                                            : detalleItem
-                                                                    )
-                                                                }));
-                                                            }}
-                                                        />
-                                                        <Label
-                                                            htmlFor={`muestra-${item.registroVenta}`}
-                                                            className="text-xs cursor-pointer"
-                                                        >
-                                                            Es una Muestra?
-                                                        </Label>
-                                                    </div>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                    <Checkbox
+                                                        id={`muestra-${item.registroVenta}`}
+                                                        checked={item.indicadorMuestra || false}
+                                                        disabled={facturaValidadaDian}
+                                                        onCheckedChange={(checked) => {
+                                                            setFactura(prev => ({
+                                                                ...prev,
+                                                                detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
+                                                                    detalleItem.registroVenta === item.registroVenta
+                                                                        ? { ...detalleItem, indicadorMuestra: checked as boolean }
+                                                                        : detalleItem
+                                                                )
+                                                            }));
+                                                        }}
+                                                    />
+                                                    <Label
+                                                        htmlFor={`muestra-${item.registroVenta}`}
+                                                        className="text-xs cursor-pointer"
+                                                    >
+                                                        Es una Muestra?
+                                                    </Label>
                                                 </div>
                                             </div>
 
-                                            {/* Contenedor para campos alineados */}
-                                            <div className="flex items-end gap-2">
+                                            <div className="flex flex-wrap items-end justify-between gap-2 w-full px-2">
+                                                <div className="flex items-end gap-2">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold mb-1 text-center">Precio</span>
+                                                        {item.idTipoProducto === 2 ? (
+                                                            <Input
+                                                                type="number"
+                                                                value={item.precioUnitarioVenta || ''}
+                                                                disabled={facturaValidadaDian}
+                                                                onChange={(e) => {
+                                                                    setFactura(prev => ({
+                                                                        ...prev,
+                                                                        detalleVenta: (prev.detalleVenta ?? []).map(detalleItem =>
+                                                                            detalleItem.registroVenta === item.registroVenta
+                                                                                ? { ...detalleItem, precioUnitarioVenta: parseFloat(e.target.value) || 0 }
+                                                                                : detalleItem
+                                                                        )
+                                                                    }));
+                                                                }}
+                                                                className="text-sm text-muted-foreground w-28 h-8 text-center bg-background"
+                                                                placeholder="Precio"
+                                                                min={0}
+                                                                onFocus={(e) => e.target.select()}
+                                                            />
+                                                        ) : (
+                                                            <span className="text-sm text-muted-foreground font-medium h-8 flex items-center px-2">
+                                                                ${formatCurrency(item.precioUnitarioVenta)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                </div>
+
                                                 {/* Campos de descuento e IVA */}
                                                 <div className="flex gap-2">
                                                     <div className="flex flex-col">

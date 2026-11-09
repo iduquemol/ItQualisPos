@@ -24,6 +24,7 @@ import UnidadesDeMedidaPage from './pages/UnidadesDeMedidaPage';
 import ListasPreciosPage from './pages/listasPreciosPage';
 import DocumentoSoportePage from './pages/DocumentoSoporte';
 import AlmacenesPage from './pages/AlmacenesPage';
+import DebitNotePage from './pages/debitNotePage';
 
 function App() {
     // Aquí podrías agregar lógica para verificar autenticación
@@ -153,6 +154,12 @@ function App() {
                     path="/almacenes"
                     element={
                         isAuthenticated ? <AppLayout><AlmacenesPage /></AppLayout> : <Navigate to="/login" />
+                    }
+                />
+                <Route
+                    path="/debit-notes"
+                    element={
+                        isAuthenticated ? <AppLayout><DebitNotePage /></AppLayout> : <Navigate to="/login" />
                     }
                 />
                 <Route
