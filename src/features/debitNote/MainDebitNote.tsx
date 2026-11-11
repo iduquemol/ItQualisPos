@@ -76,7 +76,7 @@ const MainDebitNote = () => {
     const navigate = useNavigate();
     const createInitialNotaDebito = (): DebitNoteForm => ({
         idNotaDebito: 0,
-        idTipoDocumento: 5,
+        idTipoDocumento: 9,
         codigoDocumento: '',
         nombreDocumento: null,
         numeroNotaDebito: 0,
@@ -266,16 +266,14 @@ const MainDebitNote = () => {
         try {
             setParametrosVentaDefault(null);
             setIsLoadingTerceroDefault(true);
-            const data = await NotaDebitoService.getParametrosVentaDefault();
+            const data = await VentaService.getParametrosVentaDefault();
+            //console.log('Terceros por defecto cargado:', data);
             setParametrosVentaDefault(data);
             const documentoNotaDebito = data.documentoNotaDebito?.[0];
             if (documentoNotaDebito) {
                 setNotaDebito(previous => ({
                     ...previous,
                     idTipoDocumento: documentoNotaDebito.idTipoDocumento,
-                    codigoDocumento: documentoNotaDebito.codigoDocumento,
-                    nombreDocumento: documentoNotaDebito.nombreDocumento,
-                    idMetodoDian: documentoNotaDebito.idMetodoDian,
                 }));
             }
         } catch (error) {
@@ -418,10 +416,8 @@ const MainDebitNote = () => {
                 cantidadFactura: item.cantidadVenta ?? 0,
                 precioUnitarioNotaDebito: item.precioUnitarioVenta ?? 0,
                 precioUnitarioFactura: item.precioUnitarioVenta ?? 0,
-                precioTotalNotaDebito: item.precioTotalVenta ?? 0,
                 porcentajeIvaNotaDebito: item.porcentajeIvaVenta ?? 0,
                 porcentajeIvaFactura: item.porcentajeIvaVenta ?? 0,
-                baseIvaNotaDebito: item.baseIvaVenta ?? 0,
                 ivaNotaDebito: item.ivaVenta ?? 0,
                 ivaFactura: item.ivaVenta ?? 0,
                 porcentajeDescuentoNotaDebito: item.porcentajeDescuentoVenta ?? 0,
@@ -434,63 +430,8 @@ const MainDebitNote = () => {
                 totalFactura: item.totalVenta ?? 0,
                 costoUnitarioNotaDebito: item.costoUnitarioVenta ?? 0,
                 costoUnitarioFactura: item.costoUnitarioVenta ?? 0,
-                porcentajeRetelva: item.porcentajeReteIva ?? 0,
-                baseRetelvaNotaDebito: item.baseReteIvaVenta ?? 0,
-                retelvaNotaDebito: item.reteIvaVenta ?? 0,
-                porcentajeReteRenta: item.porcentajeReteRenta ?? 0,
-                baseReteRenta: item.baseReteRenta ?? 0,
-                reteRentaNotaDebito: item.reteRentaVenta ?? 0,
-                porcentajeRetelca: item.porcentajeReteIca ?? 0,
-                baseRetelca: item.baseReteIca ?? 0,
-                retelcaNotaDebito: item.reteIcaVenta ?? 0,
-                idTerceroMandato: item.idTerceroMandato ?? null,
-                idItemSector: item.idItemSector ?? null,
-                indicadorMuestra: item.indicadorMuestra ?? false,
-                valorReferenciaUnidad: item.valorReferenciaUnidad ?? 0,
-                valorReferenciaTotal: item.valorReferenciaTotal ?? 0,
                 idDetalleVenta: item.idDetalleVenta,
             })),
-        }));
-    };
-
-    const updateDebitNoteDetail = (
-        idProducto: number,
-        changes: Partial<DebitNoteDetail>,
-        recalculateDiscount = false
-    ) => {
-        setNotaDebito(previous => ({
-            ...previous,
-            detalleNotaDebito: (previous.detalleNotaDebito ?? []).map(item => {
-                if (item.idProducto !== idProducto) return item;
-
-                const updated = { ...item, ...changes };
-                const precioTotalNotaDebito = Number(
-                    (updated.precioUnitarioNotaDebito * updated.cantidadNotaDebito).toFixed(2)
-                );
-                const descuentoNotaDebito = recalculateDiscount
-                    ? Number((precioTotalNotaDebito * updated.porcentajeDescuentoNotaDebito / 100).toFixed(2))
-                    : updated.descuentoNotaDebito;
-                const baseIvaNotaDebito = Math.max(0, precioTotalNotaDebito - descuentoNotaDebito);
-                const ivaNotaDebito = Number(
-                    (baseIvaNotaDebito * updated.porcentajeIvaNotaDebito / 100).toFixed(2)
-                );
-                const porcentajeDescuentoNotaDebito = recalculateDiscount || precioTotalNotaDebito === 0
-                    ? updated.porcentajeDescuentoNotaDebito
-                    : Number((descuentoNotaDebito / precioTotalNotaDebito * 100).toFixed(2));
-
-                return {
-                    ...updated,
-                    precioTotalNotaDebito,
-                    descuentoNotaDebito,
-                    porcentajeDescuentoNotaDebito,
-                    baseIvaNotaDebito,
-                    ivaNotaDebito,
-                    totalNotaDebito: baseIvaNotaDebito + ivaNotaDebito,
-                    costoTotalNotaDebito: Number(
-                        ((updated.costoUnitarioNotaDebito ?? 0) * updated.cantidadNotaDebito).toFixed(2)
-                    ),
-                };
-            }),
         }));
     };
 
@@ -595,32 +536,10 @@ const MainDebitNote = () => {
     };
 
     const handleSaveNotaDebito = async () => {
-        const detalle = notaDebito.detalleNotaDebito ?? [];
-        if (!notaDebito.idVenta || detalle.length === 0) {
-            toast.error('Seleccione una factura para crear la nota débito', { position: 'top-center' });
-            return;
-        }
-        if (!notaDebito.idConceptoCorreccionNota) {
-            toast.error('Seleccione el concepto de la nota débito', { position: 'top-center' });
-            return;
-        }
-
         const todayLocal = new Date();
         const offsetMs = todayLocal.getTimezoneOffset() * 60 * 1000;
         const localISODate = new Date(todayLocal.getTime() - offsetMs).toISOString().split('T')[0];
-        const totalPrecio = detalle.reduce(
-            (sum, item) => sum + item.precioUnitarioNotaDebito * item.cantidadNotaDebito,
-            0
-        );
-        const totalDescuento = detalle.reduce((sum, item) => sum + item.descuentoNotaDebito, 0);
-        const totalBaseIva = detalle.reduce(
-            (sum, item) => sum + (item.baseIvaNotaDebito ?? (
-                item.precioUnitarioNotaDebito * item.cantidadNotaDebito - item.descuentoNotaDebito
-            )),
-            0
-        );
-        const totalIva = detalle.reduce((sum, item) => sum + item.ivaNotaDebito, 0);
-        const updatedNotaDebito: INotaDebito = {
+        const updatedNotaDebito = {
             ...notaDebito,
             idNotaDebito: Number.isInteger(notaDebito.idNotaDebito)
                 ? notaDebito.idNotaDebito
@@ -629,89 +548,104 @@ const MainDebitNote = () => {
                 ? notaDebito.numeroNotaDebito
                 : 0,
             fechaNotaDebito: localISODate,
-            totalRegistros: detalle.filter(item => item.cantidadNotaDebito > 0).length,
-            cantidadProductos: detalle.reduce((sum, item) => sum + item.cantidadNotaDebito, 0),
-            totalPrecio,
-            totalDescuento,
-            totalBaseIva,
-            totalIva,
-            totalVenta: totalBaseIva + totalIva,
-            detalleNotaDebito: detalle.map((item, index) => ({
-                idDetalleNotaDebito: item.idDetalleNotaDebito,
-                idNotaDebito: notaDebito.idNotaDebito ?? 0,
-                registroNotaDebito: item.registroNotaDebito || index + 1,
-                idDetalleVenta: item.idDetalleVenta,
-                idProducto: item.idProducto,
-                nombreProducto: item.nombreProducto,
-                cantidadNotaDebito: item.cantidadNotaDebito,
-                precioUnitarioNotaDebito: item.precioUnitarioNotaDebito,
-                precioTotalNotaDebito: item.precioUnitarioNotaDebito * item.cantidadNotaDebito,
-                porcentajeDescuentoNotaDebito: item.porcentajeDescuentoNotaDebito,
-                descuentoNotaDebito: item.descuentoNotaDebito,
-                baseIvaNotaDebito: item.baseIvaNotaDebito ?? (
-                    item.precioUnitarioNotaDebito * item.cantidadNotaDebito - item.descuentoNotaDebito
-                ),
-                porcentajeIvaNotaDebito: item.porcentajeIvaNotaDebito,
-                ivaNotaDebito: item.ivaNotaDebito,
-                totalNotaDebito: item.totalNotaDebito,
-                costoUnitarioNotaDebito: item.costoUnitarioNotaDebito,
-                costoTotalNotaDebito: item.costoTotalNotaDebito,
-                fechaGrabacionDetalleNotaDebito: item.fechaGrabacionDetalleNotaDebito,
-                porcentajeRetelva: item.porcentajeRetelva,
-                baseRetelvaNotaDebito: item.baseRetelvaNotaDebito,
-                retelvaNotaDebito: item.retelvaNotaDebito,
-                porcentajeReteRenta: item.porcentajeReteRenta,
-                baseReteRenta: item.baseReteRenta,
-                reteRentaNotaDebito: item.reteRentaNotaDebito,
-                porcentajeRetelca: item.porcentajeRetelca,
-                baseRetelca: item.baseRetelca,
-                retelcaNotaDebito: item.retelcaNotaDebito,
-                idTerceroMandato: item.idTerceroMandato,
-                idItemSector: item.idItemSector,
-                indicadorMuestra: item.indicadorMuestra,
-                valorReferenciaUnidad: item.valorReferenciaUnidad,
-                valorReferenciaTotal: item.valorReferenciaTotal,
-                codigoProducto: item.codigoProducto,
-            })),
         };
         try {
             setIsSavingNotaDebito(true);
             if (updatedNotaDebito.idNotaDebito) {
-                toast.error('La actualización de notas débito no está disponible', { position: 'top-center' });
+                // Actualizar nota débito existente
+                //await VentaService.update(notaDebito);
+                console.log("Nota débito actualizada:", notaDebito);
+                setSavedNotaDebitoId(updatedNotaDebito.idNotaDebito);
+                setSuccessMessage("Nota débito actualizada correctamente");
+                setShowSuccessDialog(true);
             } else {
+                console.log("Nota débito a guardar:", updatedNotaDebito);
                 const result = await NotaDebitoService.create(updatedNotaDebito);
-                const idNotaDebito = result.idNotaDebito;
-                if (!idNotaDebito) {
-                    throw new Error('El servicio no devolvió el identificador de la nota débito');
-                }
-                setSavedNotaDebitoId(idNotaDebito);
+                console.log("Nota débito guardada:", result);
+                setSavedNotaDebitoId(result.idNotaDebito || null);
                 setNotaDebito((previous) => ({
                     ...previous,
-                    idNotaDebito,
+                    idNotaDebito: result.idNotaDebito,
                 }));
                 setSuccessMessage(result.message +
-                    "\nNúmero Documento DIAN: " + idNotaDebito);
+                    "\nNúmero Documento Dian: " + result.idNotaDebito);
                 setShowSuccessDialog(true);
+                // const data = await VentaService.getById(result.idFactura);
+                // setSelectedFactura(data);
+                // setFactura({
+                //     ...factura,
+                //     idVenta: data?.idVenta ?? null,
+                //     idTipoDocumento: data?.idTipoDocumento ?? 0,
+                //     codigoDocumento: data?.codigoDocumento ?? '',
+                //     nombreDocumento: data?.nombreDocumento ?? null,
+                //     numeroVenta: data?.numeroVenta ?? null,
+                //     prefijoVenta: data?.prefijoVenta ?? '',
+                //     fechaVenta: data?.fechaVenta ?? '',
+                //     idPuntoVenta: data?.idPuntoVenta ?? null,
+                //     idUsuario: data?.idUsuario ?? null,
+                //     totalRegistros: data?.totalRegistros ?? 0,
+                //     cantidadProductos: data?.cantidadProductos ?? 0,
+                //     totalPrecio: data?.totalPrecio ?? 0,
+                //     totalDescuento: data?.totalDescuento ?? 0,
+                //     totalBaseIva: data?.totalBaseIva ?? 0,
+                //     totalIva: data?.totalIva ?? 0,
+                //     totalVenta: data?.totalVenta ?? 0,
+                //     terceroVenta: data?.terceroVenta ?? {
+                //         idTercero: null,
+                //         idTipoDocumentoId: 0,
+                //         digitoVerificacion: null,
+                //         numeroIdentificacion: null,
+                //         primerNombre: null,
+                //         primerApellido: null,
+                //         razonSocial: null,
+                //         telefonoTercero: null,
+                //         direccionTercero: null,
+                //         idMunicipio: 0,
+                //         emailTercero: null,
+                //         idTipoPersona: null
+                //     },
+                //     detalleVenta: data?.detalleVenta ?? [],
+                //     mediosPagoVenta: data?.mediosPagoVenta ?? [],
+
+                // });
+                // const dataPrint = await VentaService.printById(result.idFactura);
+                // setFacturaModalData(dataPrint);
+                // setShowFacturaModal(true);
             }
+            //await fetchProducts();
         } catch (error) {
-            console.error('Error al guardar la nota débito:', error);
-            toast.error('No fue posible guardar la nota débito', { position: 'top-center' });
+            console.error('Error al guardar la factura:', error);
+            toast.error('No fue posible guardar la nota de débito', { position: 'top-center' });
         } finally {
             setIsSavingNotaDebito(false);
         }
     };
 
     const updateQuantity = (id: number, change: number) => {
-        const item = (notaDebito.detalleNotaDebito ?? []).find(detail => detail.idProducto === id);
-        if (!item) return;
-        const newQuantity = item.cantidadNotaDebito + change;
-        if (newQuantity < 0 || newQuantity > item.cantidadFactura) {
-            toast.error('La cantidad no puede ser mayor a la facturada ni menor a 0', {
-                position: 'top-center',
-            });
-            return;
-        }
-        updateDebitNoteDetail(id, { cantidadNotaDebito: newQuantity }, true);
+        setNotaDebito({
+            ...notaDebito,
+            detalleNotaDebito: (notaDebito.detalleNotaDebito ?? []).map(item => {
+                if (item.idProducto === id) {
+                    const newQuantity = item.cantidadNotaDebito + change;
+                    // Validar que la nueva cantidad no exceda la cantidad facturada ni sea menor a 0
+                    if (newQuantity >= 0 && newQuantity <= item.cantidadFactura) {
+                        return {
+                            ...item,
+                            cantidadNotaDebito: newQuantity,
+                            porcentajeDescuentoNotaDebito: item.porcentajeDescuentoNotaDebito,
+                            descuentoNotaDebito: parseFloat(((item.precioUnitarioNotaDebito * newQuantity) * ((item.porcentajeDescuentoNotaDebito || 0) / 100)).toFixed(2))
+                        };
+                    } else {
+                        toast.error("La cantidad no puede ser mayor a la facturada ni menor a 0", {
+                            position: "top-center"
+                        });
+                        return item; // Mantener el valor actual si excede los límites
+                    }
+                }
+                return item;
+            })
+        });
+
     };
 
     const formatCurrency = (amount: number | null | undefined): string => {
@@ -1259,11 +1193,18 @@ const MainDebitNote = () => {
                                                                     const value = e.target.value;
                                                                     const newDiscountPercent = value === '' ? 0 : parseFloat(value);
                                                                     if (newDiscountPercent >= 0 && newDiscountPercent <= 100) {
-                                                                        updateDebitNoteDetail(
-                                                                            item.idProducto,
-                                                                            { porcentajeDescuentoNotaDebito: newDiscountPercent },
-                                                                            true
-                                                                        );
+                                                                        setNotaDebito({
+                                                                            ...notaDebito,
+                                                                            detalleNotaDebito: (notaDebito.detalleNotaDebito ?? []).map(detalleItem =>
+                                                                                detalleItem.idProducto === item.idProducto
+                                                                                    ? {
+                                                                                        ...detalleItem,
+                                                                                        porcentajeDescuentoNotaDebito: newDiscountPercent,
+                                                                                        descuentoNotaDebito: parseFloat(((item.precioUnitarioNotaDebito * detalleItem.cantidadNotaDebito) * (newDiscountPercent / 100)).toFixed(2)),
+                                                                                    }
+                                                                                    : detalleItem
+                                                                            )
+                                                                        });
                                                                     }
                                                                 }}
                                                                 min={0}
@@ -1280,19 +1221,22 @@ const MainDebitNote = () => {
                                                                 onChange={(e) => {
                                                                     const value = e.target.value;
                                                                     const newDiscountValue = value === '' ? 0 : parseFloat(value);
-                                                                    const maxDiscount = item.precioUnitarioNotaDebito * item.cantidadNotaDebito;
-                                                                    if (newDiscountValue >= 0 && newDiscountValue <= maxDiscount) {
-                                                                        updateDebitNoteDetail(item.idProducto, {
-                                                                            descuentoNotaDebito: newDiscountValue,
-                                                                        });
-                                                                    } else {
-                                                                        toast.error('El descuento no puede superar el valor bruto del detalle', {
-                                                                            position: 'top-center',
+                                                                    if (newDiscountValue >= 0) {
+                                                                        setNotaDebito({
+                                                                            ...notaDebito,
+                                                                            detalleNotaDebito: (notaDebito.detalleNotaDebito ?? []).map(detalleItem =>
+                                                                                detalleItem.idProducto === item.idProducto
+                                                                                    ? {
+                                                                                        ...detalleItem,
+                                                                                        descuentoNotaDebito: newDiscountValue,
+                                                                                    }
+                                                                                    : detalleItem
+                                                                            )
                                                                         });
                                                                     }
                                                                 }}
                                                                 min={0}
-                                                                max={item.precioUnitarioNotaDebito * item.cantidadNotaDebito}
+                                                                max={100}
                                                             />
                                                         </div>
                                                         <div className="flex flex-col">
@@ -1314,14 +1258,31 @@ const MainDebitNote = () => {
                                                                         const value = e.target.value;
                                                                         const newQuantity = value === '' ? 0 : parseFloat(value);
                                                                         if (newQuantity >= 0 && newQuantity <= item.cantidadFactura) {
-                                                                            updateDebitNoteDetail(
-                                                                                item.idProducto,
-                                                                                { cantidadNotaDebito: newQuantity },
-                                                                                true
-                                                                            );
+                                                                            setNotaDebito({
+                                                                                ...notaDebito,
+                                                                                detalleNotaDebito: (notaDebito.detalleNotaDebito ?? []).map(detalleItem =>
+                                                                                    detalleItem.idProducto === item.idProducto
+                                                                                        ? {
+                                                                                            ...detalleItem,
+                                                                                            cantidadNotaDebito: newQuantity,
+                                                                                        }
+                                                                                        : detalleItem
+                                                                                )
+                                                                            });
                                                                         }
                                                                         else {
-                                                                            toast.error('La cantidad no puede ser mayor a la facturada ni menor a 0', {
+                                                                            setNotaDebito({
+                                                                                ...notaDebito,
+                                                                                detalleNotaDebito: (notaDebito.detalleNotaDebito ?? []).map(detalleItem =>
+                                                                                    detalleItem.idProducto === item.idProducto
+                                                                                        ? {
+                                                                                            ...detalleItem,
+                                                                                            cantidadNotaDebito: item.cantidadFactura,
+                                                                                        }
+                                                                                        : detalleItem
+                                                                                )
+                                                                            });
+                                                                            toast.error("La cantidad no puede ser mayor a la facturada ni menor a 0", {
                                                                                 position: "top-center"
                                                                             });
                                                                         }
@@ -1381,9 +1342,9 @@ const MainDebitNote = () => {
                                         <div className="flex-1 [&>button]:w-full [&>button]:h-[40px] [&>button]:text-lg [&>button]:font-bold">
                                             <FacturaModal
                                                 key={savedNotaDebitoId}
-                                                idVenta={notaDebito.idVenta ?? 0}
+                                                idVenta={savedNotaDebitoId}
                                                 idMetodoDian={3}
-                                                triggerText="Ver factura asociada"
+                                                triggerText="Ver Nota Débito"
                                                 triggerVariant="default"
                                             />
                                         </div>
@@ -1409,7 +1370,7 @@ const MainDebitNote = () => {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirmar guardado</AlertDialogTitle>
                         <AlertDialogDescription>
-                            ¿Desea guardar esta nota débito?
+                            ¿Desea guardar esta nota de débito?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

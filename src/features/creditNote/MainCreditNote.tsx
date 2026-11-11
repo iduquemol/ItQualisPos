@@ -317,6 +317,7 @@ const MainCreditNote = () => {
                         tipoDocumentoActivo: false,
                     }
                 ],
+                documentoNotaDebito: [],
                 documentoCotizacion: [
                     {
                         idTipoDocumento: 0,
