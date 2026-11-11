@@ -1,6 +1,6 @@
 import { IResoluciones } from "@/types/IResoluciones";
 import { API_CONFIG } from "@/config/api.config";
-    
+
 export const ResolucionesService = {
     async getAll(): Promise<IResoluciones[]> {
         try {
@@ -23,7 +23,7 @@ export const ResolucionesService = {
         }
     },
 
-    async sincronizarExternas(): Promise<{ message: string }> {
+    async sincronizarExternas(): Promise<any> {
         try {
             const response = await fetch(
                 API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.RESOLUCIONES_SINCRONIZAR_EXTERNAS),
@@ -39,7 +39,8 @@ export const ResolucionesService = {
             );
 
             if (!response.ok) {
-                throw new Error('Error al sincronizar resoluciones externas');
+                const errorText = await response.text();
+                throw new Error(errorText || 'Error al sincronizar resoluciones externas');
             }
 
             const data = await response.json();
@@ -126,6 +127,6 @@ export const ResolucionesService = {
             console.error('Error en ResolucionesService.delete:', error);
             throw error;
         }
-    },                        
+    },
 
 };
