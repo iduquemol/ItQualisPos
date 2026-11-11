@@ -5,6 +5,6 @@ export interface IParametrosVentaDefault {
     terceroVenta: ITerceroDefault[];
     documentoVenta: ITipoDocumentoDefault[];
     documentoNotaCredito: ITipoDocumentoDefault[];
-    documentoNotaDebito?: ITipoDocumentoDefault[];
+    documentoNotaDebito: ITipoDocumentoDefault[];
     documentoCotizacion: ITipoDocumentoDefault[];
 }
