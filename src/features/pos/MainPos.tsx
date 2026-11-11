@@ -194,6 +194,7 @@ const RetailPOS = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('0');
     const [showPayment, setShowPayment] = useState(false);
+    const [isSavingVenta, setIsSavingVenta] = useState(false);
     const [activePaymentMethod, setActivePaymentMethod] = useState('');
     const [customerDiscount, setCustomerDiscount] = useState('0');
     const [terceroInfo, setTerceroInfo] = useState<ITercero>({
@@ -513,6 +514,20 @@ const RetailPOS = () => {
                     }
                 ],
                 documentoNotaCredito: [
+                    {
+                        idTipoDocumento: 0,
+                        codigoDocumento: "0",
+                        nombreDocumento: "0",
+                        idTipoDocumentoE: 0,
+                        idFormaPago: 0,
+                        nombreFormaPago: "0",
+                        idMetodoDian: 0,
+                        nombreMetodo: "0",
+                        ordenTipoDocumento: 0,
+                        tipoDocumentoActivo: false,
+                    }
+                ],
+                documentoNotaDebito: [
                     {
                         idTipoDocumento: 0,
                         codigoDocumento: "0",
@@ -893,7 +908,8 @@ const RetailPOS = () => {
     const DEFAULT_TIPO_DOC_NIT = 7; // idTipoDocumentoId = 7 para NIT (código 31)
 
     const handleSaveVenta = async (indBorrador: boolean) => {
-        if (facturaValidadaDian) return;
+        if (facturaValidadaDian || isSavingVenta) return;
+        setIsSavingVenta(true);
 
         const localISODate = getLocalDate();
 
@@ -973,6 +989,7 @@ const RetailPOS = () => {
             if (updatedFactura.idVenta) {
                 console.log("Factura actualizada:", factura);
                 setSuccessMessage("Factura actualizada correctamente");
+                setShowPayment(false);
                 setShowSuccessDialog(true);
             } else {
                 console.log("Factura a guardar:", updatedFactura);
@@ -1026,9 +1043,12 @@ const RetailPOS = () => {
                 const dataPrint = await VentaService.printById(result.idFactura);
                 setFacturaModalData(dataPrint);
                 setShowFacturaModal(true);
+                setShowPayment(false);
             }
         } catch (error) {
             console.error('Error al guardar la factura:', error);
+        } finally {
+            setIsSavingVenta(false);
         }
     };
 
@@ -1124,6 +1144,7 @@ const RetailPOS = () => {
     const totalItems = factura.detalleVenta?.reduce((sum, item) => sum + (item.cantidadVenta ?? 0), 0);
     const pointsEarned = Math.floor(total / 10); // 1 punto por cada $10
     const handlePaymentModalChange = (open: boolean) => {
+        if (isSavingVenta && !open) return;
         setShowPayment(open);
         if (!open) return;
 
@@ -1967,7 +1988,7 @@ const RetailPOS = () => {
                                     ) : (
                                         <Button
                                             onClick={() => handlePaymentModalChange(true)}
-                                            disabled={!(total > 0)}
+                                            disabled={isSavingVenta || !(total > 0)}
                                             className="flex-1 h-full text-sm font-bold"
                                             size="lg"
                                         >
@@ -2338,18 +2359,17 @@ const RetailPOS = () => {
                         {/* Botones de acción */}
                         <DialogFooter className="flex space-x-2">
                             <Button
-                                disabled={facturaValidadaDian || (!esCredito && saldoPendiente !== 0)} // En crédito no se exige pago inmediato
+                                disabled={isSavingVenta || facturaValidadaDian || (!esCredito && saldoPendiente !== 0)} // En crédito no se exige pago inmediato
                                 onClick={() => {
-                                    setShowPayment(false);
-                                    handleSaveVenta(false);
+                                    void handleSaveVenta(false);
                                 }}
                                 className="flex-1"
                             >
-                                Confirmar Pago
+                                {isSavingVenta ? 'Procesando...' : 'Confirmar Pago'}
                             </Button>
                             <Button
                                 variant="outline"
-                                disabled={facturaValidadaDian}
+                                disabled={isSavingVenta || facturaValidadaDian}
                                 onClick={() => setShowPayment(false)}
                             >
                                 Cancelar
