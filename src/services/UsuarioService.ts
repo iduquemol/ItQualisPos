@@ -9,6 +9,10 @@ const normalizeUsuario = (usuario: Partial<IUsuarios> & Record<string, any>): IU
   emailUsuario: usuario.emailUsuario ?? usuario.correoElectronico ?? usuario.email ?? '',
   idVendedor: usuario.idVendedor ?? null,
   idSucursalUsuario: usuario.idSucursalUsuario ?? null,
+  idAlmacen: usuario.idAlmacen ?? null,
+  idTercero: usuario.idTercero ?? null,
+  idCargoNomina: usuario.idCargoNomina ?? null,
+  enviaEnventos: usuario.enviaEnventos ?? null,
   fechaGrabacionUsuario: usuario.fechaGrabacionUsuario ?? null,
 });
 

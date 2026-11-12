@@ -549,6 +549,7 @@ const DocumentoSoporteMaster = () => {
                         tipoDocumentoActivo: false,
                     },
                 ],
+                documentoNotaDebito: [],
                 documentoCotizacion: [
                     {
                         idTipoDocumento: 0,

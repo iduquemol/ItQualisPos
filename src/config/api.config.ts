@@ -77,6 +77,9 @@ export const API_CONFIG = {
         USUARIOS: '/usuarios',
         ROLES: '/roles',
         ALMACENES: '/almacenes',
+        EVENTOS_DIAN: '/eventos-dian',
+        CARGOS_NOMINA: '/cargos-nomina',
+        CONCEPTOS_RECHAZO_DIAN: '/conceptos-rechazo-dian',
 
     },
     getUrl: (endpoint: string) => {
