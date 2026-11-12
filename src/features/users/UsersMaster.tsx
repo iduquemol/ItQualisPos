@@ -39,6 +39,12 @@ import { IVendedores } from "@/types/IVendedores";
 import { ISucursales } from "@/types/ISucursales";
 import { IAlmacen } from "@/types/IAlmacen";
 import { AlmacenesService } from "@/services/AlmacenesService";
+import { ITercero } from "@/types/ITercero";
+import { TerceroService } from "@/services/TerceroService";
+import { ICargosNomina } from "@/types/ICargosNomina";
+import { CargosNominaService } from "@/services/CargosNominaService";
+import { Checkbox } from "@/components/ui/checkbox";
+
 
 export default function UsersMaster() {
   const navigate = useNavigate();
@@ -53,6 +59,9 @@ export default function UsersMaster() {
     idVendedor: null,
     idSucursalUsuario: null,
     idAlmacen: null,
+    idTercero: null,
+    idCargoNomina: null,
+    enviaEnventos: false,
     fechaGrabacionUsuario: null,
   });
 
@@ -69,6 +78,8 @@ export default function UsersMaster() {
   const [vendedoresList, setVendedoresList] = useState<IVendedores[]>([]);
   const [sucursalesList, setSucursalesList] = useState<ISucursales[]>([]);
   const [almacenesList, setAlmacenesList] = useState<IAlmacen[]>([]);
+  const [tercerosList, setTercerosList] = useState<ITercero[]>([]); 
+  const [cargosNominaList, setCargosNominaList] = useState<ICargosNomina[]>([]);
 
   const fetchUsuarios = async () => {
     try {
@@ -87,16 +98,20 @@ export default function UsersMaster() {
 
   const fetchCombosData = async () => {
     try {
-      const [rolesData, vendedoresData, sucursalesData, almacenesData] = await Promise.all([
+      const [rolesData, vendedoresData, sucursalesData, almacenesData, tercerosData, cargosNominaData] = await Promise.all([
         RolService.getAll(),
         VendedorService.getAll(),
         SucursalService.getAll(),
         AlmacenesService.getAll(),
+        TerceroService.getAll(undefined, 3),
+        CargosNominaService.getAll(),
       ]);
       setRolesList(rolesData || []);
       setVendedoresList(vendedoresData || []);
       setSucursalesList(sucursalesData || []);
       setAlmacenesList(almacenesData || []);
+      setTercerosList(tercerosData || []);
+      setCargosNominaList(cargosNominaData || []);
     } catch (error) {
       toast.error("Error al cargar los datos de los selectores (Roles/Vendedores/Sucursales)");
     }
@@ -122,6 +137,9 @@ export default function UsersMaster() {
       idVendedor: null,
       idSucursalUsuario: null,
       idAlmacen: null,
+      idTercero: null,
+      idCargoNomina: null,
+      enviaEnventos: false,
       fechaGrabacionUsuario: null,
     });
     setFormError(null);
@@ -427,6 +445,64 @@ export default function UsersMaster() {
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Tercero
+            </label>
+            <select
+              value={usuario.idTercero ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setUsuario({
+                  ...usuario,
+                  idTercero: val ? Number(val) : null,
+                });
+              }}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">-- Sin Tercero Asignado --</option>
+              {tercerosList.map((a) => (
+                <option key={a.idTercero} value={a.idTercero}>
+                  {a.razonSocial}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Cargo Empleado
+            </label>
+            <select
+              value={usuario.idCargoNomina ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setUsuario({
+                  ...usuario,
+                  idCargoNomina: val ? Number(val) : null,
+                });
+              }}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">-- Sin Cargo Asignado --</option>
+              {cargosNominaList.map((a) => (
+                <option key={a.idCargoEmpleado} value={a.idCargoEmpleado}>
+                  {a.nombreCargoEmpleado}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={usuario.enviaEnventos === true}
+              onCheckedChange={(checked) =>
+                setUsuario({ ...usuario, enviaEnventos: checked === true })
+              }
+            />
+            Enviar eventos
+          </label>
         </div>
 
         {formError && (
