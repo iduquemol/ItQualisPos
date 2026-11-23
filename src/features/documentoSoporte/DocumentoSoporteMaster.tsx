@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, FileText, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PermisoButton from '@/components/layout/PermisoButton';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -2432,7 +2433,9 @@ const DocumentoSoporteMaster = () => {
 
                         {/* Botones de acción */}
                         <DialogFooter className="flex space-x-2">
-                            <Button
+                            <PermisoButton
+                                idOpcion={5}
+                                accion="crear"
                                 disabled={documentoSoporteValidadoDian || (!esCredito && saldoPendiente !== 0)}
                                 onClick={() => {
                                     setShowPayment(false);
@@ -2441,7 +2444,7 @@ const DocumentoSoporteMaster = () => {
                                 className="flex-1"
                             >
                                 Confirmar Pago
-                            </Button>
+                            </PermisoButton>
                             <Button
                                 variant="outline"
                                 disabled={documentoSoporteValidadoDian}

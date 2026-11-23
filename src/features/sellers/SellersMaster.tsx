@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import PermisoButton from "@/components/layout/PermisoButton";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
@@ -186,9 +187,9 @@ export default function SellersMaster() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="default" size="icon" title="Nuevo vendedor" onClick={handleNew}>
+          <PermisoButton idOpcion={18} accion="crear" variant="default" size="icon" title="Nuevo vendedor" onClick={handleNew}>
             <Plus className="w-5 h-5" />
-          </Button>
+          </PermisoButton>
 
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
             <DialogTrigger asChild>
@@ -238,15 +239,15 @@ export default function SellersMaster() {
             </DialogContent>
           </Dialog>
 
-          <Button variant="default" onClick={handleSave}>
+          <PermisoButton idOpcion={18} accion={vendedor.idVendedor ? "actualizar" : "crear"} variant="default" onClick={handleSave}>
             <Save className="w-4 h-4 mr-2" />
             Guardar
-          </Button>
+          </PermisoButton>
 
-          <Button variant="default" onClick={handleDelete}>
+          <PermisoButton idOpcion={18} accion="eliminar" variant="default" onClick={handleDelete}>
             <Trash className="w-4 h-4 mr-2" />
             Eliminar
-          </Button>
+          </PermisoButton>
 
           <Button
             variant="default"
@@ -396,9 +397,9 @@ export default function SellersMaster() {
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <PermisoButton idOpcion={18} accion="eliminar" variant="destructive" onClick={confirmDelete}>
               Eliminar
-            </Button>
+            </PermisoButton>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

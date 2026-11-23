@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, Router } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/loginPage';
 import POSPage from './pages/pos';
@@ -6,8 +6,10 @@ import MainMenuPage from './pages/mainMenuPage';
 import ItemsPage from './pages/itemsPage';
 import { Toaster } from "@/components/ui/sonner"
 import TercerosPage from './pages/tercerosPage';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { toast } from 'sonner';
+import { usePermisos } from './context/PermisosContext';
+import { AUTH_SESSION_KEY, getAuthenticatedSession } from './features/auth/session';
 import FacturaReportPage from './pages/facturaReportPage';
 import CreditNotePage from './pages/creditNotePage';
 import EstimatePage from './pages/estimatePage';
@@ -27,26 +29,43 @@ import AlmacenesPage from './pages/AlmacenesPage';
 import DebitNotePage from './pages/debitNotePage';
 
 function App() {
-    // Aquí podrías agregar lógica para verificar autenticación
-    //const isAuthenticated = true; // Ejemplo, reemplazar con tu lógica real
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(() => getAuthenticatedSession() !== null);
 
     function LoginHandlerWrapper() {
         const navigate = useNavigate();
+        const { cargarPermisosPorRol, limpiarPermisos } = usePermisos();
 
-        const handleLogin = (user: { usuario: string; password: string }) => {
+        const handleLogin = async (user: { usuario: string; password: string }) => {
             if (user.usuario === "administrador" && user.password === "astil2025") {
-                setIsAuthenticated(true);
-                navigate("/main-menu");
-                return true;
+                const session = { usuario: user.usuario, idRol: 1 };
+                try {
+                    await cargarPermisosPorRol(session.idRol);
+                    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+                    setIsAuthenticated(true);
+                    navigate("/main-menu");
+                } catch (error) {
+                    localStorage.removeItem(AUTH_SESSION_KEY);
+                    limpiarPermisos();
+                    console.error("Error al cargar permisos durante el inicio de sesión:", error);
+                    toast.error("No se pudieron cargar los permisos del usuario");
+                }
             } else {
-                setIsAuthenticated(false);
                 toast.error("Usuario o contraseña incorrectos", {
                     position: "bottom-center",
                 });
-                return false;
             }
         };
+
+        const handleLogout = () => {
+            localStorage.removeItem(AUTH_SESSION_KEY);
+            limpiarPermisos();
+            setIsAuthenticated(false);
+            navigate("/login", { replace: true });
+        };
+
+        const withLayout = (page: ReactNode) => (
+            <AppLayout onLogout={handleLogout}>{page}</AppLayout>
+        );
 
 
 
@@ -54,119 +73,118 @@ function App() {
             <Routes>
                 <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
                 <Route path="/main-menu" element={
-                    isAuthenticated ? <AppLayout><MainMenuPage /></AppLayout> : <Navigate to="/login" />
+                    isAuthenticated ? withLayout(<MainMenuPage />) : <Navigate to="/login" />
                 } />
                 <Route path="/items" element={
-                    isAuthenticated ? <AppLayout><ItemsPage /></AppLayout> : <Navigate to="/login" />
+                    isAuthenticated ? withLayout(<ItemsPage />) : <Navigate to="/login" />
                 } />
                 <Route path="/terceros" element={
-                    isAuthenticated ? <AppLayout><TercerosPage /></AppLayout> : <Navigate to="/login" />
+                    isAuthenticated ? withLayout(<TercerosPage />) : <Navigate to="/login" />
                 } />
                 <Route path="/reporte" element={
-                    // isAuthenticated ? <FacturaReportPage /> : <Navigate to="/login" />
-                    <FacturaReportPage />
+                    isAuthenticated ? withLayout(<FacturaReportPage />) : <Navigate to="/login" />
                 } />
                 <Route path="/empresas" element={
-                    isAuthenticated ? <AppLayout><EmpresasPage /></AppLayout> : <Navigate to="/login" />
+                    isAuthenticated ? withLayout(<EmpresasPage />) : <Navigate to="/login" />
                 } />
                 <Route path="/resoluciones" element={
-                    isAuthenticated ? <AppLayout><ResolutionsPage /></AppLayout> : <Navigate to="/login" />
+                    isAuthenticated ? withLayout(<ResolutionsPage />) : <Navigate to="/login" />
                 } />
                 <Route
                     path="/pos"
                     element={
-                        isAuthenticated ? <AppLayout><POSPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<POSPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/parametros-venta"
                     element={
-                        isAuthenticated ? <AppLayout><ParametrosVentasPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<ParametrosVentasPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/documentos-externos"
                     element={
-                        isAuthenticated ? <AppLayout><DocumentosExternosPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<DocumentosExternosPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/categories"
                     element={
-                        isAuthenticated ? <AppLayout><CategoriesPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<CategoriesPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/credit-notes"
                     element={
-                        isAuthenticated ? <AppLayout><CreditNotePage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<CreditNotePage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/estimates"
                     element={
-                        isAuthenticated ? <AppLayout><EstimatePage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<EstimatePage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/actividades-ica"
                     element={
-                        isAuthenticated ? <AppLayout><ActividadesIcaPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<ActividadesIcaPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/sucursales"
                     element={
-                        isAuthenticated ? <AppLayout><SucursalesPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<SucursalesPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/vendedores"
                     element={
-                        isAuthenticated ? <AppLayout><SellersPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<SellersPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/usuarios"
                     element={
-                        isAuthenticated ? <AppLayout><UsersPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<UsersPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/unidades-medida"
                     element={
-                        isAuthenticated ? <AppLayout><UnidadesDeMedidaPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<UnidadesDeMedidaPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/listas-precios"
                     element={
-                        isAuthenticated ? <AppLayout><ListasPreciosPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<ListasPreciosPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/documento-soporte"
                     element={
-                        isAuthenticated ? <AppLayout><DocumentoSoportePage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<DocumentoSoportePage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/almacenes"
                     element={
-                        isAuthenticated ? <AppLayout><AlmacenesPage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<AlmacenesPage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/debit-notes"
                     element={
-                        isAuthenticated ? <AppLayout><DebitNotePage /></AppLayout> : <Navigate to="/login" />
+                        isAuthenticated ? withLayout(<DebitNotePage />) : <Navigate to="/login" />
                     }
                 />
                 <Route
                     path="/"
                     element={
                         isAuthenticated ? (
-                            <AppLayout><POSPage /></AppLayout>
+                            withLayout(<POSPage />)
                         ) : (
                             <LoginPage onLogin={handleLogin} />
                         )

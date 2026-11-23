@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import PermisoButton from "@/components/layout/PermisoButton";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -805,7 +806,9 @@ export default function SuppliersMaster() {
                     <p className="text-muted-foreground text-sm">Consulta y gestión de terceros</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button
+                    <PermisoButton
+                        idOpcion={12}
+                        accion={tercero.idTercero ? "actualizar" : "crear"}
                         variant="default"
                         size="icon"
                         title="Nuevo tercero"
@@ -813,7 +816,7 @@ export default function SuppliersMaster() {
                         className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
                     >
                         <Plus className="w-5 h-5" />
-                    </Button>
+                    </PermisoButton>
 
 
                     {/* Dialog de búsqueda */}
@@ -868,14 +871,16 @@ export default function SuppliersMaster() {
                             </div>
                         </DialogContent>
                     </Dialog>
-                    <Button
+                    <PermisoButton
+                        idOpcion={12}
+                        accion="eliminar"
                         variant="default"
                         title="Guardar tercero"
                         onClick={handleSaveTercero}
                         disabled={isValidandoTercero}>
                         <Save className="w-4 h-4 mr-2" />
                         Guardar
-                    </Button>
+                    </PermisoButton>
                     <Button
                         variant="default"
                         title="Eliminar tercero"
@@ -1641,9 +1646,9 @@ export default function SuppliersMaster() {
                         <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
                             Cancelar
                         </Button>
-                        <Button variant="destructive" onClick={confirmDeleteTercero}>
+                        <PermisoButton idOpcion={12} accion="eliminar" variant="destructive" onClick={confirmDeleteTercero}>
                             Eliminar
-                        </Button>
+                        </PermisoButton>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

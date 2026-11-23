@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import PermisoButton from "@/components/layout/PermisoButton";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Check,
+  ChevronsUpDown,
   Pencil,
   X,
   CircleX,
@@ -20,6 +22,9 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { Package } from "lucide-react";
 import { toast } from "sonner";
 import { TipoDocumentoIdentidadService } from "@/services/TipoDocumentoIdentidadService";
@@ -42,6 +47,10 @@ import { ITipoPersona } from "@/types/ITipoPersona";
 import { TipoPersonaService } from "@/services/TipoPersonaService";
 import { ITercero } from "@/types/ITercero";
 import { IResponsabilidadTercero } from "@/types/IResponsabilidadTercero";
+import { EmpresasActividadesCiiuService } from "@/services/EmpresasActividadesCiiuService";
+import { IEmpresasActividadesCiiu } from "@/types/IEmpresasActividadesCiiu";
+import { ActividadesCiiuService } from "@/services/ActividadesCiiuService";
+import { IActividadesCiiu } from "@/types/IActividadesCiiu";
 
 export default function CompaniesMaster() {
   const navigate = useNavigate();
@@ -183,6 +192,35 @@ export default function CompaniesMaster() {
     responsabilidadesTerceros: [],
   });
 
+  // ESTADOS PARA ACTIVIDADES CIIU (GRID)
+  const [actividadesCiiuLista, setActividadesCiiuLista] = useState<IEmpresasActividadesCiiu[]>([]);
+  const [actividadesCiiuOriginal, setActividadesCiiuOriginal] = useState<IEmpresasActividadesCiiu[]>([]);
+  const [catalogoCiiu, setCatalogoCiiu] = useState<IActividadesCiiu[]>([]);
+  const [addCiiuMode, setAddCiiuMode] = useState(false);
+  const [openCiiuSelector, setOpenCiiuSelector] = useState(false);
+  const [nuevaCiiu, setNuevaCiiu] = useState<IEmpresasActividadesCiiu>({
+    idEmpresaActividadCiiu: 0,
+    idEmpresa: 0,
+    idActividadCiiu: 0,
+    esActividadPrincipal: false,
+  });
+  const actividadCiiuSeleccionada = catalogoCiiu.find(
+    (item) => Number(item.idActividadCiiu) === Number(nuevaCiiu.idActividadCiiu)
+  );
+  const tieneActividadPrincipal = actividadesCiiuLista.some(
+    (item) => Boolean(item.esActividadPrincipal)
+  );
+
+  // Sincronizar el idEmpresa cuando la información de la empresa termine de cargar
+  useEffect(() => {
+    if (empresa.idEmpresa && empresa.idEmpresa > 0) {
+      setNuevaCiiu((prev) => ({
+        ...prev,
+        idEmpresa: empresa.idEmpresa,
+      }));
+    }
+  }, [empresa.idEmpresa]);
+
   // Estados para edición inline de responsabilidades
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editResponsabilidad, setEditResponsabilidad] = useState<IResponsabilidadTercero>({
@@ -261,6 +299,82 @@ export default function CompaniesMaster() {
   };
 
   const filteredResponsabilidades = tercero.responsabilidadesTerceros || [];
+
+  // FUNCIONES PARA EL GRID DE ACTIVIDADES CIIU
+  const fetchCatalogoCiiu = async () => {
+    try {
+      const data = await ActividadesCiiuService.getAll();
+      setCatalogoCiiu(data);
+    } catch (error) {
+      console.error("Error al cargar catálogo CIIU:", error);
+    }
+  };
+
+  const fetchEmpresasActividades = async (idEmpresa: number) => {
+    try {
+      const data = await EmpresasActividadesCiiuService.getAll();
+      // Filtramos las que correspondan a esta empresa
+      const filtradas = data.filter((item) => Number(item.idEmpresa) === Number(idEmpresa));
+      setActividadesCiiuLista(filtradas);
+      setActividadesCiiuOriginal(filtradas);
+    } catch (error) {
+      console.error("Error al cargar actividades CIIU de la empresa:", error);
+    }
+  };
+
+  const handleAddActividadCiiu = () => {
+    if (!nuevaCiiu.idActividadCiiu || nuevaCiiu.idActividadCiiu === 0) {
+      toast.error("Debe seleccionar una actividad CIIU.");
+      return;
+    }
+
+    if (
+      nuevaCiiu.esActividadPrincipal &&
+      actividadesCiiuLista.some((item) => Boolean(item.esActividadPrincipal))
+    ) {
+      toast.error("La empresa ya tiene una actividad principal.");
+      return;
+    }
+
+    // Verificar si ya fue agregada
+    const yaExiste = actividadesCiiuLista.some(
+      (item) => Number(item.idActividadCiiu) === Number(nuevaCiiu.idActividadCiiu)
+    );
+    if (yaExiste) {
+      toast.error("Esta actividad CIIU ya está asignada a la empresa.");
+      return;
+    }
+
+    const idTemporal = actividadesCiiuLista.reduce(
+      (minId, item) => Math.min(minId, item.idEmpresaActividadCiiu),
+      0
+    ) - 1;
+    const actividadSeleccionada: IEmpresasActividadesCiiu = {
+      idEmpresaActividadCiiu: idTemporal,
+      idEmpresa: empresa.idEmpresa,
+      idActividadCiiu: Number(nuevaCiiu.idActividadCiiu),
+      esActividadPrincipal: nuevaCiiu.esActividadPrincipal,
+    };
+
+    setActividadesCiiuLista((prev) => [...prev, actividadSeleccionada]);
+    toast.success("Actividad agregada al grid. Guarde la empresa para aplicar los cambios.");
+    setAddCiiuMode(false);
+    setOpenCiiuSelector(false);
+    setNuevaCiiu({
+      idEmpresaActividadCiiu: 0,
+      idEmpresa: empresa.idEmpresa,
+      idActividadCiiu: 0,
+      esActividadPrincipal: false,
+    });
+  };
+
+  const handleDeleteActividadCiiu = (idEmpresaActividadCiiu?: number) => {
+    if (idEmpresaActividadCiiu === undefined) return;
+    setActividadesCiiuLista((prev) =>
+      prev.filter((item) => item.idEmpresaActividadCiiu !== idEmpresaActividadCiiu)
+    );
+    toast.success("Actividad quitada del grid. Guarde la empresa para aplicar los cambios.");
+  };
 
   // Lógica para la tabla de notas FE
   const [notasFe, setNotasFe] = useState<string[]>([]);
@@ -354,6 +468,20 @@ export default function CompaniesMaster() {
       return;
     }
 
+    const actividadesPrincipales = actividadesCiiuLista.filter(
+      (item) => Boolean(item.esActividadPrincipal)
+    );
+    if (actividadesPrincipales.length > 1) {
+      setFormError("La empresa no puede tener más de una actividad CIIU principal.");
+      return;
+    }
+
+    const idsActividadesSeleccionadas = actividadesCiiuLista.map((item) => Number(item.idActividadCiiu));
+    if (new Set(idsActividadesSeleccionadas).size !== idsActividadesSeleccionadas.length) {
+      setFormError("No puede asignar la misma actividad CIIU más de una vez.");
+      return;
+    }
+
 
     const empresaToSave: IEmpresas = {
       ...empresa,
@@ -363,14 +491,62 @@ export default function CompaniesMaster() {
     };
 
     setFormError(null);
+    let sincronizacionCiiuIniciada = false;
+    let empresaActualizada = false;
     try {
       await EmpresaService.update(empresaToSave);
+      empresaActualizada = true;
+
+      const idsRelacionesActuales = new Set(
+        actividadesCiiuLista
+          .filter((item) => item.idEmpresaActividadCiiu > 0)
+          .map((item) => item.idEmpresaActividadCiiu)
+      );
+      const relacionesEliminadas = actividadesCiiuOriginal.filter(
+        (item) => !idsRelacionesActuales.has(item.idEmpresaActividadCiiu)
+      );
+      const relacionesNuevas = actividadesCiiuLista.filter(
+        (item) => item.idEmpresaActividadCiiu <= 0
+      );
+      const hayCambiosCiiu = relacionesEliminadas.length > 0 || relacionesNuevas.length > 0;
+
+      if (hayCambiosCiiu) {
+        sincronizacionCiiuIniciada = true;
+        for (const relacion of relacionesEliminadas) {
+          await EmpresasActividadesCiiuService.delete(relacion.idEmpresaActividadCiiu);
+        }
+
+        const actividadesGuardadas = actividadesCiiuLista.filter(
+          (item) => item.idEmpresaActividadCiiu > 0
+        );
+        for (const relacion of relacionesNuevas) {
+          const resultado = await EmpresasActividadesCiiuService.create({
+            ...relacion,
+            idEmpresaActividadCiiu: 0,
+            idEmpresa: empresa.idEmpresa,
+          });
+          actividadesGuardadas.push({
+            ...relacion,
+            idEmpresaActividadCiiu: resultado.idEmpresaActividadCiiu,
+          });
+        }
+        setActividadesCiiuLista(actividadesGuardadas);
+        setActividadesCiiuOriginal(actividadesGuardadas);
+      }
+
       setSuccessMessage("Empresa actualizada correctamente");
       setShowSuccessDialog(true);
-      fetchEmpresa();
+      await fetchEmpresa();
     } catch (error) {
-      console.error("Error al actualizar la empresa:", error);
-      toast.error("Error al guardar la información de la empresa");
+      console.error("Error al guardar la empresa o sus actividades CIIU:", error);
+      if (sincronizacionCiiuIniciada) {
+        await fetchEmpresasActividades(empresa.idEmpresa);
+      }
+      toast.error(
+        empresaActualizada
+          ? "La empresa se guardó, pero hubo un error al guardar las actividades CIIU."
+          : "Error al guardar la información de la empresa."
+      );
     }
   };
 
@@ -394,6 +570,7 @@ export default function CompaniesMaster() {
             ? new Date(data.fechaGrabacionEmpresa).toISOString().split("T")[0]
             : null,
         });
+        await fetchEmpresasActividades(data.idEmpresa);
 
         // Cargar notas de Facturación Electrónica si existen
         const notas: string[] = [];
@@ -553,11 +730,12 @@ export default function CompaniesMaster() {
     fetchEmpresa();
     fetchMediosPago();
     fetchTiposPersona();
+    fetchCatalogoCiiu();
   }, []);
 
   return (
     <div className="p-6 bg-muted min-h-screen">
-      
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -565,16 +743,31 @@ export default function CompaniesMaster() {
           <p className="text-muted-foreground text-sm">
             Gestión del perfil único de empresa usuaria
           </p>
-        </div>        
+        </div>
         <div className="flex gap-2">
           <Button
-          variant={isEditing ? "destructive" : "outline"}
-          onClick={() => setIsEditing(!isEditing)}
-        >
-          {isEditing ? "Cancelar Edición" : "Modo Edición"}
-          <Pencil className="w-4 h-4 mr-2"/>
+            variant={isEditing ? "destructive" : "outline"}
+            onClick={() => {
+              if (isEditing) {
+                setActividadesCiiuLista(actividadesCiiuOriginal);
+                setAddCiiuMode(false);
+                setOpenCiiuSelector(false);
+                setNuevaCiiu({
+                  idEmpresaActividadCiiu: 0,
+                  idEmpresa: empresa.idEmpresa,
+                  idActividadCiiu: 0,
+                  esActividadPrincipal: false,
+                });
+              }
+              setIsEditing(!isEditing);
+            }}
+          >
+            {isEditing ? "Cancelar Edición" : "Modo Edición"}
+            <Pencil className="w-4 h-4 mr-2" />
           </Button>
-          <Button
+          <PermisoButton
+            idOpcion={13}
+            accion={empresa.idEmpresa ? "actualizar" : "crear"}
             variant="default"
             title="Guardar empresa"
             onClick={handleSaveEmpresa}
@@ -582,7 +775,7 @@ export default function CompaniesMaster() {
           >
             <Save className="w-4 h-4 mr-2" />
             Guardar
-          </Button>
+          </PermisoButton>
           <Button
             variant="default"
             size="icon"
@@ -617,7 +810,7 @@ export default function CompaniesMaster() {
                     className={
                       (!empresa.idTipoDocumentoId ||
                         empresa.idTipoDocumentoId === 0) &&
-                      formError
+                        formError
                         ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
                         : "w-full rounded border px-3 py-2 text-sm bg-background"
                     }
@@ -693,11 +886,10 @@ export default function CompaniesMaster() {
                     placeholder="DV"
                     readOnly
                     disabled={isFormDisabled}
-                    className={`w-20 ${
-                      !empresa.digitoVerificacion?.trim() && formError
-                        ? "border border-red-500"
-                        : ""
-                    }`}
+                    className={`w-20 ${!empresa.digitoVerificacion?.trim() && formError
+                      ? "border border-red-500"
+                      : ""
+                      }`}
                   />
                 </div>
                 <div className="md:col-span-4 grid grid-cols-4 gap-4">
@@ -747,7 +939,7 @@ export default function CompaniesMaster() {
                     <select
                       className={
                         (!empresa.idTipoPersona || empresa.idTipoPersona === 0) &&
-                        formError
+                          formError
                           ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
                           : "w-full rounded border px-3 py-2 text-sm bg-background"
                       }
@@ -807,7 +999,7 @@ export default function CompaniesMaster() {
                     <select
                       className={
                         (!empresa.idTipoRegimen || empresa.idTipoRegimen === 0) &&
-                        formError
+                          formError
                           ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
                           : "w-full rounded border px-3 py-2 text-sm bg-background"
                       }
@@ -922,7 +1114,7 @@ export default function CompaniesMaster() {
                       className={
                         (!empresa.idDepartamento ||
                           empresa.idDepartamento === 0) &&
-                        formError
+                          formError
                           ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
                           : "w-full rounded border px-3 py-2 text-sm bg-background"
                       }
@@ -965,7 +1157,7 @@ export default function CompaniesMaster() {
                     <select
                       className={
                         (!empresa.idMunicipio || empresa.idMunicipio === 0) &&
-                        formError
+                          formError
                           ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
                           : "w-full rounded border px-3 py-2 text-sm bg-background"
                       }
@@ -1018,8 +1210,8 @@ export default function CompaniesMaster() {
                       aria-label="Email de la Empresa"
                       className={
                         (formError && !empresa.emailEmpresa?.trim()) ||
-                        (empresa.emailEmpresa?.trim() &&
-                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(empresa.emailEmpresa))
+                          (empresa.emailEmpresa?.trim() &&
+                            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(empresa.emailEmpresa))
                           ? "border border-red-500"
                           : ""
                       }
@@ -1080,10 +1272,10 @@ export default function CompaniesMaster() {
                       className={
                         (formError &&
                           !empresa.correoElectronicoRepresentante?.trim()) ||
-                        (empresa.correoElectronicoRepresentante?.trim() &&
-                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-                            empresa.correoElectronicoRepresentante
-                          ))
+                          (empresa.correoElectronicoRepresentante?.trim() &&
+                            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                              empresa.correoElectronicoRepresentante
+                            ))
                           ? "border border-red-500"
                           : ""
                       }
@@ -1110,7 +1302,7 @@ export default function CompaniesMaster() {
                     <select
                       className={
                         (!selectedMedioPago || selectedMedioPago === 0) &&
-                        formError
+                          formError
                           ? "w-full rounded border px-3 py-2 text-sm bg-background border-red-500"
                           : "w-full rounded border px-3 py-2 text-sm bg-background"
                       }
@@ -1434,6 +1626,168 @@ export default function CompaniesMaster() {
               </div>
             </Card>
           </div>
+
+          {/* GRID DE ACTIVIDADES CIIU DE LA EMPRESA     */}
+          <Card className="overflow-x-auto mb-6 p-4">
+            <h3 className="text-lg font-bold mb-3">Actividades Económicas CIIU</h3>
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="px-3 py-2 text-left font-semibold w-32">Código</th>
+                  <th className="px-4 py-2 text-left font-semibold">Descripción Actividad</th>
+                  <th className="px-4 py-2 text-center font-semibold w-32">Principal</th>
+                  <th className="px-4 py-2 w-20"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {actividadesCiiuLista.map((item) => {
+                  const infoCiiu = catalogoCiiu.find(c => Number(c.idActividadCiiu) === Number(item.idActividadCiiu));
+                  return (
+                    <tr key={item.idEmpresaActividadCiiu} className="border-b hover:bg-accent">
+                      <td className="px-3 py-2">
+                        {infoCiiu?.codigoActividadCiiu ?? "-"}
+                      </td>
+                      <td className="px-4 py-2">
+                        {infoCiiu?.descripcionActividadCiiu ?? "-"}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        {item.esActividadPrincipal ? (
+                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-semibold">Sí</span>
+                        ) : (
+                          <span className="text-gray-500 text-xs">No</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 flex gap-2 items-center justify-center">
+                        <button
+                          className="text-red-600 font-semibold flex items-center disabled:opacity-50"
+                          onClick={() => handleDeleteActividadCiiu(item.idEmpresaActividadCiiu)}
+                          title="Eliminar"
+                          disabled={!isEditing}
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {addCiiuMode ? (
+                  <tr className="border-b bg-accent/40">
+                    <td colSpan={2} className="px-3 py-2">
+                      <Popover open={openCiiuSelector} onOpenChange={setOpenCiiuSelector}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openCiiuSelector}
+                            className="w-full justify-between font-normal"
+                          >
+                            {actividadCiiuSeleccionada
+                              ? `${actividadCiiuSeleccionada.codigoActividadCiiu} - ${actividadCiiuSeleccionada.descripcionActividadCiiu}`
+                              : "Seleccione una actividad CIIU..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Buscar por código o descripción..." />
+                            <CommandList>
+                              <CommandEmpty>No se encontraron actividades CIIU.</CommandEmpty>
+                              <CommandGroup>
+                                {catalogoCiiu.map((cat) => (
+                                  <CommandItem
+                                    key={cat.idActividadCiiu}
+                                    value={`${cat.codigoActividadCiiu} ${cat.descripcionActividadCiiu}`}
+                                    onSelect={() => {
+                                      setNuevaCiiu({ ...nuevaCiiu, idActividadCiiu: cat.idActividadCiiu });
+                                      setOpenCiiuSelector(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        Number(nuevaCiiu.idActividadCiiu) === Number(cat.idActividadCiiu)
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {cat.codigoActividadCiiu} - {cat.descripcionActividadCiiu}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <input
+                          type="checkbox"
+                          checked={nuevaCiiu.esActividadPrincipal}
+                          disabled={tieneActividadPrincipal && !nuevaCiiu.esActividadPrincipal}
+                          onChange={(e) => {
+                            if (e.target.checked && tieneActividadPrincipal) {
+                              toast.error("La empresa ya tiene una actividad principal.");
+                              return;
+                            }
+                            setNuevaCiiu((prev) => ({
+                              ...prev,
+                              esActividadPrincipal: e.target.checked,
+                            }));
+                          }}
+                          className="w-4 h-4 text-primary rounded disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                        {tieneActividadPrincipal && (
+                          <span className="text-xs text-muted-foreground">
+                            Ya existe una actividad principal
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 flex gap-2 justify-center">
+                      <button
+                        className="text-green-600 font-semibold flex items-center"
+                        onClick={handleAddActividadCiiu}
+                        title="Guardar"
+                      >
+                        <Check className="w-6 h-6" />
+                      </button>
+                      <button
+                        className="text-red-600 font-semibold flex items-center"
+                        onClick={() => {
+                          setAddCiiuMode(false);
+                          setOpenCiiuSelector(false);
+                          setNuevaCiiu({
+                            idEmpresaActividadCiiu: 0,
+                            idEmpresa: empresa.idEmpresa,
+                            idActividadCiiu: 0,
+                            esActividadPrincipal: false,
+                          });
+                        }}
+                        title="Cancelar"
+                      >
+                        <CircleX className="w-6 h-6" />
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-0 py-2">
+                      <button
+                        className="bg-black text-white font-semibold px-4 py-2 rounded text-left disabled:opacity-50 text-sm"
+                        onClick={() => setAddCiiuMode(true)}
+                        disabled={!isEditing}
+                      >
+                        + Agregar Actividad CIIU
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </Card>
 
           {/* Tabla de responsabilidades */}
           <Card className="overflow-x-auto">

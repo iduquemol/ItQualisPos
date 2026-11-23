@@ -1,11 +1,35 @@
 import { ReactNode } from "react"
 import AppSidebar from "./AppSidebar"
-import { Card, CardContent } from "../ui/card"
+import { Navigate, useLocation } from "react-router-dom"
+import { OPCIONES_SERVICIO_POR_RUTA } from "@/config/opcionesServicio"
+import { usePermisos } from "@/context/PermisosContext"
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default function AppLayout({
+  children,
+  onLogout,
+}: {
+  children: ReactNode
+  onLogout: () => void
+}) {
+  const location = useLocation()
+  const { cargandoPermisos, tienePermiso } = usePermisos()
+  const idOpcion = OPCIONES_SERVICIO_POR_RUTA[location.pathname]
+
+  if (cargandoPermisos) {
+    return (
+      <div className="flex min-h-screen flex-1 items-center justify-center" role="status" aria-busy="true">
+        Cargando permisos...
+      </div>
+    )
+  }
+
+  if (idOpcion !== undefined && !tienePermiso(idOpcion, "leer")) {
+    return <Navigate to="/main-menu" replace />
+  }
+
   return (
     <div className="flex min-h-screen">
-      <AppSidebar />
+      <AppSidebar onLogout={onLogout} />
       {/* <main className="flex-1">
         <div className="flex flex-col gap-6 p-6">
           <div className="flex flex-row items-center gap-6">

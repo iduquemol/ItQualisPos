@@ -1,7 +1,7 @@
 import Login from '@/features/auth/Login';
 
 type LoginPageProps = {
-  onLogin: (user: { usuario: string; password: string }) => void;
+  onLogin: (user: { usuario: string; password: string }) => Promise<void>;
 };
 
 export default function LoginPage({ onLogin }: LoginPageProps) {

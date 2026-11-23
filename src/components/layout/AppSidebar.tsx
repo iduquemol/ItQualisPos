@@ -17,6 +17,9 @@ import {
 } from "lucide-react"
 
 import { NavLink } from "react-router-dom"
+import { LogOut } from "lucide-react"
+import { OPCIONES_SERVICIO_POR_RUTA } from "@/config/opcionesServicio"
+import { usePermisos } from "@/context/PermisosContext"
 
 import {
   Collapsible,
@@ -72,9 +75,11 @@ const menuGroups = [
   },
 ]
 
-export default function AppSidebar() {
+export default function AppSidebar({ onLogout }: { onLogout: () => void }) {
+  const { cargandoPermisos, tienePermiso } = usePermisos()
+
   return (
-    <aside className="w-[280px] shrink-0 border-r border-border bg-background">
+    <aside className="flex min-h-screen w-[280px] shrink-0 flex-col border-r border-border bg-background">
       {/* Logo */}
       <div className="flex h-16 items-center px-4">
         <div className="flex w-full items-center gap-2 rounded-md p-2">
@@ -88,6 +93,12 @@ export default function AppSidebar() {
       {/* Navigation */}
       <nav className="flex flex-col gap-1 p-2">
         {menuGroups.map((group) => {
+          const visibleChildren = group.children.filter((child) => {
+            const idOpcion = OPCIONES_SERVICIO_POR_RUTA[child.path]
+            return idOpcion !== undefined && tienePermiso(idOpcion, "leer")
+          })
+          if (cargandoPermisos || visibleChildren.length === 0) return null
+
           const GroupIcon = group.icon
 
           return (
@@ -105,7 +116,7 @@ export default function AppSidebar() {
 
               <CollapsibleContent>
                 <div className="ml-4 border-l border-border py-1 pl-2">
-                  {group.children.map((child) => {
+                  {visibleChildren.map((child) => {
                     const Icon = child.icon
 
                     return (
@@ -133,6 +144,16 @@ export default function AppSidebar() {
           )
         })}
       </nav>
+      <div className="mt-auto p-2">
+        <button
+          type="button"
+          onClick={onLogout}
+          className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground/80 hover:bg-muted hover:text-foreground"
+        >
+          <LogOut className="size-4 shrink-0" />
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
     </aside>
   )
 }

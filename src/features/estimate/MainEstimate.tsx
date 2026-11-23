@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import PermisoButton from '@/components/layout/PermisoButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -1412,7 +1413,9 @@ const MainEstimate = () => {
                                                         Cantidad
                                                     </span>
                                                     <div className="flex items-center">
-                                                        <Button
+                                                        <PermisoButton
+                                                            idOpcion={2}
+                                                            accion={cotizacion.idCotizacion ? "actualizar" : "crear"}
                                                             type="button"
                                                             variant="outline"
                                                             size="sm"
@@ -1425,7 +1428,7 @@ const MainEstimate = () => {
                                                             }
                                                         >
                                                             <Minus className="h-4 w-4" />
-                                                        </Button>
+                                                        </PermisoButton>
                                                         <Input
                                                             type="number"
                                                             min={0}
@@ -1515,7 +1518,9 @@ const MainEstimate = () => {
                                 <span>${formatCurrency(total)}</span>
                             </div>
                         </div>
-                        <Button
+                        <PermisoButton
+                            idOpcion={2}
+                            accion={cotizacion.idCotizacion ? "actualizar" : "crear"}
                             type="button"
                             onClick={handleSaveCotizacion}
                             disabled={
@@ -1533,7 +1538,7 @@ const MainEstimate = () => {
                                 : cotizacion.idCotizacion
                                     ? 'Actualizar Cotización'
                                     : 'Guardar Cotización'}
-                        </Button>
+                        </PermisoButton>
                     </div>
                 </div>
 
