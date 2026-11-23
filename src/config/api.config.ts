@@ -80,6 +80,9 @@ export const API_CONFIG = {
         EVENTOS_DIAN: '/eventos-dian',
         CARGOS_NOMINA: '/cargos-nomina',
         CONCEPTOS_RECHAZO_DIAN: '/conceptos-rechazo-dian',
+        CONSULTAR_ACTIVIDADES_CIIU: '/consultar-actividades-ciiu',
+        EMPRESAS_ACTIVIDADES_CIIU: '/empresas-actividades-ciiu',
+        ROLES_OPCIONES_SERVICIO: '/roles-opciones-servicio',
 
     },
     getUrl: (endpoint: string) => {

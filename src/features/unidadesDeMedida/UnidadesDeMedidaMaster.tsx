@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import PermisoButton from "@/components/layout/PermisoButton";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
@@ -171,7 +172,9 @@ export default function UnidadesDeMedidaMaster() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
+          <PermisoButton
+            idOpcion={10}
+            accion="crear"
             variant="default"
             size="icon"
             title="Nueva unidad de medida"
@@ -179,7 +182,7 @@ export default function UnidadesDeMedidaMaster() {
             className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
           >
             <Plus className="w-5 h-5" />
-          </Button>
+          </PermisoButton>
 
           {/* Diálogo de Búsqueda */}
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
@@ -245,15 +248,15 @@ export default function UnidadesDeMedidaMaster() {
             </DialogContent>
           </Dialog>
 
-          <Button variant="default" title="Guardar unidad de medida" onClick={handleSave}>
+          <PermisoButton idOpcion={10} accion={unidadMedida.idUnidadMedida ? "actualizar" : "crear"} variant="default" title="Guardar unidad de medida" onClick={handleSave}>
             <Save className="w-4 h-4 mr-2" />
             Guardar
-          </Button>
+          </PermisoButton>
 
-          <Button variant="default" title="Eliminar unidad de medida" onClick={handleDelete}>
+          <PermisoButton idOpcion={10} accion="eliminar" variant="default" title="Eliminar unidad de medida" onClick={handleDelete}>
             <Trash className="w-4 h-4 mr-2" />
             Eliminar
-          </Button>
+          </PermisoButton>
 
           <Button
             variant="default"
@@ -367,9 +370,9 @@ export default function UnidadesDeMedidaMaster() {
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <PermisoButton idOpcion={10} accion="eliminar" variant="destructive" onClick={confirmDelete}>
               Eliminar
-            </Button>
+            </PermisoButton>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

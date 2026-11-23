@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, Package, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PermisoButton from '@/components/layout/PermisoButton';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -1349,7 +1350,9 @@ const MainDebitNote = () => {
                                             />
                                         </div>
                                     ) : (
-                                        <Button
+                                        <PermisoButton
+                                            idOpcion={4}
+                                            accion="crear"
                                             onClick={() => setShowConfirmSaveDialog(true)}
                                             disabled={isSavingNotaDebito}
                                             className="flex-1 h-[40px] text-lg font-bold"
@@ -1357,7 +1360,7 @@ const MainDebitNote = () => {
                                         >
                                             <Check className="h-5 w-5 mr-2" />
                                             {isSavingNotaDebito ? 'Guardando...' : 'Guardar Nota Débito'}
-                                        </Button>
+                                        </PermisoButton>
                                     )}
                                 </div>
                             </div>

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import PermisoButton from "@/components/layout/PermisoButton";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
@@ -281,7 +282,9 @@ export default function AlmacenesMaster() {
         </div>
         <div className="flex gap-2">
           {/* Nuevo */}
-          <Button
+          <PermisoButton
+            idOpcion={14}
+            accion="crear"
             variant="default"
             size="icon"
             title="Nuevo almacén"
@@ -289,7 +292,7 @@ export default function AlmacenesMaster() {
             className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
           >
             <Plus className="w-5 h-5" />
-          </Button>
+          </PermisoButton>
 
           {/* Diálogo de Búsqueda */}
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
@@ -363,24 +366,28 @@ export default function AlmacenesMaster() {
           </Dialog>
 
           {/* Guardar */}
-          <Button
+          <PermisoButton
+            idOpcion={14}
+            accion={almacen.idAlmacen ? "actualizar" : "crear"}
             variant="default"
             title="Guardar almacén"
             onClick={handleSave}
           >
             <Save className="w-4 h-4 mr-2" />
             Guardar
-          </Button>
+          </PermisoButton>
 
           {/* Eliminar */}
-          <Button
+          <PermisoButton
+            idOpcion={14}
+            accion="eliminar"
             variant="default"
             title="Eliminar almacén"
             onClick={handleDelete}
           >
             <Trash className="w-4 h-4 mr-2" />
             Eliminar
-          </Button>
+          </PermisoButton>
 
           {/* Salir */}
           <Button
@@ -664,9 +671,9 @@ export default function AlmacenesMaster() {
             </Button>
           </AlertDialogFooter>
           <AlertDialogFooter>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <PermisoButton idOpcion={14} accion="eliminar" variant="destructive" onClick={confirmDelete}>
               Eliminar
-            </Button>
+            </PermisoButton>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, CreditCard, DollarSign, User, Settings, BarChart3, Zap, X, Plus, Minus, Check, Star, Scan, AlertTriangle, Tag, Gift, Users, Trash, DoorOpen, FileText, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PermisoButton from '@/components/layout/PermisoButton';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -2358,7 +2359,9 @@ const RetailPOS = () => {
 
                         {/* Botones de acción */}
                         <DialogFooter className="flex space-x-2">
-                            <Button
+                            <PermisoButton
+                                idOpcion={1}
+                                accion="crear"
                                 disabled={isSavingVenta || facturaValidadaDian || (!esCredito && saldoPendiente !== 0)} // En crédito no se exige pago inmediato
                                 onClick={() => {
                                     void handleSaveVenta(false);
@@ -2366,7 +2369,7 @@ const RetailPOS = () => {
                                 className="flex-1"
                             >
                                 {isSavingVenta ? 'Procesando...' : 'Confirmar Pago'}
-                            </Button>
+                            </PermisoButton>
                             <Button
                                 variant="outline"
                                 disabled={isSavingVenta || facturaValidadaDian}

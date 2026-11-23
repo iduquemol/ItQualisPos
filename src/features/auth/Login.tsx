@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface LoginProps {
-    onLogin: (user: { usuario: string; password: string }) => void;
+    onLogin: (user: { usuario: string; password: string }) => Promise<void>;
 }
 
 const Login = ({ onLogin }: LoginProps) => {
@@ -18,9 +18,15 @@ const Login = ({ onLogin }: LoginProps) => {
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        onLogin({ usuario: email, password });
+        setIsLoading(true);
+        setError(null);
+        try {
+            await onLogin({ usuario: email, password });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // const handleLogin = async (usuario: string, password: string) => {

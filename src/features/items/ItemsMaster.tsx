@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import PermisoButton from "@/components/layout/PermisoButton";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -731,7 +732,9 @@ export default function ItemsMaster() {
                     <p className="text-muted-foreground text-sm">Consulta y gestión de productos</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button
+                    <PermisoButton
+                        idOpcion={8}
+                        accion="crear"
                         variant="default"
                         size="icon"
                         title="Nuevo producto"
@@ -739,7 +742,7 @@ export default function ItemsMaster() {
                         className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
                     >
                         <Plus className="w-5 h-5" />
-                    </Button>
+                    </PermisoButton>
                     {/* Dialog de búsqueda */}
                     <Dialog open={openDialog} onOpenChange={handleSearchDialogChange}>
                         <DialogTrigger asChild>
@@ -788,20 +791,25 @@ export default function ItemsMaster() {
                             </div>
                         </DialogContent>
                     </Dialog>
-                    <Button variant="default"
+                    <PermisoButton
+                        idOpcion={8}
+                        accion={producto.idProducto ? "actualizar" : "crear"}
+                        variant="default"
                         title="Guardar producto"
                         onClick={handleSaveProduct}>
                         <Save className="w-4 h-4 mr-2" />
                         Guardar
-                    </Button>
-                    <Button
+                    </PermisoButton>
+                    <PermisoButton
+                        idOpcion={8}
+                        accion="eliminar"
                         variant="default"
                         title="Eliminar producto"
                         onClick={handleDeleteProduct}
                     >
                         <Trash className="w-4 h-4 mr-2" />
                         Eliminar
-                    </Button>
+                    </PermisoButton>
                     <Button
                         variant="default"
                         size="icon"
@@ -1633,9 +1641,9 @@ export default function ItemsMaster() {
                         <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
                             Cancelar
                         </Button>
-                        <Button variant="destructive" onClick={confirmDeleteProduct}>
+                        <PermisoButton idOpcion={8} accion="eliminar" variant="destructive" onClick={confirmDeleteProduct}>
                             Eliminar
-                        </Button>
+                        </PermisoButton>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

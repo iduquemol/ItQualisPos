@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import PermisoButton from "@/components/layout/PermisoButton";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
@@ -192,7 +193,9 @@ export default function ActividadesIcaMaster() {
         </div>
         <div className="flex gap-2">
           {/* Nuevo */}
-          <Button
+          <PermisoButton
+            idOpcion={16}
+            accion="crear"
             variant="default"
             size="icon"
             title="Nueva actividad ICA"
@@ -200,7 +203,7 @@ export default function ActividadesIcaMaster() {
             className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
           >
             <Plus className="w-5 h-5" />
-          </Button>
+          </PermisoButton>
 
           {/* Diálogo de Búsqueda */}
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
@@ -270,24 +273,28 @@ export default function ActividadesIcaMaster() {
           </Dialog>
 
           {/* Guardar */}
-          <Button
+          <PermisoButton
+            idOpcion={16}
+            accion={actividadIca.idActividadIca ? "actualizar" : "crear"}
             variant="default"
             title="Guardar actividad ICA"
             onClick={handleSave}
           >
             <Save className="w-4 h-4 mr-2" />
             Guardar
-          </Button>
+          </PermisoButton>
 
           {/* Eliminar */}
-          <Button
+          <PermisoButton
+            idOpcion={16}
+            accion="eliminar"
             variant="default"
             title="Eliminar actividad ICA"
             onClick={handleDelete}
           >
             <Trash className="w-4 h-4 mr-2" />
             Eliminar
-          </Button>
+          </PermisoButton>
 
           {/* Salir */}
           <Button
@@ -442,9 +449,9 @@ export default function ActividadesIcaMaster() {
             >
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <PermisoButton idOpcion={16} accion="eliminar" variant="destructive" onClick={confirmDelete}>
               Eliminar
-            </Button>
+            </PermisoButton>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

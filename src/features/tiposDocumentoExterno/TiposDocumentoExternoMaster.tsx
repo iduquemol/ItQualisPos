@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import PermisoButton from "@/components/layout/PermisoButton";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
@@ -240,7 +241,9 @@ export default function TiposDocumentoExternoMaster() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
+          <PermisoButton
+            idOpcion={6}
+            accion="crear"
             variant="default"
             size="icon"
             title="Nuevo documento"
@@ -248,7 +251,7 @@ export default function TiposDocumentoExternoMaster() {
             className="bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
           >
             <Plus className="w-5 h-5" />
-          </Button>
+          </PermisoButton>
 
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
             <DialogTrigger asChild>
@@ -311,23 +314,27 @@ export default function TiposDocumentoExternoMaster() {
             </DialogContent>
           </Dialog>
 
-          <Button
+          <PermisoButton
+            idOpcion={6}
+            accion={tipoDocExterno.idTipoDocumentoExterno ? "actualizar" : "crear"}
             variant="default"
             title="Guardar documento"
             onClick={handleSave}
           >
             <Save className="w-4 h-4 mr-2" />
             Guardar
-          </Button>
+          </PermisoButton>
 
-          <Button
+          <PermisoButton
+            idOpcion={6}
+            accion="eliminar"
             variant="default"
             title="Eliminar documento"
             onClick={handleDelete}
           >
             <Trash className="w-4 h-4 mr-2" />
             Eliminar
-          </Button>
+          </PermisoButton>
 
           <Button
             variant="default"
@@ -606,9 +613,9 @@ export default function TiposDocumentoExternoMaster() {
             >
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <PermisoButton idOpcion={6} accion="eliminar" variant="destructive" onClick={confirmDelete}>
               Eliminar
-            </Button>
+            </PermisoButton>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

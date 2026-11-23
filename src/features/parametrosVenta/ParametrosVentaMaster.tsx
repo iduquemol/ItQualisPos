@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import PermisoButton from "@/components/layout/PermisoButton";
 import { Card } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -229,7 +230,9 @@ export default function ParametrosVentaMaster() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
+          <PermisoButton
+            idOpcion={7}
+            accion="crear"
             variant="default"
             size="icon"
             title="Nuevo parámetro"
@@ -237,7 +240,7 @@ export default function ParametrosVentaMaster() {
             className="bg-primary hover:bg-primary/90 text-white shadow-md transition-all duration-200"
           >
             <Plus className="w-5 h-5" />
-          </Button>
+          </PermisoButton>
 
           <Button
             variant="outline"
@@ -249,15 +252,15 @@ export default function ParametrosVentaMaster() {
             <RefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
           </Button>
 
-          <Button variant="default" title="Guardar parámetros" onClick={handleSaveParametros}>
+          <PermisoButton idOpcion={7} accion={parametros.idParametroVenta ? "actualizar" : "crear"} variant="default" title="Guardar parámetros" onClick={handleSaveParametros}>
             <Save className="w-4 h-4 mr-2" />
             Guardar
-          </Button>
+          </PermisoButton>
 
-          <Button variant="default" title="Eliminar parámetros" onClick={handleDeleteParametros}>
+          <PermisoButton idOpcion={7} accion="eliminar" variant="default" title="Eliminar parámetros" onClick={handleDeleteParametros}>
             <Trash className="w-4 h-4 mr-2" />
             Eliminar
-          </Button>
+          </PermisoButton>
 
           <Button
             variant="default"
@@ -663,9 +666,9 @@ export default function ParametrosVentaMaster() {
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteParametros}>
+            <PermisoButton idOpcion={7} accion="eliminar" variant="destructive" onClick={confirmDeleteParametros}>
               Eliminar
-            </Button>
+            </PermisoButton>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
